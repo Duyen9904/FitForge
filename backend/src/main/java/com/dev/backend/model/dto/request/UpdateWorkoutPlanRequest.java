@@ -1,7 +1,6 @@
 package com.dev.backend.model.dto.request;
 
 import com.dev.backend.model.enums.DifficultyLevel;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -43,13 +42,5 @@ public class UpdateWorkoutPlanRequest {
      * Optional. User-chosen specific workout dates. When provided, replaces the plan's scheduled workout dates.
      */
     private List<LocalDate> workoutDates;
-
-    /**
-     * Optional. When provided, performs a partial update of sessions and their exercises.
-     * Existing sessions or session exercises that are not referenced here are left unchanged;
-     * they are not deleted. To remove a specific session exercise, use the dedicated
-     * session-exercise delete endpoint.
-     */
-    @Valid
-    private List<UpdateWorkoutSessionRequest> sessions;
 }
+

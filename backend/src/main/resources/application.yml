@@ -1,9 +1,30 @@
+# ============= Server Configuration =============
+server:
+  tomcat:
+    connection-timeout: 120s
+    keep-alive-timeout: 120s
+    threads:
+      max: 200
+      min-spare: 10
+  servlet:
+    session:
+      timeout: 30m
+
 spring:
+  # MVC Async Timeout
+  mvc:
+    async:
+      request-timeout: 120s
+
   datasource:
     url: jdbc:mysql://localhost:3306/gym_plan
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      connection-timeout: 10000
+      idle-timeout: 300000
+      max-lifetime: 1800000
 
   jpa:
     hibernate:

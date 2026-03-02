@@ -216,6 +216,10 @@ public class OnboardingServiceImpl implements OnboardingService {
             switch (stepType) {
                 case PERSONAL_INFO -> applyPersonalInfo(user, root);
                 case BODY_METRICS -> applyBodyMetrics(user, root);
+                case GENDER -> applyGender(user, root);
+                case AGE -> applyAge(user, root);
+                case WEIGHT -> applyWeight(user, root);
+                case HEIGHT -> applyHeight(user, root);
                 case FITNESS_LEVEL -> applyFitnessLevel(user, root);
                 case FITNESS_GOAL -> applyFitnessGoal(user, root);
                 case EQUIPMENT, SCHEDULE, HEALTH_LIMITATIONS, NOTIFICATIONS -> {
@@ -243,6 +247,40 @@ public class OnboardingServiceImpl implements OnboardingService {
         }
     }
     
+    private void applyGender(User user, JsonNode root) {
+        if (root.has("selected")) {
+            user.setGender(root.get("selected").asText().toUpperCase());
+        } else if (root.has("gender")) {
+            user.setGender(root.get("gender").asText().toUpperCase());
+        }
+    }
+    
+    private void applyAge(User user, JsonNode root) {
+        if (root.has("value")) {
+            int age = root.get("value").asInt();
+            user.setDateOfBirth(LocalDate.now().minusYears(age));
+        } else if (root.has("age")) {
+            int age = root.get("age").asInt();
+            user.setDateOfBirth(LocalDate.now().minusYears(age));
+        }
+    }
+    
+    private void applyWeight(User user, JsonNode root) {
+        if (root.has("value")) {
+            user.setCurrentWeightKg((float) root.get("value").asDouble());
+        } else if (root.has("weight")) {
+            user.setCurrentWeightKg((float) root.get("weight").asDouble());
+        }
+    }
+    
+    private void applyHeight(User user, JsonNode root) {
+        if (root.has("value")) {
+            user.setHeightCm((float) root.get("value").asDouble());
+        } else if (root.has("height")) {
+            user.setHeightCm((float) root.get("height").asDouble());
+        }
+    }
+
     private void applyBodyMetrics(User user, JsonNode root) {
         if (root.has("weight")) {
             user.setCurrentWeightKg((float) root.get("weight").asDouble());

@@ -7,6 +7,7 @@ import com.dev.backend.model.dto.request.CompleteWorkoutRequest;
 import com.dev.backend.model.dto.request.LogExerciseRequest;
 import com.dev.backend.model.dto.request.SkipExerciseRequest;
 import com.dev.backend.model.dto.request.StartWorkoutRequest;
+import com.dev.backend.model.dto.response.HomeDashboardResponse;
 import com.dev.backend.model.dto.response.ProgressChartResponse;
 import com.dev.backend.model.dto.response.WeeklyWorkoutProgressResponse;
 import com.dev.backend.model.dto.response.WorkoutHistoryResponse;
@@ -385,5 +386,155 @@ public class WorkoutExecutionServiceImpl implements WorkoutExecutionService {
             return String.format("%s %d-%s %d", startMonth, startDate.getDayOfMonth(), 
                                endMonth, endDate.getDayOfMonth());
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public HomeDashboardResponse getDashboard(Long userId, LocalDate referenceDate) {
+        log.info("Getting home dashboard for user {} on date {}", userId, referenceDate);
+
+        // 1. Weekly progress (reuse existing logic)
+        LocalDate weekStart = referenceDate.with(java.time.DayOfWeek.MONDAY);
+        WeeklyWorkoutProgressResponse weeklyProgress = getWeeklyProgress(userId, weekStart);
+
+        // 2. Weekly quick stats (derive from weekly progress summary)
+        HomeDashboardResponse.WeeklyQuickStats weeklyStats = buildWeeklyQuickStats(
+                weeklyProgress, userId, referenceDate);
+
+        // 3. Today's session
+        HomeDashboardResponse.TodaySessionInfo todaySession = findTodaySession(userId, referenceDate);
+
+        // 4. Active plans
+        List<HomeDashboardResponse.ActivePlanInfo> activePlans = buildActivePlans(userId, referenceDate);
+
+        return HomeDashboardResponse.builder()
+                .todaySession(todaySession)
+                .weeklyStats(weeklyStats)
+                .weeklyProgress(weeklyProgress)
+                .activePlans(activePlans)
+                .build();
+    }
+
+    private HomeDashboardResponse.WeeklyQuickStats buildWeeklyQuickStats(
+            WeeklyWorkoutProgressResponse weeklyProgress, Long userId, LocalDate referenceDate) {
+        WeeklyWorkoutProgressResponse.WeeklySummary summary = weeklyProgress.getSummary();
+
+        int caloriesBurned = summary != null ? summary.getTotalCaloriesBurned() : 0;
+        int workoutsCompleted = summary != null ? summary.getTotalWorkoutsCompleted() : 0;
+        int totalMinutes = summary != null ? summary.getTotalMinutesExercised() : 0;
+
+        // Count planned workouts for this week from active plans
+        int workoutsPlanned = 0;
+        List<WorkoutPlan> activePlans = workoutPlanRepository.findByUserUserIdAndIsActiveTrue(userId);
+        for (WorkoutPlan plan : activePlans) {
+            workoutsPlanned += plan.getFrequencyPerWeek() != null ? plan.getFrequencyPerWeek() : 0;
+        }
+
+        // Calculate streak
+        int currentStreak = calculateStreak(userId, referenceDate);
+
+        return HomeDashboardResponse.WeeklyQuickStats.builder()
+                .caloriesBurned(caloriesBurned)
+                .workoutsCompleted(workoutsCompleted)
+                .workoutsPlanned(workoutsPlanned)
+                .totalMinutes(totalMinutes)
+                .currentStreak(currentStreak)
+                .build();
+    }
+
+    private HomeDashboardResponse.TodaySessionInfo findTodaySession(Long userId, LocalDate date) {
+        // Find sessions scheduled for today from active plans belonging to this user
+        List<WorkoutSession> scheduledSessions = workoutSessionRepository.findScheduledSessionsByDate(date);
+
+        // Filter to only this user's sessions
+        WorkoutSession todaySession = scheduledSessions.stream()
+                .filter(s -> s.getWorkoutPlan().getUser().getUserId().equals(userId))
+                .findFirst()
+                .orElse(null);
+
+        if (todaySession == null) return null;
+
+        // Check if already completed today
+        boolean alreadyCompleted = workoutProgressRepository
+                .existsByUserUserIdAndWorkoutSessionSessionIdAndCompletedTrue(userId, todaySession.getSessionId());
+
+        // Build target muscle groups from focus area
+        List<String> targetMuscleGroups = new ArrayList<>();
+        if (todaySession.getFocusArea() != null && !todaySession.getFocusArea().isEmpty()) {
+            targetMuscleGroups.add(todaySession.getFocusArea());
+        }
+
+        return HomeDashboardResponse.TodaySessionInfo.builder()
+                .planId(todaySession.getWorkoutPlan().getPlanId())
+                .sessionId(todaySession.getSessionId())
+                .planName(todaySession.getWorkoutPlan().getPlanName())
+                .sessionName(todaySession.getSessionName())
+                .exerciseCount(todaySession.getSessionExercises() != null ? todaySession.getSessionExercises().size() : 0)
+                .estimatedMinutes(todaySession.getEstimatedDuration())
+                .scheduledDate(date)
+                .targetMuscleGroups(targetMuscleGroups)
+                .alreadyCompleted(alreadyCompleted)
+                .build();
+    }
+
+    private List<HomeDashboardResponse.ActivePlanInfo> buildActivePlans(Long userId, LocalDate referenceDate) {
+        List<WorkoutPlan> activePlans = workoutPlanRepository.findByUserUserIdAndIsActiveTrue(userId);
+        List<HomeDashboardResponse.ActivePlanInfo> result = new ArrayList<>();
+
+        for (WorkoutPlan plan : activePlans) {
+            // Calculate current week
+            int currentWeek = 1;
+            if (plan.getStartDate() != null) {
+                long daysSinceStart = java.time.temporal.ChronoUnit.DAYS.between(plan.getStartDate(), referenceDate);
+                currentWeek = Math.max(1, (int) (daysSinceStart / 7) + 1);
+                if (plan.getDurationWeeks() != null) {
+                    currentWeek = Math.min(currentWeek, plan.getDurationWeeks());
+                }
+            }
+
+            // Count sessions and completed sessions
+            List<WorkoutSession> sessions = workoutSessionRepository
+                    .findByWorkoutPlanPlanIdOrderByDayNumber(plan.getPlanId());
+            int totalSessions = (int) sessions.stream().filter(s -> !Boolean.TRUE.equals(s.getIsRestDay())).count();
+
+            // Count completed workout progress entries for this plan
+            long sessionsCompleted = workoutProgressRepository
+                    .countByUserUserIdAndWorkoutPlanPlanIdAndCompletedTrue(userId, plan.getPlanId());
+
+            result.add(HomeDashboardResponse.ActivePlanInfo.builder()
+                    .planId(plan.getPlanId())
+                    .planName(plan.getPlanName())
+                    .frequencyPerWeek(plan.getFrequencyPerWeek())
+                    .durationWeeks(plan.getDurationWeeks())
+                    .currentWeek(currentWeek)
+                    .sessionsCompleted((int) sessionsCompleted)
+                    .totalSessions(totalSessions)
+                    .isActive(plan.getIsActive())
+                    .build());
+        }
+
+        return result;
+    }
+
+    private int calculateStreak(Long userId, LocalDate referenceDate) {
+        int streak = 0;
+        LocalDate checkDate = referenceDate;
+
+        // Check backwards from today — streak is consecutive days with completed workouts
+        for (int i = 0; i < 365; i++) {
+            boolean hasWorkout = workoutProgressRepository
+                    .existsByUserUserIdAndWorkoutDateBetweenAndCompletedTrue(
+                            userId,
+                            checkDate.atStartOfDay(java.time.ZoneOffset.UTC).toInstant(),
+                            checkDate.plusDays(1).atStartOfDay(java.time.ZoneOffset.UTC).toInstant());
+            if (hasWorkout) {
+                streak++;
+                checkDate = checkDate.minusDays(1);
+            } else {
+                break;
+            }
+        }
+
+        return streak;
     }
 }

@@ -4,6 +4,7 @@ import com.dev.backend.model.dto.request.CompleteWorkoutRequest;
 import com.dev.backend.model.dto.request.LogExerciseRequest;
 import com.dev.backend.model.dto.request.SkipExerciseRequest;
 import com.dev.backend.model.dto.request.StartWorkoutRequest;
+import com.dev.backend.model.dto.response.HomeDashboardResponse;
 import com.dev.backend.model.dto.response.ProgressChartResponse;
 import com.dev.backend.model.dto.response.WeeklyWorkoutProgressResponse;
 import com.dev.backend.model.dto.response.WorkoutHistoryResponse;
@@ -65,4 +66,9 @@ public interface WorkoutExecutionService {
      * Get weekly workout progress for visualization
      */
     WeeklyWorkoutProgressResponse getWeeklyProgress(Long userId, LocalDate startDate);
+
+    /**
+     * Get aggregated home dashboard data
+     */
+    HomeDashboardResponse getDashboard(Long userId, LocalDate referenceDate);
 }

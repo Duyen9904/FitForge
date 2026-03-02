@@ -27,4 +27,7 @@ public interface WorkoutSessionLogRepository extends JpaRepository<WorkoutSessio
     @Query("SELECT COUNT(s) FROM WorkoutSessionLog s WHERE s.user.userId = :userId " +
            "AND s.workoutPlan.planId = :planId AND s.performedAt >= :since")
     Long countSessionsSince(@Param("userId") Long userId, @Param("planId") Long planId, @Param("since") Instant since);
+
+    @Query("SELECT COUNT(s) FROM WorkoutSessionLog s WHERE s.user.userId = :userId")
+    long countTotalByUserId(@Param("userId") Long userId);
 }

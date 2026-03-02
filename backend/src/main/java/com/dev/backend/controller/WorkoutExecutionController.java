@@ -5,6 +5,7 @@ import com.dev.backend.model.dto.request.LogExerciseRequest;
 import com.dev.backend.model.dto.request.SkipExerciseRequest;
 import com.dev.backend.model.dto.request.StartWorkoutRequest;
 import com.dev.backend.model.dto.response.ApiResponse;
+import com.dev.backend.model.dto.response.HomeDashboardResponse;
 import com.dev.backend.model.dto.response.ProgressChartResponse;
 import com.dev.backend.model.dto.response.WeeklyWorkoutProgressResponse;
 import com.dev.backend.model.dto.response.WorkoutHistoryResponse;
@@ -160,5 +161,18 @@ public class WorkoutExecutionController {
         Long userId = Long.parseLong(jwt.getSubject());
         workoutExecutionService.cancelWorkout(userId, progressId);
         return ApiResponse.success(null, "Workout cancelled");
+    }
+
+    @Operation(summary = "Get home dashboard", description = "Returns aggregated dashboard data: today's session, weekly stats, weekly progress chart, and active plans")
+    @GetMapping("/dashboard")
+    public ApiResponse<HomeDashboardResponse> getDashboard(
+            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(description = "Reference date (ISO-8601, defaults to today)")
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        LocalDate refDate = date != null ? date : LocalDate.now();
+        HomeDashboardResponse response = workoutExecutionService.getDashboard(userId, refDate);
+        return ApiResponse.success(response);
     }
 }

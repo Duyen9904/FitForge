@@ -3,13 +3,22 @@ package com.dev.backend.service.impl;
 import com.dev.backend.exception.BadRequestException;
 import com.dev.backend.exception.ResourceNotFoundException;
 import com.dev.backend.mapper.WorkoutPlanMapper;
+import com.dev.backend.model.dto.ai.AiExerciseResult;
+import com.dev.backend.model.dto.ai.AiPlanGenerationContext;
+import com.dev.backend.model.dto.ai.AiSessionResult;
+import com.dev.backend.model.dto.ai.AiWorkoutPlanResult;
+import com.dev.backend.model.dto.profile.UserProfile;
 import com.dev.backend.model.dto.request.*;
 import com.dev.backend.model.dto.response.WorkoutPlanDetailResponse;
 import com.dev.backend.model.dto.response.WorkoutPlanResponse;
+import com.dev.backend.model.dto.response.WorkoutPlanStatsResponse;
 import com.dev.backend.model.dto.response.WorkoutPlanSummaryResponse;
 import com.dev.backend.model.dto.response.WorkoutSessionResponse;
 import com.dev.backend.model.entity.*;
+import com.dev.backend.model.enums.PlanGenerationStrategy;
 import com.dev.backend.repository.*;
+import com.dev.backend.service.AiService;
+import com.dev.backend.service.UserProfileService;
 import com.dev.backend.service.WorkoutDateCalculator;
 import com.dev.backend.service.WorkoutPlanService;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +47,9 @@ public class WorkoutPlanServiceImpl implements WorkoutPlanService {
     private final MuscleGroupRepository muscleGroupRepository;
     private final WorkoutPlanMapper workoutPlanMapper;
     private final WorkoutDateCalculator workoutDateCalculator;
+    private final AiService aiService;
+    private final UserProfileService userProfileService;
+    private final WorkoutSessionLogRepository workoutSessionLogRepository;
 
     public WorkoutPlanServiceImpl(WorkoutPlanRepository workoutPlanRepository,
                                   WorkoutSessionRepository workoutSessionRepository,
@@ -47,7 +59,10 @@ public class WorkoutPlanServiceImpl implements WorkoutPlanService {
                                   UserRepository userRepository,
                                   MuscleGroupRepository muscleGroupRepository,
                                   WorkoutPlanMapper workoutPlanMapper,
-                                  WorkoutDateCalculator workoutDateCalculator) {
+                                  WorkoutDateCalculator workoutDateCalculator,
+                                  AiService aiService,
+                                  UserProfileService userProfileService,
+                                  WorkoutSessionLogRepository workoutSessionLogRepository) {
         this.workoutPlanRepository = workoutPlanRepository;
         this.workoutSessionRepository = workoutSessionRepository;
         this.sessionExerciseRepository = sessionExerciseRepository;
@@ -57,6 +72,9 @@ public class WorkoutPlanServiceImpl implements WorkoutPlanService {
         this.muscleGroupRepository = muscleGroupRepository;
         this.workoutPlanMapper = workoutPlanMapper;
         this.workoutDateCalculator = workoutDateCalculator;
+        this.aiService = aiService;
+        this.userProfileService = userProfileService;
+        this.workoutSessionLogRepository = workoutSessionLogRepository;
     }
 
     @Override
@@ -244,6 +262,26 @@ public class WorkoutPlanServiceImpl implements WorkoutPlanService {
 
     @Override
     @Transactional
+    public WorkoutSessionResponse updateSession(Long userId, Long planId, Long sessionId,
+                                                UpdateWorkoutSessionRequest request) {
+        log.info("Updating session {} in plan {} for user: {}", sessionId, planId, userId);
+
+        workoutPlanRepository.findByPlanIdAndUserUserId(planId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkoutPlan", "id", planId));
+
+        WorkoutSession session = workoutSessionRepository.findBySessionIdAndWorkoutPlanPlanId(sessionId, planId)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkoutSession", "id", sessionId));
+
+        workoutPlanMapper.applyPartialUpdate(session, request);
+
+        session = workoutSessionRepository.save(session);
+        log.info("Updated session {} in plan {}", sessionId, planId);
+
+        return workoutPlanMapper.toSessionResponse(session);
+    }
+
+    @Override
+    @Transactional
     public WorkoutSessionResponse updateSessionExercise(Long userId,
                                                         Long planId,
                                                         Long sessionId,
@@ -266,32 +304,7 @@ public class WorkoutPlanServiceImpl implements WorkoutPlanService {
             throw new BadRequestException("SessionExercise does not belong to the specified session");
         }
 
-        if (request.getExerciseId() != null) {
-            Exercise exercise = exerciseRepository.findById(request.getExerciseId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Exercise", "id", request.getExerciseId()));
-            sessionExercise.setExercise(exercise);
-        }
-        if (request.getSets() != null) {
-            sessionExercise.setSets(request.getSets());
-        }
-        if (request.getRepetitions() != null) {
-            sessionExercise.setRepetitions(request.getRepetitions());
-        }
-        if (request.getWeightKg() != null) {
-            sessionExercise.setWeightKg(request.getWeightKg());
-        }
-        if (request.getRestTimeSeconds() != null) {
-            sessionExercise.setRestTimeSeconds(request.getRestTimeSeconds());
-        }
-        if (request.getOrderIndex() != null) {
-            sessionExercise.setOrderIndex(request.getOrderIndex());
-        }
-        if (request.getNotes() != null) {
-            sessionExercise.setNotes(request.getNotes());
-        }
-        if (request.getIsSuperset() != null) {
-            sessionExercise.setIsSuperset(request.getIsSuperset());
-        }
+        workoutPlanMapper.applyPartialUpdate(sessionExercise, request, exerciseRepository);
 
         sessionExerciseRepository.save(sessionExercise);
         log.info("Updated session exercise {} in session {}", sessionExerciseId, sessionId);
@@ -338,40 +351,165 @@ public class WorkoutPlanServiceImpl implements WorkoutPlanService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
 
-        Goal goal = goalRepository.findById(request.getGoalId())
-                .orElseThrow(() -> new ResourceNotFoundException("Goal", "id", request.getGoalId()));
+        // Build user profile from onboarding data
+        UserProfile profile = userProfileService.buildProfile(userId);
 
-        // TODO: Implement AI logic to generate optimal workout plan
-        // For now, create a basic plan structure
+        // Derive goal from onboarding (user.primaryGoal)
+        Goal goal = user.getPrimaryGoal();
+        if (goal == null) {
+            throw new BadRequestException("No primary fitness goal set. Please complete onboarding first.");
+        }
+
+        // Derive difficulty from onboarding fitness level (default BEGINNER)
+        String difficultyLevel = profile.getFitnessLevel() != null
+                ? profile.getFitnessLevel()
+                : "BEGINNER";
+
+        // Derive frequency from onboarding schedule days (default 3)
+        int frequencyPerWeek = (profile.getScheduleDays() != null && !profile.getScheduleDays().isEmpty())
+                ? profile.getScheduleDays().size()
+                : 3;
+
+        // Build equipment list from onboarding profile
+        List<String> availableEquipment;
+        if (profile.getEquipmentKeys() != null && !profile.getEquipmentKeys().isEmpty()) {
+            availableEquipment = profile.getEquipmentKeys();
+        } else {
+            availableEquipment = List.of("Bodyweight only");
+        }
+
+        // Build target muscle group names
+        List<String> targetMuscleGroupNames = request.getTargetMuscleGroups().stream()
+                .map(Enum::name)
+                .collect(Collectors.toList());
+
+        // Build AI context
+        AiPlanGenerationContext context = AiPlanGenerationContext.builder()
+                .profile(profile)
+                .availableEquipment(availableEquipment)
+                .additionalInformation(request.getAdditionalInformation())
+                .frequencyPerWeek(frequencyPerWeek)
+                .durationWeeks(request.getDurationWeeks())
+                .difficultyLevel(difficultyLevel)
+                .startDate(request.getStartDate())
+                .goalName(goal.getGoalName())
+                .targetMuscleGroups(targetMuscleGroupNames)
+                .weekNumber(1)
+                .build();
+
+        // Call AI service
+        AiWorkoutPlanResult aiResult = aiService.generateWorkoutPlan(context);
+
+        // Resolve primary muscle group (enum name matches the 'category' column, not 'group_name')
+        MuscleGroup muscleGroup = null;
+        if (!request.getTargetMuscleGroups().isEmpty()) {
+            String category = request.getTargetMuscleGroups().get(0).name();
+            muscleGroup = muscleGroupRepository.findFirstByCategory(category)
+                    .orElseThrow(() -> new BadRequestException("No MuscleGroup configured for category " + category));
+        }
+
+        // Create WorkoutPlan entity from AI result
         WorkoutPlan plan = new WorkoutPlan();
         plan.setUser(user);
         plan.setGoal(goal);
-        plan.setPlanName("AI Generated Plan - " + goal.getGoalName());
-        plan.setDescription("AI-generated workout plan optimized for " + goal.getGoalName());
-        if (request.getTargetMuscleGroups() != null && !request.getTargetMuscleGroups().isEmpty()) {
-            String groupName = request.getTargetMuscleGroups().get(0).name();
-            MuscleGroup muscleGroup = muscleGroupRepository.findByGroupName(groupName)
-                    .orElseThrow(() -> new BadRequestException("No MuscleGroup configured for target " + groupName));
-            plan.setMuscleGroup(muscleGroup);
-        }
-        plan.setFrequencyPerWeek(request.getFrequencyPerWeek());
+        plan.setPlanName(aiResult.getPlanName() != null ? aiResult.getPlanName() : "AI Generated Plan - " + goal.getGoalName());
+        plan.setDescription(aiResult.getDescription() != null ? aiResult.getDescription() : "AI-generated workout plan");
+        plan.setMuscleGroup(muscleGroup);
+        plan.setFrequencyPerWeek(frequencyPerWeek);
         plan.setDurationWeeks(request.getDurationWeeks());
-        plan.setDifficultyLevel(request.getDifficultyLevel().name());
+        plan.setDifficultyLevel(difficultyLevel);
         plan.setStartDate(request.getStartDate());
         plan.setAiGenerated(true);
         plan.setAllowWorkoutSwaps(true);
         plan.setIsActive(true);
+        plan.setGenerationStrategy(PlanGenerationStrategy.AI);
+        plan.setAlgorithmVersion("AI_V1");
+        plan.setGeneratedFrom("AI_GENERATE");
+        plan.setVersion(1);
+        plan.setRecommendationReason(aiResult.getRecommendationReason());
 
         plan = workoutPlanRepository.save(plan);
 
-        // TODO: Add AI-generated sessions and exercises based on:
-        // - User's fitness level
-        // - Available equipment
-        // - Target muscle groups
-        // - Progressive overload structure
+        // Materialize AI-generated sessions into entities
+        if (aiResult.getSessions() != null) {
+            for (AiSessionResult sessionResult : aiResult.getSessions()) {
+                WorkoutSession session = new WorkoutSession();
+                session.setWorkoutPlan(plan);
+                session.setDayNumber(sessionResult.getDayNumber());
+                session.setSessionName(sessionResult.getSessionName());
+                session.setFocusArea(sessionResult.getFocusArea());
+                session.setEstimatedDuration(sessionResult.getEstimatedDuration());
+                session.setIsRestDay(sessionResult.getIsRestDay() != null ? sessionResult.getIsRestDay() : false);
+                session.setWarmUpNotes(sessionResult.getWarmUpNotes());
+                session.setCoolDownNotes(sessionResult.getCoolDownNotes());
+                if (plan.getStartDate() != null && sessionResult.getDayNumber() != null) {
+                    session.setScheduledDate(plan.getStartDate().plusDays(sessionResult.getDayNumber() - 1));
+                }
 
-        log.info("Generated AI workout plan with ID: {}", plan.getPlanId());
+                session = workoutSessionRepository.save(session);
+
+                // Add exercises if not a rest day
+                if (sessionResult.getExercises() != null && !sessionResult.getIsRestDay()) {
+                    for (AiExerciseResult exerciseResult : sessionResult.getExercises()) {
+                        // Resolve exercise by name (AI returns exerciseName)
+                        Exercise exercise = null;
+                        if (exerciseResult.getExerciseName() != null) {
+                            exercise = exerciseRepository.findByExerciseName(exerciseResult.getExerciseName()).orElse(null);
+                        }
+                        if (exercise == null && exerciseResult.getExerciseId() != null) {
+                            // Fallback: try by ID if present
+                            exercise = exerciseRepository.findById(exerciseResult.getExerciseId()).orElse(null);
+                        }
+                        if (exercise == null) {
+                            log.warn("AI referenced unknown exercise name='{}', ID={}. Skipping.",
+                                    exerciseResult.getExerciseName(), exerciseResult.getExerciseId());
+                            continue;
+                        }
+
+                        SessionExercise sessionExercise = new SessionExercise();
+                        sessionExercise.setWorkoutSession(session);
+                        sessionExercise.setExercise(exercise);
+                        sessionExercise.setSets(exerciseResult.getSets() != null ? exerciseResult.getSets() : 3);
+                        sessionExercise.setRepetitions(parseRepetitions(exerciseResult.getRepetitions()));
+                        sessionExercise.setWeightKg(exerciseResult.getWeightKg() != null ? exerciseResult.getWeightKg().floatValue() : null);
+                        sessionExercise.setRestTimeSeconds(exerciseResult.getRestTimeSeconds() != null ? exerciseResult.getRestTimeSeconds() : 60);
+                        sessionExercise.setOrderIndex(exerciseResult.getOrderIndex() != null ? exerciseResult.getOrderIndex() : 0);
+                        sessionExercise.setNotes(exerciseResult.getNotes());
+                        sessionExercise.setIsSuperset(false);
+
+                        sessionExerciseRepository.save(sessionExercise);
+                        session.getSessionExercises().add(sessionExercise);
+                    }
+                }
+
+                plan.getWorkoutSessions().add(session);
+            }
+        }
+
+        log.info("Generated AI workout plan with ID: {} ({} sessions)", plan.getPlanId(),
+                plan.getWorkoutSessions().size());
         return workoutPlanMapper.toResponse(plan);
+    }
+
+
+
+    /**
+     * Parse AI repetitions string (e.g. "10-12", "15", "30 seconds") into Integer.
+     * Takes the first number found, defaults to 10.
+     */
+    private Integer parseRepetitions(String reps) {
+        if (reps == null || reps.isBlank()) return 10;
+        try {
+            // Try direct parse first
+            return Integer.parseInt(reps.trim());
+        } catch (NumberFormatException e) {
+            // Extract first number from strings like "10-12" or "8-10 reps"
+            String digits = reps.replaceAll("[^0-9].*", "").trim();
+            if (!digits.isEmpty()) {
+                try { return Integer.parseInt(digits); } catch (NumberFormatException ignored) {}
+            }
+            return 10;
+        }
     }
 
     @Override
@@ -382,159 +520,11 @@ public class WorkoutPlanServiceImpl implements WorkoutPlanService {
         WorkoutPlan plan = workoutPlanRepository.findByPlanIdAndUserUserId(planId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("WorkoutPlan", "id", planId));
 
-        // Update basic fields if provided
-        if (request.getPlanName() != null) {
-            plan.setPlanName(request.getPlanName());
-        }
-        if (request.getDescription() != null) {
-            plan.setDescription(request.getDescription());
-        }
-        if (request.getGoalId() != null) {
-            Goal goal = goalRepository.findById(request.getGoalId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Goal", "id", request.getGoalId()));
-            plan.setGoal(goal);
-        }
-        if (request.getMuscleGroupId() != null) {
-            MuscleGroup muscleGroup = muscleGroupRepository.findById(request.getMuscleGroupId())
-                    .orElseThrow(() -> new ResourceNotFoundException("MuscleGroup", "id", request.getMuscleGroupId()));
-            plan.setMuscleGroup(muscleGroup);
-        }
-        if (request.getFrequencyPerWeek() != null) {
-            plan.setFrequencyPerWeek(request.getFrequencyPerWeek());
-        }
-        if (request.getDurationWeeks() != null) {
-            plan.setDurationWeeks(request.getDurationWeeks());
-        }
-        if (request.getDifficultyLevel() != null) {
-            plan.setDifficultyLevel(request.getDifficultyLevel().name());
-        }
-        if (request.getAllowWorkoutSwaps() != null) {
-            plan.setAllowWorkoutSwaps(request.getAllowWorkoutSwaps());
-        }
-        if (request.getWorkoutDates() != null) {
-            plan.getScheduledWorkoutDates().clear();
-            plan.getScheduledWorkoutDates().addAll(request.getWorkoutDates());
-        }
-
-        // Update sessions if provided
-        if (request.getSessions() != null) {
-            updateSessions(plan, request.getSessions());
-        }
+        workoutPlanMapper.applyPartialUpdate(plan, request, goalRepository, muscleGroupRepository);
 
         plan = workoutPlanRepository.save(plan);
         log.info("Updated workout plan: {}", planId);
         return workoutPlanMapper.toResponse(plan);
-    }
-
-    private void updateSessions(WorkoutPlan plan, List<UpdateWorkoutSessionRequest> sessionRequests) {
-        for (UpdateWorkoutSessionRequest sessionRequest : sessionRequests) {
-            WorkoutSession session;
-            
-            if (sessionRequest.getSessionId() != null) {
-                // Update existing session
-                session = workoutSessionRepository.findById(sessionRequest.getSessionId())
-                        .orElseThrow(() -> new ResourceNotFoundException("WorkoutSession", "id", sessionRequest.getSessionId()));
-                
-                if (sessionRequest.getSessionName() != null) {
-                    session.setSessionName(sessionRequest.getSessionName());
-                }
-                if (sessionRequest.getDayNumber() != null) {
-                    session.setDayNumber(sessionRequest.getDayNumber());
-                }
-                if (sessionRequest.getFocusArea() != null) {
-                    session.setFocusArea(sessionRequest.getFocusArea());
-                }
-                if (sessionRequest.getEstimatedDuration() != null) {
-                    session.setEstimatedDuration(sessionRequest.getEstimatedDuration());
-                }
-                if (sessionRequest.getWarmUpNotes() != null) {
-                    session.setWarmUpNotes(sessionRequest.getWarmUpNotes());
-                }
-                if (sessionRequest.getCoolDownNotes() != null) {
-                    session.setCoolDownNotes(sessionRequest.getCoolDownNotes());
-                }
-                if (sessionRequest.getIsRestDay() != null) {
-                    session.setIsRestDay(sessionRequest.getIsRestDay());
-                }
-            } else {
-                // Create new session
-                session = new WorkoutSession();
-                session.setWorkoutPlan(plan);
-                session.setSessionName(sessionRequest.getSessionName());
-                session.setDayNumber(sessionRequest.getDayNumber());
-                session.setFocusArea(sessionRequest.getFocusArea());
-                session.setEstimatedDuration(sessionRequest.getEstimatedDuration());
-                session.setWarmUpNotes(sessionRequest.getWarmUpNotes());
-                session.setCoolDownNotes(sessionRequest.getCoolDownNotes());
-                session.setIsRestDay(sessionRequest.getIsRestDay() != null ? sessionRequest.getIsRestDay() : false);
-            }
-            
-            workoutSessionRepository.save(session);
-
-            // Update exercises if provided
-            if (sessionRequest.getExercises() != null) {
-                updateSessionExercises(session, sessionRequest.getExercises());
-            }
-        }
-    }
-
-    private void updateSessionExercises(WorkoutSession session, List<UpdateSessionExerciseRequest> exerciseRequests) {
-        for (UpdateSessionExerciseRequest exerciseRequest : exerciseRequests) {
-            SessionExercise sessionExercise;
-            
-            if (exerciseRequest.getSessionExerciseId() != null) {
-                // Update existing exercise
-                sessionExercise = sessionExerciseRepository.findById(exerciseRequest.getSessionExerciseId())
-                        .orElseThrow(() -> new ResourceNotFoundException("SessionExercise", "id", exerciseRequest.getSessionExerciseId()));
-                
-                if (exerciseRequest.getExerciseId() != null) {
-                    Exercise exercise = exerciseRepository.findById(exerciseRequest.getExerciseId())
-                            .orElseThrow(() -> new ResourceNotFoundException("Exercise", "id", exerciseRequest.getExerciseId()));
-                    sessionExercise.setExercise(exercise);
-                }
-                if (exerciseRequest.getSets() != null) {
-                    sessionExercise.setSets(exerciseRequest.getSets());
-                }
-                if (exerciseRequest.getRepetitions() != null) {
-                    sessionExercise.setRepetitions(exerciseRequest.getRepetitions());
-                }
-                if (exerciseRequest.getWeightKg() != null) {
-                    sessionExercise.setWeightKg(exerciseRequest.getWeightKg());
-                }
-                if (exerciseRequest.getRestTimeSeconds() != null) {
-                    sessionExercise.setRestTimeSeconds(exerciseRequest.getRestTimeSeconds());
-                }
-                if (exerciseRequest.getOrderIndex() != null) {
-                    sessionExercise.setOrderIndex(exerciseRequest.getOrderIndex());
-                }
-                if (exerciseRequest.getNotes() != null) {
-                    sessionExercise.setNotes(exerciseRequest.getNotes());
-                }
-                if (exerciseRequest.getIsSuperset() != null) {
-                    sessionExercise.setIsSuperset(exerciseRequest.getIsSuperset());
-                }
-            } else {
-                // Create new session exercise
-                if (exerciseRequest.getExerciseId() == null) {
-                    throw new BadRequestException("Exercise ID is required for new session exercises");
-                }
-                Exercise exercise = exerciseRepository.findById(exerciseRequest.getExerciseId())
-                        .orElseThrow(() -> new ResourceNotFoundException("Exercise", "id", exerciseRequest.getExerciseId()));
-
-                sessionExercise = new SessionExercise();
-                sessionExercise.setWorkoutSession(session);
-                sessionExercise.setExercise(exercise);
-                sessionExercise.setSets(exerciseRequest.getSets());
-                sessionExercise.setRepetitions(exerciseRequest.getRepetitions());
-                sessionExercise.setWeightKg(exerciseRequest.getWeightKg());
-                sessionExercise.setRestTimeSeconds(exerciseRequest.getRestTimeSeconds());
-                sessionExercise.setOrderIndex(exerciseRequest.getOrderIndex());
-                sessionExercise.setNotes(exerciseRequest.getNotes());
-                sessionExercise.setIsSuperset(exerciseRequest.getIsSuperset() != null ? exerciseRequest.getIsSuperset() : false);
-            }
-            
-            sessionExerciseRepository.save(sessionExercise);
-        }
     }
 
     @Override
@@ -573,6 +563,22 @@ public class WorkoutPlanServiceImpl implements WorkoutPlanService {
 
         workoutPlanRepository.delete(plan);
         log.info("Deleted workout plan: {}", planId);
+    }
+
+    @Override
+    @Transactional
+    public void deleteSession(Long userId, Long planId, Long sessionId) {
+        log.info("Deleting session {} from plan {} for user: {}", sessionId, planId, userId);
+
+        WorkoutPlan plan = workoutPlanRepository.findByPlanIdAndUserUserId(planId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkoutPlan", "id", planId));
+
+        WorkoutSession session = workoutSessionRepository.findBySessionIdAndWorkoutPlanPlanId(sessionId, planId)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkoutSession", "id", sessionId));
+
+        plan.getWorkoutSessions().remove(session);
+        workoutSessionRepository.delete(session);
+        log.info("Deleted session {} from plan {}", sessionId, planId);
     }
 
     @Override
@@ -717,6 +723,55 @@ public class WorkoutPlanServiceImpl implements WorkoutPlanService {
 
         return workoutPlanRepository.findAll(spec, pageable)
                 .map(workoutPlanMapper::toSummaryResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public WorkoutPlanStatsResponse getPlanStats(Long userId) {
+        log.info("Getting workout plan stats for user: {}", userId);
+
+        long totalPlans = workoutPlanRepository.countByUserId(userId);
+        long activePlans = workoutPlanRepository.countActivePlansByUserId(userId);
+        long completedWorkouts = workoutSessionLogRepository.countTotalByUserId(userId);
+
+        // Calculate current streak from session logs
+        int currentStreak = calculateCurrentStreak(userId);
+
+        return WorkoutPlanStatsResponse.builder()
+                .totalPlans(totalPlans)
+                .activePlans(activePlans)
+                .completedWorkouts(completedWorkouts)
+                .currentStreak(currentStreak)
+                .build();
+    }
+
+    /**
+     * Calculate the current consecutive-day workout streak for a user.
+     * Counts backward from today/yesterday checking if a session log exists for each date.
+     */
+    private int calculateCurrentStreak(Long userId) {
+        List<WorkoutSessionLog> logs = workoutSessionLogRepository
+                .findByUserUserIdOrderByPerformedAtDesc(userId);
+        if (logs.isEmpty()) return 0;
+
+        java.util.Set<LocalDate> workoutDates = logs.stream()
+                .map(log1 -> log1.getPerformedAt()
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toLocalDate())
+                .collect(java.util.stream.Collectors.toSet());
+
+        LocalDate checkDate = LocalDate.now();
+        // Allow streak to start from yesterday if no workout today
+        if (!workoutDates.contains(checkDate)) {
+            checkDate = checkDate.minusDays(1);
+        }
+
+        int streak = 0;
+        while (workoutDates.contains(checkDate)) {
+            streak++;
+            checkDate = checkDate.minusDays(1);
+        }
+        return streak;
     }
 }
 

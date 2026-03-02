@@ -1,21 +1,16 @@
 package com.dev.backend.model.dto.request;
 
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class UpdateWorkoutSessionRequest {
-
-    private Long sessionId;
 
     @Size(max = 100, message = "Session name must not exceed 100 characters")
     private String sessionName;
@@ -37,7 +32,5 @@ public class UpdateWorkoutSessionRequest {
     private String coolDownNotes;
 
     private Boolean isRestDay;
-
-    @Valid
-    private List<UpdateSessionExerciseRequest> exercises;
 }
+

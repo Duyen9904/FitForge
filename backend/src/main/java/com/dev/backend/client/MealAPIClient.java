@@ -1,17 +1,22 @@
 package com.dev.backend.client;
 
 import com.dev.backend.model.dto.external.EdamamRecipeResponse;
+import io.netty.channel.ChannelOption;
+import io.netty.handler.timeout.ReadTimeoutHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Client for Edamam Recipe Search API
@@ -31,8 +36,15 @@ public class MealAPIClient {
             @Value("${edamam.api.app-key:#{null}}") String appKey) {
         this.appId = appId;
         this.appKey = appKey;
+
+        HttpClient httpClient = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
+                .doOnConnected(conn -> conn.addHandlerLast(
+                        new ReadTimeoutHandler(15, TimeUnit.SECONDS)));
+
         this.webClient = WebClient.builder()
                 .baseUrl(baseUrl)
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .build();
     }
 

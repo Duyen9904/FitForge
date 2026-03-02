@@ -37,6 +37,9 @@ public interface WorkoutPlanRepository extends JpaRepository<WorkoutPlan, Long>,
 
     boolean existsByPlanIdAndUserUserId(Long planId, Long userId);
 
+    @Query("SELECT COUNT(wp) FROM WorkoutPlan wp WHERE wp.user.userId = :userId AND wp.isActive = true")
+    long countActivePlansByUserId(@Param("userId") Long userId);
+
     /**
      * Check if a goal is used by any workout plan (UC-16.2)
      */

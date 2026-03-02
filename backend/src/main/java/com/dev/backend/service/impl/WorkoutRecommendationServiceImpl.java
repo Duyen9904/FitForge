@@ -3,12 +3,15 @@ package com.dev.backend.service.impl;
 import com.dev.backend.exception.BadRequestException;
 import com.dev.backend.exception.ResourceNotFoundException;
 import com.dev.backend.mapper.WorkoutPlanMapper;
+import com.dev.backend.model.dto.ai.*;
 import com.dev.backend.model.dto.profile.UserProfile;
 import com.dev.backend.model.dto.response.WorkoutSessionResponse;
 import com.dev.backend.model.dto.response.WorkoutTemplateSummaryResponse;
 import com.dev.backend.model.entity.*;
 import com.dev.backend.model.enums.OnboardingStepType;
+import com.dev.backend.model.enums.PlanGenerationStrategy;
 import com.dev.backend.repository.*;
+import com.dev.backend.service.AiService;
 import com.dev.backend.service.ExerciseAPIService;
 import com.dev.backend.service.UserProfileService;
 import com.dev.backend.service.WorkoutRecommendationService;
@@ -53,6 +56,8 @@ public class WorkoutRecommendationServiceImpl implements WorkoutRecommendationSe
     private final WorkoutPlanMapper workoutPlanMapper;
     private final MissedWorkoutRepository missedWorkoutRepository;
     private final MuscleGroupRepository muscleGroupRepository;
+    private final AiService aiService;
+    private final ExerciseRepository exerciseRepository;
 
     @Override
     @Transactional
@@ -73,9 +78,9 @@ public class WorkoutRecommendationServiceImpl implements WorkoutRecommendationSe
             fallbackPlan.setUser(user);
             fallbackPlan.setPlanName("Starter Plan - Personalized");
             fallbackPlan.setDescription("Baseline full body plan generated from your onboarding profile.");
-            String fallbackGroupName = "Full Body";
-            MuscleGroup fallbackMuscleGroup = muscleGroupRepository.findByGroupName(fallbackGroupName)
-                    .orElseThrow(() -> new BadRequestException("No MuscleGroup configured for target " + fallbackGroupName));
+            String fallbackCategory = "FULL_BODY";
+            MuscleGroup fallbackMuscleGroup = muscleGroupRepository.findFirstByCategory(fallbackCategory)
+                    .orElseThrow(() -> new BadRequestException("No MuscleGroup configured for category " + fallbackCategory));
             fallbackPlan.setMuscleGroup(fallbackMuscleGroup);
 
             int frequency = 3;
@@ -128,14 +133,14 @@ public class WorkoutRecommendationServiceImpl implements WorkoutRecommendationSe
         plan.setUser(user);
         plan.setPlanName(bestTemplate.getName() + " - Personalized");
         plan.setDescription(bestTemplate.getDescription());
-        final String templateGroupName;
+        final String templateCategory;
         if (bestTemplate.getPrimaryMuscleGroups() != null && !bestTemplate.getPrimaryMuscleGroups().isBlank()) {
-            templateGroupName = bestTemplate.getPrimaryMuscleGroups().split(",")[0].trim();
+            templateCategory = bestTemplate.getPrimaryMuscleGroups().split(",")[0].trim();
         } else {
-            templateGroupName = "Full Body";
+            templateCategory = "FULL_BODY";
         }
-        MuscleGroup templateMuscleGroup = muscleGroupRepository.findByGroupName(templateGroupName)
-                .orElseThrow(() -> new BadRequestException("No MuscleGroup configured for target " + templateGroupName));
+        MuscleGroup templateMuscleGroup = muscleGroupRepository.findFirstByCategory(templateCategory)
+                .orElseThrow(() -> new BadRequestException("No MuscleGroup configured for category " + templateCategory));
         plan.setMuscleGroup(templateMuscleGroup);
         plan.setFrequencyPerWeek(bestTemplate.getDaysPerWeek());
         plan.setDurationWeeks(12); // Default 12-week program
@@ -322,8 +327,18 @@ public class WorkoutRecommendationServiceImpl implements WorkoutRecommendationSe
             return existing.get();
         }
 
-        // Generate on-demand
+        // Generate on-demand — route based on strategy
         log.info("Generating new session for day {}", dayNumber);
+
+        if (plan.getGenerationStrategy() == PlanGenerationStrategy.MANUAL) {
+            throw new ResourceNotFoundException("No session exists for day " + dayNumber
+                    + ". Manual plans do not auto-generate sessions.");
+        }
+
+        if (plan.getGenerationStrategy() == PlanGenerationStrategy.AI) {
+            return generateSessionForDayViaAi(plan, dayNumber);
+        }
+        
         try {
             List<Exercise> exercises = exerciseAPIService.selectExercisesForPlan(plan);
             WorkoutSession session = workoutSessionGenerator.generateSessionForDay(plan, exercises, dayNumber);
@@ -366,6 +381,11 @@ public class WorkoutRecommendationServiceImpl implements WorkoutRecommendationSe
 
             if (existing.isPresent()) {
                 weekSessions.add(existing.get());
+            } else if (plan.getGenerationStrategy() == PlanGenerationStrategy.MANUAL) {
+                // Manual plans: skip days without user-created sessions
+                continue;
+            } else if (plan.getGenerationStrategy() == PlanGenerationStrategy.AI) {
+                weekSessions.add(generateSessionForDayViaAi(plan, currentDay));
             } else {
                 try {
                     List<Exercise> exercises = exerciseAPIService.selectExercisesForPlan(plan);
@@ -386,6 +406,150 @@ public class WorkoutRecommendationServiceImpl implements WorkoutRecommendationSe
         return weekSessions;
     }
 
+    /**
+     * Generate a single session for a specific day using AI.
+     * Calls AiService to generate a full week, then extracts the specific day.
+     */
+    private WorkoutSession generateSessionForDayViaAi(WorkoutPlan plan, int dayNumber) {
+        int weekNumber = ((dayNumber - 1) / 7) + 1;
+        int dayInWeek = ((dayNumber - 1) % 7) + 1; // 1-7
+
+        try {
+            UserProfile profile = userProfileService.buildProfile(plan.getUser().getUserId());
+
+            // Build equipment list from profile
+            List<String> availableEquipment;
+            if (profile.getEquipmentKeys() != null && !profile.getEquipmentKeys().isEmpty()) {
+                availableEquipment = profile.getEquipmentKeys();
+            } else {
+                availableEquipment = List.of("Bodyweight only");
+            }
+
+            List<String> targetMuscleGroups = new ArrayList<>();
+            if (plan.getMuscleGroup() != null) {
+                targetMuscleGroups.add(plan.getMuscleGroup().getGroupName());
+            }
+
+            AiPlanGenerationContext context = AiPlanGenerationContext.builder()
+                    .profile(profile)
+                    .availableEquipment(availableEquipment)
+                    .frequencyPerWeek(plan.getFrequencyPerWeek())
+                    .durationWeeks(plan.getDurationWeeks())
+                    .difficultyLevel(plan.getDifficultyLevel())
+                    .startDate(plan.getStartDate())
+                    .goalName(plan.getGoal() != null ? plan.getGoal().getGoalName() : null)
+                    .targetMuscleGroups(targetMuscleGroups)
+                    .weekNumber(weekNumber)
+                    .build();
+
+            AiWorkoutPlanResult aiResult = aiService.generateWorkoutPlan(context);
+
+            // Materialize all sessions from AI result for this week
+            if (aiResult.getSessions() != null) {
+                WorkoutSession targetSession = null;
+                for (AiSessionResult sessionResult : aiResult.getSessions()) {
+                    int absoluteDay = (weekNumber - 1) * 7 + sessionResult.getDayNumber();
+                    
+                    // Only save if session doesn't already exist
+                    Optional<WorkoutSession> existingSession = workoutSessionRepository.findByPlanIdAndDayNumber(
+                            plan.getPlanId(), absoluteDay);
+                    if (existingSession.isPresent()) {
+                        if (sessionResult.getDayNumber() == dayInWeek) {
+                            targetSession = existingSession.get();
+                        }
+                        continue;
+                    }
+
+                    WorkoutSession session = materializeAiSession(plan, sessionResult, absoluteDay);
+                    if (sessionResult.getDayNumber() == dayInWeek) {
+                        targetSession = session;
+                    }
+                }
+                if (targetSession != null) {
+                    return targetSession;
+                }
+            }
+
+            throw new RuntimeException("AI did not generate session for day " + dayNumber);
+        } catch (Exception e) {
+            log.error("AI session generation failed for day {}, falling back to rule-based", dayNumber, e);
+            // Fallback to rule-based
+            List<Exercise> exercises = exerciseAPIService.selectExercisesForPlan(plan);
+            WorkoutSession session = workoutSessionGenerator.generateSessionForDay(plan, exercises, dayNumber);
+            session.setWorkoutPlan(plan);
+            if (plan.getStartDate() != null) {
+                session.setScheduledDate(plan.getStartDate().plusDays(dayNumber - 1));
+            }
+            return workoutSessionRepository.save(session);
+        }
+    }
+
+    private WorkoutSession materializeAiSession(WorkoutPlan plan, AiSessionResult sessionResult, int absoluteDay) {
+        WorkoutSession session = new WorkoutSession();
+        session.setWorkoutPlan(plan);
+        session.setDayNumber(absoluteDay);
+        session.setSessionName(sessionResult.getSessionName());
+        session.setFocusArea(sessionResult.getFocusArea());
+        session.setEstimatedDuration(sessionResult.getEstimatedDuration());
+        session.setIsRestDay(sessionResult.getIsRestDay() != null ? sessionResult.getIsRestDay() : false);
+        session.setWarmUpNotes(sessionResult.getWarmUpNotes());
+        session.setCoolDownNotes(sessionResult.getCoolDownNotes());
+        if (plan.getStartDate() != null) {
+            session.setScheduledDate(plan.getStartDate().plusDays(absoluteDay - 1));
+        }
+
+        session = workoutSessionRepository.save(session);
+
+        if (sessionResult.getExercises() != null && !Boolean.TRUE.equals(sessionResult.getIsRestDay())) {
+            for (AiExerciseResult exerciseResult : sessionResult.getExercises()) {
+                // Resolve exercise by name (AI returns exerciseName)
+                Exercise exercise = null;
+                if (exerciseResult.getExerciseName() != null) {
+                    exercise = exerciseRepository.findByExerciseName(exerciseResult.getExerciseName()).orElse(null);
+                }
+                if (exercise == null && exerciseResult.getExerciseId() != null) {
+                    // Fallback: try by ID if present
+                    exercise = exerciseRepository.findById(exerciseResult.getExerciseId()).orElse(null);
+                }
+                if (exercise == null) {
+                    log.warn("AI referenced unknown exercise name='{}', ID={}. Skipping.",
+                            exerciseResult.getExerciseName(), exerciseResult.getExerciseId());
+                    continue;
+                }
+
+                SessionExercise sessionExercise = new SessionExercise();
+                sessionExercise.setWorkoutSession(session);
+                sessionExercise.setExercise(exercise);
+                sessionExercise.setSets(exerciseResult.getSets() != null ? exerciseResult.getSets() : 3);
+                sessionExercise.setRepetitions(parseRepetitions(exerciseResult.getRepetitions()));
+                sessionExercise.setWeightKg(exerciseResult.getWeightKg() != null ? exerciseResult.getWeightKg().floatValue() : null);
+                sessionExercise.setRestTimeSeconds(exerciseResult.getRestTimeSeconds() != null ? exerciseResult.getRestTimeSeconds() : 60);
+                sessionExercise.setOrderIndex(exerciseResult.getOrderIndex() != null ? exerciseResult.getOrderIndex() : 0);
+                sessionExercise.setNotes(exerciseResult.getNotes());
+                sessionExercise.setIsSuperset(false);
+
+                session.getSessionExercises().add(sessionExercise);
+            }
+            workoutSessionRepository.save(session);
+        }
+
+        return session;
+    }
+
+
+
+    private Integer parseRepetitions(String reps) {
+        if (reps == null || reps.isBlank()) return 10;
+        try {
+            return Integer.parseInt(reps.trim());
+        } catch (NumberFormatException e) {
+            String digits = reps.replaceAll("[^0-9].*", "").trim();
+            if (!digits.isEmpty()) {
+                try { return Integer.parseInt(digits); } catch (NumberFormatException ignored) {}
+            }
+            return 10;
+        }
+    }
     @Override
     @Transactional
     public List<WorkoutSessionResponse> getWeekSessionsWithCompletion(Long userId, Long planId, int weekNumber) {

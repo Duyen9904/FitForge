@@ -10,6 +10,18 @@ public enum OnboardingStepType {
     
     /** Numeric inputs for weight, height */
     BODY_METRICS,
+
+    /** Single select gender (Female / Male) */
+    GENDER,
+
+    /** Numeric input for age */
+    AGE,
+
+    /** Numeric input for weight (kg) */
+    WEIGHT,
+
+    /** Numeric input for height (cm) */
+    HEIGHT,
     
     /** Single select from admin-configured fitness level options */
     FITNESS_LEVEL,
@@ -36,8 +48,8 @@ public enum OnboardingStepType {
     public OnboardingInputType getInputType() {
         return switch (this) {
             case PERSONAL_INFO -> OnboardingInputType.TEXT;
-            case BODY_METRICS -> OnboardingInputType.NUMBER;
-            case FITNESS_LEVEL -> OnboardingInputType.SINGLE_CHOICE;
+            case BODY_METRICS, AGE, WEIGHT, HEIGHT -> OnboardingInputType.NUMBER;
+            case GENDER, FITNESS_LEVEL -> OnboardingInputType.SINGLE_CHOICE;
             case FITNESS_GOAL, EQUIPMENT, SCHEDULE, HEALTH_LIMITATIONS -> OnboardingInputType.MULTIPLE_CHOICE;
             case NOTIFICATIONS -> OnboardingInputType.TOGGLE;
         };

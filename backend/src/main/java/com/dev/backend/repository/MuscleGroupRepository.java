@@ -11,5 +11,7 @@ public interface MuscleGroupRepository extends JpaRepository<MuscleGroup, Long> 
 
     Optional<MuscleGroup> findByGroupName(String groupName);
 
+    Optional<MuscleGroup> findFirstByCategory(String category);
+
     boolean existsByGroupName(String groupName);
 }

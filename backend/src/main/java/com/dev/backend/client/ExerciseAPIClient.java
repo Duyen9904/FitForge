@@ -1,16 +1,21 @@
 package com.dev.backend.client;
 
 import com.dev.backend.model.dto.external.ExerciseDBResponse;
+import io.netty.channel.ChannelOption;
+import io.netty.handler.timeout.ReadTimeoutHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.netty.http.client.HttpClient;
 import reactor.util.retry.Retry;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Client for ExerciseDB API (RapidAPI)
@@ -30,8 +35,15 @@ public class ExerciseAPIClient {
             @Value("${exercisedb.api.host:exercisedb.p.rapidapi.com}") String apiHost) {
         this.apiKey = apiKey;
         this.apiHost = apiHost;
+
+        HttpClient httpClient = HttpClient.create()
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
+                .doOnConnected(conn -> conn.addHandlerLast(
+                        new ReadTimeoutHandler(15, TimeUnit.SECONDS)));
+
         this.webClient = WebClient.builder()
                 .baseUrl(baseUrl)
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .build();
     }
 

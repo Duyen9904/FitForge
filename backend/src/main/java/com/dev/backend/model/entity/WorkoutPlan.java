@@ -1,5 +1,6 @@
 package com.dev.backend.model.entity;
 
+import com.dev.backend.model.enums.PlanGenerationStrategy;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
@@ -93,6 +94,15 @@ public class WorkoutPlan extends BaseEntity {
 
     @Column(nullable = false)
     private Boolean isActive = true;
+
+    /**
+     * Determines which strategy to use for on-demand session generation:
+     * MANUAL — no auto-generation (user creates sessions);
+     * AI — AiService; RULE_BASED — WorkoutSessionGenerator.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private PlanGenerationStrategy generationStrategy = PlanGenerationStrategy.MANUAL;
 
     /**
      * The date when the user intends to start this workout plan.

@@ -3,8 +3,16 @@ package com.dev.backend.mapper;
 import com.dev.backend.model.dto.request.CreateSessionExerciseRequest;
 import com.dev.backend.model.dto.request.CreateWorkoutPlanRequest;
 import com.dev.backend.model.dto.request.CreateWorkoutSessionRequest;
+import com.dev.backend.model.dto.request.UpdateSessionExerciseRequest;
+import com.dev.backend.model.dto.request.UpdateWorkoutPlanRequest;
+import com.dev.backend.model.dto.request.UpdateWorkoutSessionRequest;
+import com.dev.backend.model.enums.PlanGenerationStrategy;
 import com.dev.backend.model.dto.response.*;
 import com.dev.backend.model.entity.*;
+import com.dev.backend.repository.ExerciseRepository;
+import com.dev.backend.repository.GoalRepository;
+import com.dev.backend.repository.MuscleGroupRepository;
+import com.dev.backend.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -35,6 +43,7 @@ public class WorkoutPlanMapper {
         plan.setAiGenerated(false);
         plan.setAllowWorkoutSwaps(request.getAllowWorkoutSwaps() != null ? request.getAllowWorkoutSwaps() : true);
         plan.setIsActive(true);
+        plan.setGenerationStrategy(PlanGenerationStrategy.MANUAL);
         if (request.getWorkoutDates() != null && !request.getWorkoutDates().isEmpty()) {
             plan.setScheduledWorkoutDates(new ArrayList<>(request.getWorkoutDates()));
         }
@@ -68,6 +77,112 @@ public class WorkoutPlanMapper {
         sessionExercise.setNotes(request.getNotes());
         sessionExercise.setIsSuperset(request.getIsSuperset() != null ? request.getIsSuperset() : false);
         return sessionExercise;
+    }
+
+    // ── Partial-update helpers (single source of truth) ──────────────────────
+
+    /**
+     * Apply non-null fields from the update request to the plan entity.
+     * Resolves Goal and MuscleGroup via repositories when their IDs are provided.
+     */
+    public void applyPartialUpdate(WorkoutPlan plan,
+                                   UpdateWorkoutPlanRequest request,
+                                   GoalRepository goalRepository,
+                                   MuscleGroupRepository muscleGroupRepository) {
+        if (request.getPlanName() != null) {
+            plan.setPlanName(request.getPlanName());
+        }
+        if (request.getDescription() != null) {
+            plan.setDescription(request.getDescription());
+        }
+        if (request.getGoalId() != null) {
+            Goal goal = goalRepository.findById(request.getGoalId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Goal", "id", request.getGoalId()));
+            plan.setGoal(goal);
+        }
+        if (request.getMuscleGroupId() != null) {
+            MuscleGroup muscleGroup = muscleGroupRepository.findById(request.getMuscleGroupId())
+                    .orElseThrow(() -> new ResourceNotFoundException("MuscleGroup", "id", request.getMuscleGroupId()));
+            plan.setMuscleGroup(muscleGroup);
+        }
+        if (request.getFrequencyPerWeek() != null) {
+            plan.setFrequencyPerWeek(request.getFrequencyPerWeek());
+        }
+        if (request.getDurationWeeks() != null) {
+            plan.setDurationWeeks(request.getDurationWeeks());
+        }
+        if (request.getDifficultyLevel() != null) {
+            plan.setDifficultyLevel(request.getDifficultyLevel().name());
+        }
+        if (request.getAllowWorkoutSwaps() != null) {
+            plan.setAllowWorkoutSwaps(request.getAllowWorkoutSwaps());
+        }
+        if (request.getWorkoutDates() != null) {
+            plan.getScheduledWorkoutDates().clear();
+            plan.getScheduledWorkoutDates().addAll(request.getWorkoutDates());
+        }
+    }
+
+    /**
+     * Apply non-null fields from the update request to the session entity.
+     */
+    public void applyPartialUpdate(WorkoutSession session, UpdateWorkoutSessionRequest request) {
+        if (request.getSessionName() != null) {
+            session.setSessionName(request.getSessionName());
+        }
+        if (request.getDayNumber() != null) {
+            session.setDayNumber(request.getDayNumber());
+        }
+        if (request.getFocusArea() != null) {
+            session.setFocusArea(request.getFocusArea());
+        }
+        if (request.getEstimatedDuration() != null) {
+            session.setEstimatedDuration(request.getEstimatedDuration());
+        }
+        if (request.getWarmUpNotes() != null) {
+            session.setWarmUpNotes(request.getWarmUpNotes());
+        }
+        if (request.getCoolDownNotes() != null) {
+            session.setCoolDownNotes(request.getCoolDownNotes());
+        }
+        if (request.getIsRestDay() != null) {
+            session.setIsRestDay(request.getIsRestDay());
+        }
+    }
+
+    /**
+     * Apply non-null fields from the update request to the session exercise entity.
+     * Resolves Exercise via repository when exerciseId is provided.
+     */
+    public void applyPartialUpdate(SessionExercise sessionExercise,
+                                   UpdateSessionExerciseRequest request,
+                                   ExerciseRepository exerciseRepository) {
+        if (request.getExerciseId() != null) {
+            Exercise exercise = exerciseRepository.findById(request.getExerciseId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Exercise", "id", request.getExerciseId()));
+            sessionExercise.setExercise(exercise);
+        }
+        if (request.getSets() != null) {
+            sessionExercise.setSets(request.getSets());
+        }
+        if (request.getRepetitions() != null) {
+            sessionExercise.setRepetitions(request.getRepetitions());
+        }
+        if (request.getWeightKg() != null) {
+            sessionExercise.setWeightKg(request.getWeightKg());
+        }
+        if (request.getRestTimeSeconds() != null) {
+            sessionExercise.setRestTimeSeconds(request.getRestTimeSeconds());
+        }
+        if (request.getOrderIndex() != null) {
+            sessionExercise.setOrderIndex(request.getOrderIndex());
+        }
+        if (request.getNotes() != null) {
+            sessionExercise.setNotes(request.getNotes());
+        }
+        if (request.getIsSuperset() != null) {
+            sessionExercise.setIsSuperset(request.getIsSuperset());
+        }
     }
 
     public WorkoutPlanResponse toResponse(WorkoutPlan plan) {

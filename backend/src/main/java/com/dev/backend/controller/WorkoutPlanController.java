@@ -8,10 +8,12 @@ import com.dev.backend.model.dto.request.GenerateAIPlanRequest;
 import com.dev.backend.model.dto.request.GenerateRecommendedPlanRequest;
 import com.dev.backend.model.dto.request.RescheduleWorkoutSessionRequest;
 import com.dev.backend.model.dto.request.UpdateWorkoutPlanRequest;
+import com.dev.backend.model.dto.request.UpdateWorkoutSessionRequest;
 import com.dev.backend.model.dto.request.UpdateSessionExerciseRequest;
 import com.dev.backend.model.dto.response.ApiResponse;
 import com.dev.backend.model.dto.response.WorkoutPlanDetailResponse;
 import com.dev.backend.model.dto.response.WorkoutPlanResponse;
+import com.dev.backend.model.dto.response.WorkoutPlanStatsResponse;
 import com.dev.backend.model.dto.response.WorkoutPlanSummaryResponse;
 import com.dev.backend.model.dto.response.WorkoutSessionResponse;
 import com.dev.backend.model.dto.response.WorkoutTemplateSummaryResponse;
@@ -141,6 +143,19 @@ public class WorkoutPlanController {
         return ApiResponse.success(response, "Workout session rescheduled successfully");
     }
 
+    @Operation(summary = "Update a workout session",
+               description = "Update session-level metadata (name, focus area, notes, rest day, etc.). Performs a partial update; null fields are ignored.")
+    @PutMapping("/{planId}/sessions/{sessionId}")
+    public ApiResponse<WorkoutSessionResponse> updateSession(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long planId,
+            @PathVariable Long sessionId,
+            @Valid @RequestBody UpdateWorkoutSessionRequest request) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        WorkoutSessionResponse response = workoutPlanService.updateSession(userId, planId, sessionId, request);
+        return ApiResponse.success(response, "Workout session updated successfully");
+    }
+
     @Operation(summary = "Update an exercise in a session",
                description = "Update a single session exercise within a workout plan session. Performs a partial update; null fields are ignored.")
     @PutMapping("/{planId}/sessions/{sessionId}/exercises/{sessionExerciseId}")
@@ -210,6 +225,19 @@ public class WorkoutPlanController {
         return ApiResponse.success(null, "Workout plan deleted successfully");
     }
 
+    @Operation(summary = "Delete a workout session",
+               description = "Remove a session and all its exercises from a workout plan.")
+    @DeleteMapping("/{planId}/sessions/{sessionId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public ApiResponse<Void> deleteSession(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long planId,
+            @PathVariable Long sessionId) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        workoutPlanService.deleteSession(userId, planId, sessionId);
+        return ApiResponse.success(null, "Workout session deleted successfully");
+    }
+
     @Operation(summary = "Delete an exercise from a session",
                description = "Remove a single session exercise from a workout session within a workout plan.")
     @DeleteMapping("/{planId}/sessions/{sessionId}/exercises/{sessionExerciseId}")
@@ -246,6 +274,15 @@ public class WorkoutPlanController {
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         Long userId = Long.parseLong(jwt.getSubject());
         Page<WorkoutPlanSummaryResponse> response = workoutPlanService.getUserPlans(userId, activeOnly, pageable);
+        return ApiResponse.success(response);
+    }
+
+    @Operation(summary = "Get workout plan stats", description = "Get aggregate stats for the authenticated user's workout plans including total plans, active plans, completed workouts, and current streak")
+    @GetMapping("/summary")
+    public ApiResponse<WorkoutPlanStatsResponse> getPlanStats(
+            @AuthenticationPrincipal Jwt jwt) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        WorkoutPlanStatsResponse response = workoutPlanService.getPlanStats(userId);
         return ApiResponse.success(response);
     }
 

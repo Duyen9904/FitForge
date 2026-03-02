@@ -6,11 +6,13 @@ import com.dev.backend.model.dto.request.CreateWorkoutSessionRequest;
 import com.dev.backend.model.dto.request.GenerateAIPlanRequest;
 import com.dev.backend.model.dto.request.UpdateWorkoutPlanRequest;
 import com.dev.backend.model.dto.request.UpdateSessionExerciseRequest;
+import com.dev.backend.model.dto.request.UpdateWorkoutSessionRequest;
 import com.dev.backend.model.dto.request.RescheduleWorkoutSessionRequest;
 import com.dev.backend.model.dto.request.WorkoutPlanFilterRequest;
 import com.dev.backend.model.dto.response.WorkoutPlanDetailResponse;
 import com.dev.backend.model.dto.response.WorkoutPlanResponse;
 import com.dev.backend.model.dto.response.WorkoutPlanSummaryResponse;
+import com.dev.backend.model.dto.response.WorkoutPlanStatsResponse;
 import com.dev.backend.model.dto.response.WorkoutSessionResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -46,6 +48,12 @@ public interface WorkoutPlanService {
     WorkoutSessionResponse addExercises(Long userId, Long planId, Long sessionId, List<CreateSessionExerciseRequest> exercises);
 
     /**
+     * Update a workout session's metadata (name, focus area, notes, etc.).
+     * Performs a partial update; null fields in the request are ignored.
+     */
+    WorkoutSessionResponse updateSession(Long userId, Long planId, Long sessionId, UpdateWorkoutSessionRequest request);
+
+    /**
      * Get workout plan details (UC-2.4)
      */
     WorkoutPlanDetailResponse getPlanById(Long userId, Long planId);
@@ -59,6 +67,12 @@ public interface WorkoutPlanService {
      * Delete a workout plan (UC-2.6)
      */
     void deletePlan(Long userId, Long planId);
+
+    /**
+     * Delete a workout session from a plan.
+     * Removes the session and all its exercises via cascade.
+     */
+    void deleteSession(Long userId, Long planId, Long sessionId);
 
     /**
      * Duplicate an existing workout plan (UC-2.7)
@@ -75,6 +89,12 @@ public interface WorkoutPlanService {
      * Filter workout plans (UC-14.2)
      */
     Page<WorkoutPlanSummaryResponse> filterPlans(Long userId, WorkoutPlanFilterRequest filter, Pageable pageable);
+
+    /**
+     * Get aggregate stats for a user's workout plans.
+     * Returns total plans, active plans, completed workouts, and current streak.
+     */
+    WorkoutPlanStatsResponse getPlanStats(Long userId);
 
     /**
      * Reschedule an upcoming (not-yet-missed) workout session to a new date.

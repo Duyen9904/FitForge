@@ -56,6 +56,20 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long>, JpaSp
     long countByMuscleGroupCategory(@Param("category") String category);
 
     /**
+     * Find exercises by muscle group category (e.g. "CHEST", "BACK", "LEGS").
+     * Used by AI agent tool to discover available exercises in the local DB.
+     */
+    @Query("SELECT DISTINCT e FROM Exercise e " +
+           "JOIN e.exerciseMuscleGroups emg " +
+           "WHERE UPPER(emg.muscleGroup.category) = UPPER(:category)")
+    List<Exercise> findByMuscleGroupCategory(@Param("category") String category);
+
+    /**
+     * Find exercises by equipment category (e.g. "Barbell", "Dumbbell", "Body Weight").
+     */
+    List<Exercise> findByEquipmentCategoryIgnoreCase(String equipmentCategory);
+
+    /**
      * Check if exercise is used in any workout session (UC-16.1)
      */
     @Query("SELECT CASE WHEN COUNT(se) > 0 THEN true ELSE false END FROM SessionExercise se WHERE se.exercise.exerciseId = :exerciseId")

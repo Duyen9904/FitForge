@@ -12,8 +12,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UpdateSessionExerciseRequest {
 
-    private Long sessionExerciseId;
-
     private Long exerciseId;
 
     @Min(value = 1, message = "Sets must be at least 1")

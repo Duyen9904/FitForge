@@ -34,7 +34,7 @@ public interface WorkoutProgressRepository extends JpaRepository<WorkoutProgress
            "ORDER BY wp.workoutDate DESC")
     List<WorkoutProgress> findByUserIdAndDateRange(@Param("userId") Long userId,
                                                     @Param("startDate") Instant startDate,
-                                                    @Param("endDate") Instant endDate);
+                                                    @Param(     "endDate") Instant endDate);
 
     @Query("SELECT wp FROM WorkoutProgress wp " +
            "WHERE wp.user.userId = :userId AND wp.completed = false " +
@@ -86,4 +86,18 @@ public interface WorkoutProgressRepository extends JpaRepository<WorkoutProgress
                                                 @Param("sessionId") Long sessionId,
                                                 @Param("start") Instant start,
                                                 @Param("end") Instant end);
+
+    // Dashboard queries
+
+    boolean existsByUserUserIdAndWorkoutSessionSessionIdAndCompletedTrue(Long userId, Long sessionId);
+
+    long countByUserUserIdAndWorkoutPlanPlanIdAndCompletedTrue(Long userId, Long planId);
+
+    @Query("SELECT CASE WHEN COUNT(wp) > 0 THEN true ELSE false END FROM WorkoutProgress wp " +
+           "WHERE wp.user.userId = :userId AND wp.completed = true " +
+           "AND wp.workoutDate BETWEEN :start AND :end")
+    boolean existsByUserUserIdAndWorkoutDateBetweenAndCompletedTrue(
+            @Param("userId") Long userId,
+            @Param("start") Instant start,
+            @Param("end") Instant end);
 }
