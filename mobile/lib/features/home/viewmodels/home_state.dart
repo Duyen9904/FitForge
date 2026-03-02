@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import '../models/home_dashboard_models.dart';
 import '../models/home_models.dart';
 
 part 'home_state.freezed.dart';
@@ -16,6 +17,7 @@ class HomeState with _$HomeState {
   const factory HomeState.loaded({
     required WeeklyWorkoutProgressResponse weeklyProgress,
     ProgressChartResponse? progressCharts,
+    HomeDashboardResponse? dashboard,
   }) = HomeLoaded;
 
   /// Error state

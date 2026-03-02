@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../viewmodels/create_workout_plan_state.dart';
 import '../../viewmodels/create_workout_plan_viewmodel.dart';
 
-/// Step 2: Sessions builder
+/// Step 2: Sessions builder — shows all 7 weekdays
 class SessionsStep extends ConsumerWidget {
   const SessionsStep({super.key});
+
+  static const _weekdayLabels = [
+    'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun',
+  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final state = ref.watch(createWorkoutPlanViewModelProvider);
-    final vm = ref.read(createWorkoutPlanViewModelProvider.notifier);
+    final state = ref.watch(activeWorkoutPlanViewModelProvider);
+    final vm = ref.read(activeWorkoutPlanViewModelProvider.notifier);
     final muscleGroupsAsync = ref.watch(muscleGroupsProvider);
 
     if (state is! CreateWorkoutPlanEditing) return const SizedBox.shrink();
@@ -31,27 +36,31 @@ class SessionsStep extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Workout Sessions',
+            'Weekly Schedule',
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: AppDimensions.spacing4),
           Text(
-            'Name your sessions and set focus areas',
+            'Tap a day to toggle rest. Set focus areas and dates for each workout.',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: AppColors.grey500,
             ),
           ),
           const SizedBox(height: AppDimensions.spacing24),
 
-          // Session cards
+          // Session cards for all 7 days
           ...state.sessions.asMap().entries.map((entry) {
             final index = entry.key;
             final session = entry.value;
+            final weekdayLabel = index < _weekdayLabels.length
+                ? _weekdayLabels[index]
+                : 'Day ${index + 1}';
             return _SessionCard(
               index: index,
               session: session,
+              weekdayLabel: weekdayLabel,
               focusAreas: focusAreas,
               isLoadingFocusAreas: muscleGroupsAsync.isLoading,
               onNameChanged: (name) => vm.updateSessionName(index, name),
@@ -60,6 +69,7 @@ class SessionsStep extends ConsumerWidget {
               onDurationChanged: (dur) =>
                   vm.updateSessionDuration(index, dur),
               onToggleRest: () => vm.toggleRestDay(index),
+              onDateChanged: (date) => vm.updateSessionDate(index, date),
             );
           }),
         ],
@@ -71,22 +81,26 @@ class SessionsStep extends ConsumerWidget {
 class _SessionCard extends StatefulWidget {
   final int index;
   final SessionDraft session;
+  final String weekdayLabel;
   final List<String> focusAreas;
   final bool isLoadingFocusAreas;
   final ValueChanged<String> onNameChanged;
   final ValueChanged<String?> onFocusChanged;
   final ValueChanged<int?> onDurationChanged;
   final VoidCallback onToggleRest;
+  final ValueChanged<DateTime?> onDateChanged;
 
   const _SessionCard({
     required this.index,
     required this.session,
+    required this.weekdayLabel,
     required this.focusAreas,
     required this.isLoadingFocusAreas,
     required this.onNameChanged,
     required this.onFocusChanged,
     required this.onDurationChanged,
     required this.onToggleRest,
+    required this.onDateChanged,
   });
 
   @override
@@ -107,25 +121,53 @@ class _SessionCardState extends State<_SessionCard> {
   }
 
   @override
+  void didUpdateWidget(covariant _SessionCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Sync controllers when rest toggle changes
+    if (oldWidget.session.isRestDay != widget.session.isRestDay) {
+      _nameController.text = widget.session.sessionName;
+      _durationController.text =
+          widget.session.estimatedDuration?.toString() ?? '';
+    }
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _durationController.dispose();
     super.dispose();
   }
 
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'No date';
+    return DateFormat('MMM d, yyyy').format(date);
+  }
+
+  Future<void> _pickDate(BuildContext context) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: widget.session.scheduledDate ?? now,
+      firstDate: now.subtract(const Duration(days: 30)),
+      lastDate: now.add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      widget.onDateChanged(picked);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isRest = widget.session.isRestDay;
 
     return Container(
       margin: const EdgeInsets.only(bottom: AppDimensions.spacing12),
       decoration: BoxDecoration(
-        color: widget.session.isRestDay
-            ? AppColors.grey50
-            : AppColors.white,
+        color: isRest ? AppColors.grey50 : AppColors.white,
         borderRadius: BorderRadius.circular(AppDimensions.radiusXLarge),
         border: Border.all(
-          color: widget.session.isRestDay
+          color: isRest
               ? AppColors.grey300
               : AppColors.primary.withValues(alpha: 0.3),
         ),
@@ -142,39 +184,61 @@ class _SessionCardState extends State<_SessionCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header row
+            // Header row: day badge, weekday + date, rest toggle
             Row(
               children: [
+                // Day number badge
                 Container(
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    gradient: widget.session.isRestDay
-                        ? null
-                        : AppColors.primaryGradient,
-                    color: widget.session.isRestDay
-                        ? AppColors.grey300
-                        : null,
+                    gradient: isRest ? null : AppColors.primaryGradient,
+                    color: isRest ? AppColors.grey300 : null,
                     borderRadius:
                         BorderRadius.circular(AppDimensions.radiusMedium),
                   ),
                   child: Center(
                     child: Text(
-                      '${widget.index + 1}',
-                      style: theme.textTheme.titleSmall?.copyWith(
+                      widget.weekdayLabel,
+                      style: theme.textTheme.labelSmall?.copyWith(
                         color: AppColors.white,
                         fontWeight: FontWeight.bold,
+                        fontSize: 11,
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: AppDimensions.spacing12),
+                // Day label + date
                 Expanded(
-                  child: Text(
-                    'Day ${widget.session.dayNumber}',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Day ${widget.session.dayNumber}',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => _pickDate(context),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.calendar_today,
+                                size: 13, color: AppColors.primary),
+                            const SizedBox(width: 4),
+                            Text(
+                              _formatDate(widget.session.scheduledDate),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 // Rest day toggle
@@ -188,7 +252,7 @@ class _SessionCardState extends State<_SessionCard> {
                       ),
                     ),
                     Switch.adaptive(
-                      value: widget.session.isRestDay,
+                      value: isRest,
                       onChanged: (_) => widget.onToggleRest(),
                       activeColor: AppColors.primary,
                     ),
@@ -197,7 +261,7 @@ class _SessionCardState extends State<_SessionCard> {
               ],
             ),
 
-            if (!widget.session.isRestDay) ...[
+            if (!isRest) ...[
               const SizedBox(height: AppDimensions.spacing12),
               // Session Name
               TextField(
@@ -334,7 +398,7 @@ class _SessionCardState extends State<_SessionCard> {
                     Icon(Icons.hotel, color: AppColors.grey400, size: 20),
                     const SizedBox(width: AppDimensions.spacing8),
                     Text(
-                      'Rest Day - Recovery & Stretch',
+                      'Rest Day — Recovery & Stretch',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: AppColors.grey500,
                         fontStyle: FontStyle.italic,

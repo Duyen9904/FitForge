@@ -30,6 +30,7 @@ class Routes {
   static String exerciseCategories(String typeName) => '/exercises/type/$typeName/categories';
   static const String exercisesByCategorySegment = 'type/:typeName/category/:categoryName';
   static String exercisesByCategory(String typeName, String categoryName) => '/exercises/type/$typeName/category/$categoryName';
+
   
   // Equipment routes (full paths)
   static const String equipmentList = '/equipment';
@@ -55,6 +56,7 @@ class Routes {
   static const String restTimer = '/rest-timer';
   static const String workoutCongratulations = '/workout-congratulations';
   static const String createWorkoutPlan = '/create-workout-plan';
+  static const String generateAIPlan = '/generate-ai-plan';
 }
 
 /// Route name constants
@@ -83,6 +85,7 @@ class RouteNames {
   // Equipment routes
   static const String equipmentList = 'equipmentList';
   static const String equipmentExercises = 'equipmentExercises';
+
   
   // Recommendation routes
   static const String workoutRecommendation = 'workoutRecommendation';
@@ -97,4 +100,5 @@ class RouteNames {
   static const String restTimer = 'restTimer';
   static const String workoutCongratulations = 'workoutCongratulations';
   static const String createWorkoutPlan = 'createWorkoutPlan';
+  static const String generateAIPlan = 'generateAIPlan';
 }

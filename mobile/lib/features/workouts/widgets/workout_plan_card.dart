@@ -5,7 +5,7 @@ import '../models/workout_plan_models.dart';
 import 'workout_plan_menu.dart';
 
 /// Card widget for displaying a workout plan summary
-/// Theme-based card with plan info and badges
+/// Premium gradient card with white-background badges
 class WorkoutPlanCard extends StatelessWidget {
   final WorkoutPlanSummaryResponse plan;
   final VoidCallback onTap;
@@ -27,6 +27,7 @@ class WorkoutPlanCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimensions.screenPaddingHorizontal,
@@ -36,27 +37,29 @@ class WorkoutPlanCard extends StatelessWidget {
         color: Colors.transparent,
         borderRadius: BorderRadius.circular(AppDimensions.radiusXLarge),
         clipBehavior: Clip.antiAlias,
-        elevation: 2,
-        shadowColor: AppColors.grey900.withValues(alpha: 0.1),
+        elevation: 0,
+        shadowColor: Colors.transparent,
         child: InkWell(
           onTap: onTap,
           child: Container(
             height: AppDimensions.spacing64 * 2.8,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppDimensions.radiusXLarge),
-              color: colorScheme.secondary,
-
+              color: colorScheme.surface,
+              border: Border.all(
+                color: colorScheme.onSurface.withValues(alpha: 0.08),
+              ),
             ),
             child: Stack(
               children: [
-                // Background pattern
+                // Background pattern icon
                 Positioned(
                   right: -AppDimensions.spacing20,
                   bottom: -AppDimensions.spacing20,
                   child: Icon(
                     _getMuscleGroupIcon(),
                     size: AppDimensions.iconXLarge * 2.5,
-                    color: colorScheme.onSurface.withValues(alpha: 0.05),
+                    color: colorScheme.primary.withValues(alpha: 0.05),
                   ),
                 ),
 
@@ -85,32 +88,29 @@ class WorkoutPlanCard extends StatelessWidget {
                               color: _getDifficultyColor(plan.difficultyLevel!),
                             ),
                           const Spacer(),
-                          // Active status text
+                          // Active status badge
                           if (onToggleActive != null)
                             InkWell(
                               onTap: onToggleActive,
-                              borderRadius: BorderRadius.circular(AppDimensions.spacing8),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: AppDimensions.spacing8,
-                                  vertical: AppDimensions.spacing4,
-                                ),
-                                child: Text(
-                                  plan.isActive ? 'Active' : 'Inactive',
-                                  style: theme.textTheme.labelMedium?.copyWith(
-                                    color: plan.isActive ? AppColors.success : AppColors.grey400,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
+                              borderRadius: BorderRadius.circular(
+                                  AppDimensions.radiusRound),
+                              child: _buildBadge(
+                                context,
+                                icon: plan.isActive
+                                    ? Icons.check_circle_outline
+                                    : Icons.radio_button_unchecked,
+                                label: plan.isActive ? 'Active' : 'Inactive',
+                                color: plan.isActive
+                                    ? AppColors.success
+                                    : AppColors.grey400,
                               ),
                             )
                           else if (plan.isActive)
-                            Text(
-                              'Active',
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                color: AppColors.success,
-                                fontWeight: FontWeight.w600,
-                              ),
+                            _buildBadge(
+                              context,
+                              icon: Icons.check_circle_outline,
+                              label: 'Active',
+                              color: AppColors.success,
                             ),
                           // Menu button
                           if (onDuplicate != null && onDelete != null) ...[
@@ -119,6 +119,7 @@ class WorkoutPlanCard extends StatelessWidget {
                               plan: plan,
                               onDuplicate: onDuplicate!,
                               onDelete: onDelete!,
+
                             ),
                           ],
                         ],
@@ -146,15 +147,13 @@ class WorkoutPlanCard extends StatelessWidget {
                             Icon(
                               _getMuscleGroupIcon(),
                               size: AppDimensions.iconSmall,
-                              color: colorScheme.onSurface
-                                  .withValues(alpha: 0.6),
+                              color: colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                             const SizedBox(width: AppDimensions.spacing4),
                             Text(
                               _formatMuscleGroup(plan.muscleGroup!.groupName),
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurface
-                                    .withValues(alpha: 0.6),
+                                color: colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
                             ),
                             const SizedBox(width: AppDimensions.spacing12),
@@ -163,15 +162,13 @@ class WorkoutPlanCard extends StatelessWidget {
                             Icon(
                               Icons.calendar_today,
                               size: AppDimensions.iconSmall,
-                              color: colorScheme.onSurface
-                                  .withValues(alpha: 0.6),
+                              color: colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                             const SizedBox(width: AppDimensions.spacing4),
                             Text(
                               '${plan.frequencyPerWeek}x/week',
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurface
-                                    .withValues(alpha: 0.6),
+                                color: colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
                             ),
                             const SizedBox(width: AppDimensions.spacing12),
@@ -180,15 +177,13 @@ class WorkoutPlanCard extends StatelessWidget {
                             Icon(
                               Icons.timer_outlined,
                               size: AppDimensions.iconSmall,
-                              color: colorScheme.onSurface
-                                  .withValues(alpha: 0.6),
+                              color: colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                             const SizedBox(width: AppDimensions.spacing4),
                             Text(
                               '${plan.durationWeeks} weeks',
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurface
-                                    .withValues(alpha: 0.6),
+                                color: colorScheme.onSurface.withValues(alpha: 0.6),
                               ),
                             ),
                           ],
@@ -219,9 +214,9 @@ class WorkoutPlanCard extends StatelessWidget {
         vertical: AppDimensions.spacing4,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(AppDimensions.radiusRound),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

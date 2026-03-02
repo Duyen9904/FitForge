@@ -2,6 +2,7 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:mobile/features/exercises/models/exercise_models.dart';
 
 import '../../../shared/enums/reschedule_reason.dart';
+import '../../../shared/enums/target_muscle_group.dart';
 
 part 'workout_plan_models.freezed.dart';
 part 'workout_plan_models.g.dart';
@@ -50,6 +51,7 @@ class WorkoutPlanResponse with _$WorkoutPlanResponse {
     @Default(true) bool isActive,
     String? createdAt,
     String? updatedAt,
+    @Default([]) List<String> scheduledWorkoutDates,
     @Default([]) List<WorkoutSessionResponse> sessions,
   }) = _WorkoutPlanResponse;
 
@@ -219,12 +221,10 @@ class CreateSessionExerciseRequest with _$CreateSessionExerciseRequest {
 @freezed
 class GenerateAIPlanRequest with _$GenerateAIPlanRequest {
   const factory GenerateAIPlanRequest({
-    int? goalId,
-    @Default(1) muscleGroupId,
-    int? frequencyPerWeek,
-    int? durationWeeks,
-    String? difficultyLevel,
-    String? additionalNotes,
+    required List<TargetMuscleGroup> targetMuscleGroups,
+    required int durationWeeks,
+    required String startDate,
+    String? additionalInformation,
   }) = _GenerateAIPlanRequest;
 
   factory GenerateAIPlanRequest.fromJson(Map<String, dynamic> json) =>
@@ -243,10 +243,28 @@ class UpdateWorkoutPlanRequest with _$UpdateWorkoutPlanRequest {
     int? durationWeeks,
     String? difficultyLevel,
     bool? allowWorkoutSwaps,
+    List<String>? workoutDates,
   }) = _UpdateWorkoutPlanRequest;
 
   factory UpdateWorkoutPlanRequest.fromJson(Map<String, dynamic> json) =>
       _$UpdateWorkoutPlanRequestFromJson(json);
+}
+
+/// Request to update a workout session (PUT /workout-plans/{planId}/sessions/{sessionId})
+@freezed
+class UpdateWorkoutSessionRequest with _$UpdateWorkoutSessionRequest {
+  const factory UpdateWorkoutSessionRequest({
+    String? sessionName,
+    int? dayNumber,
+    String? focusArea,
+    int? estimatedDuration,
+    String? warmUpNotes,
+    String? coolDownNotes,
+    bool? isRestDay,
+  }) = _UpdateWorkoutSessionRequest;
+
+  factory UpdateWorkoutSessionRequest.fromJson(Map<String, dynamic> json) =>
+      _$UpdateWorkoutSessionRequestFromJson(json);
 }
 
 /// Filter request for workout plans (GET /workout-plans/filter)
@@ -269,7 +287,6 @@ class WorkoutPlanFilterRequest with _$WorkoutPlanFilterRequest {
 @freezed
 class UpdateSessionExerciseRequest with _$UpdateSessionExerciseRequest {
   const factory UpdateSessionExerciseRequest({
-    int? sessionExerciseId,
     int? exerciseId,
     int? sets,
     int? repetitions,

@@ -457,4 +457,54 @@ class WorkoutPlanDetailViewModel
       rethrow;
     }
   }
+
+  /// Update plan metadata (name, description, goal, etc.)
+  Future<void> updatePlanMetadata(UpdateWorkoutPlanRequest request) async {
+    final currentState = state;
+    if (currentState is! WorkoutPlanDetailLoaded) return;
+
+    try {
+      await _repository.updatePlan(currentState.plan.planId, request);
+
+      // Reload the plan to reflect changes
+      await loadPlan(currentState.plan.planId);
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to update plan metadata',
+        name: 'WorkoutPlanDetailViewModel',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
+
+  /// Update session metadata (name, focus area, duration, etc.)
+  Future<void> updateSessionMetadata(
+      int sessionId, UpdateWorkoutSessionRequest request) async {
+    final currentState = state;
+    if (currentState is! WorkoutPlanDetailLoaded) return;
+
+    try {
+      await _repository.updateSession(
+        currentState.plan.planId,
+        sessionId,
+        request,
+      );
+
+      // Reload the current week to reflect changes
+      await loadSessionsForWeek(
+        currentState.plan.planId,
+        currentState.currentWeekNumber,
+      );
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to update session metadata',
+        name: 'WorkoutPlanDetailViewModel',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      rethrow;
+    }
+  }
 }

@@ -2,7 +2,7 @@
 class ApiConstants {
   ApiConstants._();
 
-  static const String baseUrl = 'http://192.168.1.15:8080/api/v1';
+  static const String baseUrl = 'http://192.168.1.16:8080/api/v1';
 
   // Auth endpoints
   static const String login = '/auth/login';
@@ -34,6 +34,8 @@ class ApiConstants {
       '/workout-plans/$planId/sessions';
   static String workoutSessionExercises(int planId, int sessionId) =>
       '/workout-plans/$planId/sessions/$sessionId/exercises';
+  static String workoutSessionById(int planId, int sessionId) =>
+      '/workout-plans/$planId/sessions/$sessionId';
 
   // Exercise endpoints
   static const String exercises = '/exercises';
@@ -61,6 +63,7 @@ class ApiConstants {
   // Workout Progress endpoints (WorkoutExecutionController)
   static const String workoutWeeklyProgress = '/workouts/weekly-progress';
   static const String workoutProgressCharts = '/workouts/progress/charts';
+  static const String workoutDashboard = '/workouts/dashboard';
 
   // Nutrition endpoints
   static const String nutrition = '/nutrition';
@@ -141,6 +144,6 @@ class ApiConstants {
       '/missed-workouts/$id/reschedule';
 
   // Timeouts
-  static const Duration connectTimeout = Duration(seconds: 30);
-  static const Duration receiveTimeout = Duration(seconds: 30);
+  static const Duration connectTimeout = Duration(seconds: 120);
+  static const Duration receiveTimeout = Duration(seconds: 120);
 }

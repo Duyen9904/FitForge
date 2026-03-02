@@ -11,6 +11,8 @@ import '../widgets/plan_hero_section.dart';
 import '../widgets/session_day_selector.dart';
 import '../widgets/session_exercise_list.dart';
 import '../widgets/edit_session_exercise_sheet.dart';
+import '../widgets/edit_plan_metadata_sheet.dart';
+import '../widgets/edit_session_metadata_sheet.dart';
 import '../widgets/start_workout_button.dart';
 import '../widgets/reschedule_workout_button.dart';
 
@@ -60,6 +62,11 @@ class _WorkoutPlanDetailScreenState
             ),
             const SizedBox(height: AppDimensions.spacing16),
             ListTile(
+              leading: Icon(Icons.edit, color: AppColors.grey700),
+              title: const Text('Edit'),
+              onTap: () => Navigator.pop(context, 'edit'),
+            ),
+            ListTile(
               leading: Icon(Icons.copy, color: AppColors.grey700),
               title: const Text('Duplicate'),
               onTap: () => Navigator.pop(context, 'duplicate'),
@@ -86,6 +93,9 @@ class _WorkoutPlanDetailScreenState
 
     if (result != null && mounted) {
       switch (result) {
+        case 'edit':
+          _showEditPlanMetadataSheet(context, plan);
+          break;
         case 'duplicate':
           await _handleDuplicate(context, plan);
           break;
@@ -243,6 +253,90 @@ class _WorkoutPlanDetailScreenState
     }
   }
 
+  void _showEditPlanMetadataSheet(
+      BuildContext context, WorkoutPlanResponse plan) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppDimensions.radiusXLarge)),
+      ),
+      builder: (_) => EditPlanMetadataSheet(
+        plan: plan,
+        onSave: (request) async {
+          try {
+            await ref
+                .read(workoutPlanDetailViewModelProvider.notifier)
+                .updatePlanMetadata(request);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Plan updated'),
+                  backgroundColor: AppColors.success,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Failed to update: ${e.toString()}'),
+                  backgroundColor: AppColors.error,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          }
+        },
+      ),
+    );
+  }
+
+  void _showEditSessionSheet(
+      BuildContext context, WorkoutSessionResponse session) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppDimensions.radiusXLarge)),
+      ),
+      builder: (_) => EditSessionMetadataSheet(
+        session: session,
+        onSave: (request) async {
+          try {
+            await ref
+                .read(workoutPlanDetailViewModelProvider.notifier)
+                .updateSessionMetadata(session.sessionId, request);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Session updated'),
+                  backgroundColor: AppColors.success,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Failed to update: ${e.toString()}'),
+                  backgroundColor: AppColors.error,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          }
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(workoutPlanDetailViewModelProvider);
@@ -329,6 +423,33 @@ class _WorkoutPlanDetailScreenState
                           .read(workoutPlanDetailViewModelProvider.notifier)
                           .goToNextWeek();
                     },
+                  ),
+                ),
+
+              // Session edit button
+              if (loadedSession != null && !loadedSession.isRestDay)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimensions.spacing20,
+                      vertical: AppDimensions.spacing4,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          loadedSession.sessionName,
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined, size: 20, color: AppColors.grey600),
+                          tooltip: 'Edit Session',
+                          onPressed: () => _showEditSessionSheet(context, loadedSession),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 

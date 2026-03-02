@@ -99,8 +99,8 @@ class PlanGenerationOptionsSheet extends StatelessWidget {
                         icon: Icons.psychology,
                         title: 'Generate with AI',
                         description: 'Customize parameters for AI generation',
-                        badgeText: 'Coming Soon',
-                        badgeColor: AppColors.grey400,
+                        badgeText: 'AI',
+                        badgeColor: AppColors.primary,
                         onTap: () {
                           Navigator.pop(context);
                           onOptionSelected(PlanGenerationOption.customAI);

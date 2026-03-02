@@ -27,7 +27,7 @@ class _PlanDetailsStepState extends ConsumerState<PlanDetailsStep> {
   @override
   void initState() {
     super.initState();
-    final state = ref.read(createWorkoutPlanViewModelProvider);
+    final state = ref.read(activeWorkoutPlanViewModelProvider);
     if (state is CreateWorkoutPlanEditing) {
       _nameController.text = state.planName;
       _descController.text = state.description;
@@ -44,8 +44,8 @@ class _PlanDetailsStepState extends ConsumerState<PlanDetailsStep> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final state = ref.watch(createWorkoutPlanViewModelProvider);
-    final vm = ref.read(createWorkoutPlanViewModelProvider.notifier);
+    final state = ref.watch(activeWorkoutPlanViewModelProvider);
+    final vm = ref.read(activeWorkoutPlanViewModelProvider.notifier);
     final goalsAsync = ref.watch(goalsProvider);
     final muscleGroupsAsync = ref.watch(muscleGroupsProvider);
 

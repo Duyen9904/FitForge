@@ -1,5 +1,6 @@
 import 'dart:developer' as developer;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/home_dashboard_models.dart';
 import '../repositories/home_repository.dart';
 import 'home_state.dart';
 
@@ -18,12 +19,15 @@ class HomeViewModel extends StateNotifier<HomeState> {
       : _repository = repository,
         super(const HomeState.initial());
 
-  /// Load the dashboard data (weekly progress)
+  /// Load the dashboard data (all-in-one API call)
   Future<void> loadDashboard() async {
     state = const HomeState.loading();
 
     try {
-      // Calculate this week's Monday (Mon-Sun week)
+      // Use the new dashboard endpoint
+      final dashboard = await _repository.getDashboard();
+
+      // Also load weekly progress for backward compatibility with the chart widget
       final now = DateTime.now();
       final monday = now.subtract(Duration(days: now.weekday - 1));
       final startDate =
@@ -31,7 +35,11 @@ class HomeViewModel extends StateNotifier<HomeState> {
 
       final weeklyProgress =
           await _repository.getWeeklyProgress(startDate: startDate);
-      state = HomeState.loaded(weeklyProgress: weeklyProgress);
+
+      state = HomeState.loaded(
+        weeklyProgress: weeklyProgress,
+        dashboard: dashboard,
+      );
     } catch (e, stackTrace) {
       developer.log(
         'Failed to load home dashboard',
@@ -39,7 +47,22 @@ class HomeViewModel extends StateNotifier<HomeState> {
         error: e,
         stackTrace: stackTrace,
       );
-      state = HomeState.error(e.toString());
+
+      // Fallback: try loading just weekly progress if dashboard fails
+      try {
+        final now = DateTime.now();
+        final monday = now.subtract(Duration(days: now.weekday - 1));
+        final startDate =
+            '${monday.year}-${monday.month.toString().padLeft(2, '0')}-${monday.day.toString().padLeft(2, '0')}';
+        final weeklyProgress =
+            await _repository.getWeeklyProgress(startDate: startDate);
+        state = HomeState.loaded(
+          weeklyProgress: weeklyProgress,
+          dashboard: const HomeDashboardResponse(),
+        );
+      } catch (fallbackError) {
+        state = HomeState.error(e.toString());
+      }
     }
   }
 
@@ -53,6 +76,7 @@ class HomeViewModel extends StateNotifier<HomeState> {
       state = HomeState.loaded(
         weeklyProgress: currentState.weeklyProgress,
         progressCharts: charts,
+        dashboard: currentState.dashboard,
       );
     } catch (e, stackTrace) {
       developer.log(

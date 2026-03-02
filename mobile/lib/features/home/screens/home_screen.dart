@@ -6,23 +6,19 @@ import '../../../core/constants/app_dimensions.dart';
 import '../../../core/config/routes.dart';
 import '../../auth/viewmodels/auth_viewmodel.dart';
 import '../../recommendation/viewmodels/workout_plan_viewmodel.dart';
-import '../../recommendation/viewmodels/workout_plan_state.dart';
 import '../../workouts/viewmodels/workout_plans_viewmodel.dart';
 import '../../workouts/viewmodels/workout_plans_state.dart';
-import '../../workouts/viewmodels/recommended_templates_viewmodel.dart';
-import '../../recommendation/viewmodels/nutrition_plan_viewmodel.dart';
-import '../../recommendation/viewmodels/nutrition_plan_state.dart';
 import '../viewmodels/home_viewmodel.dart';
 import '../viewmodels/home_state.dart';
-import '../models/home_models.dart';
 import '../widgets/welcome_header.dart';
 import '../widgets/weekly_progress_chart.dart';
-import '../widgets/featured_plan_card.dart';
-import '../widgets/trending_workout_card.dart';
-import '../widgets/workout_filter_chips.dart';
-import '../widgets/generate_workout_card.dart';
+import '../widgets/todays_workout_card.dart';
+import '../widgets/quick_stats_row.dart';
+import '../widgets/active_plans_section.dart';
+import '../widgets/quick_actions_grid.dart';
 import '../widgets/plan_generation_options_sheet.dart';
 import '../models/plan_generation_option.dart';
+import '../models/home_models.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -32,22 +28,12 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  String _selectedCategory = 'All Type';
-
-  static const List<String> _categories = [
-    'All Type',
-    'Chest',
-    'Cardio',
-    'Lower',
-  ];
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(homeViewModelProvider.notifier).loadDashboard();
       ref.read(workoutPlansViewModelProvider.notifier).loadPlans();
-      ref.read(nutritionPlanViewModelProvider.notifier).loadActivePlanIfExists();
     });
   }
 
@@ -55,20 +41,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authViewModelProvider);
     final homeState = ref.watch(homeViewModelProvider);
-    final workoutPlanState = ref.watch(workoutPlanViewModelProvider);
     final workoutPlansState = ref.watch(workoutPlansViewModelProvider);
-    final nutritionPlanState = ref.watch(nutritionPlanViewModelProvider);
 
     final userName = authState.maybeWhen(
       authenticated: (user) => user.username,
       orElse: () => 'User',
     );
 
+    final hasPlans = workoutPlansState.maybeWhen(
+      loaded: (plans, _, __, ___, ____, _____) => plans.isNotEmpty,
+      orElse: () => false,
+    );
+
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: () => ref.read(homeViewModelProvider.notifier).refresh(),
+          onRefresh: () async {
+            await ref.read(homeViewModelProvider.notifier).refresh();
+            ref.read(workoutPlansViewModelProvider.notifier).loadPlans();
+          },
           color: AppColors.primary,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -83,32 +75,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 WelcomeHeader(userName: userName),
                 const SizedBox(height: AppDimensions.spacing24),
 
-                // 2. Weekly Progress Chart or Generate Workout Button
-                _buildWeeklyChartOrGenerate(homeState, workoutPlansState),
+                // 2. Today's Workout Hero Card
+                _buildTodaysWorkout(homeState, hasPlans),
+                const SizedBox(height: AppDimensions.spacing20),
+
+                // 3. Quick Stats Row
+                _buildQuickStats(homeState),
                 const SizedBox(height: AppDimensions.spacing24),
 
-                // 3. Featured Plan Section
-                _buildSectionHeader(context, 'Featured plan', onSeeAll: () {
-                  context.push(Routes.workoutRecommendation);
-                }),
-                const SizedBox(height: AppDimensions.spacing12),
-                _buildFeaturedPlans(workoutPlanState, nutritionPlanState),
+                // 4. Weekly Progress Chart
+                _buildWeeklyChart(homeState),
                 const SizedBox(height: AppDimensions.spacing24),
 
-                // 4. Trending Workouts Section
-                _buildSectionHeader(context, 'Trending workouts', onSeeAll: () {
-                  context.push(Routes.workoutRecommendation);
-                }),
-                const SizedBox(height: AppDimensions.spacing12),
-                WorkoutFilterChips(
-                  categories: _categories,
-                  selectedCategory: _selectedCategory,
-                  onSelected: (category) {
-                    setState(() => _selectedCategory = category);
-                  },
+                // 5. Active Plans Section
+                _buildActivePlans(homeState),
+
+                // 6. Quick Actions Grid
+                QuickActionsGrid(
+                  onBrowseExercises: () => context.push(Routes.exercises),
+                  onLogMeasurement: () => context.push(Routes.recordMeasurement),
+                  onNutrition: () => context.push(Routes.nutrition),
+                  onWorkoutHistory: () => context.push(Routes.workouts),
                 ),
-                const SizedBox(height: AppDimensions.spacing12),
-                _buildTrendingWorkoutsGrid(),
                 const SizedBox(height: AppDimensions.spacing24),
               ],
             ),
@@ -118,57 +106,50 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  /// Section header with title and "See all" link
-  Widget _buildSectionHeader(
-    BuildContext context,
-    String title, {
-    VoidCallback? onSeeAll,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
+  /// Today's workout hero card
+  Widget _buildTodaysWorkout(HomeState homeState, bool hasPlans) {
+    return homeState.when(
+      initial: () => TodaysWorkoutCard(
+        hasPlans: hasPlans,
+        onGeneratePlan: _showPlanGenerationOptionsSheet,
+      ),
+      loading: () => Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(AppDimensions.radiusXLarge),
         ),
-        if (onSeeAll != null)
-          GestureDetector(
-            onTap: onSeeAll,
-            child: Text(
-              'See all',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w500,
-                  ),
-            ),
-          ),
-      ],
+        child: const Center(
+          child: CircularProgressIndicator(color: AppColors.primary),
+        ),
+      ),
+      loaded: (_, __, dashboard) => TodaysWorkoutCard(
+        session: dashboard?.todaySession,
+        hasPlans: hasPlans || (dashboard?.activePlans.isNotEmpty ?? false),
+        onStartWorkout: () {
+          final session = dashboard?.todaySession;
+          if (session != null && session.planId != null) {
+            context.push(Routes.workoutPlanDetail(session.planId!));
+          }
+        },
+        onGeneratePlan: _showPlanGenerationOptionsSheet,
+      ),
+      error: (_) => TodaysWorkoutCard(
+        hasPlans: hasPlans,
+        onGeneratePlan: _showPlanGenerationOptionsSheet,
+      ),
     );
   }
 
-  /// Weekly progress bar chart section or generate workout button
-  Widget _buildWeeklyChartOrGenerate(HomeState homeState, WorkoutPlansState workoutPlansState) {
-    // Check if user has any workout plans
-    final hasPlans = workoutPlansState.maybeWhen(
-      loaded: (plans, _, __, ___, ____, _____) => plans.isNotEmpty,
-      orElse: () => false,
+  /// Quick stats row
+  Widget _buildQuickStats(HomeState homeState) {
+    return homeState.maybeWhen(
+      loaded: (_, __, dashboard) => QuickStatsRow(stats: dashboard?.weeklyStats),
+      orElse: () => const QuickStatsRow(),
     );
-
-    // If no plans, show generate button instead of chart
-    if (!hasPlans) {
-      return GenerateWorkoutCard(
-        onTap: _showPlanGenerationOptionsSheet,
-      );
-    }
-
-    // Otherwise show the weekly progress chart
-    return _buildWeeklyChart(homeState);
   }
 
-  /// Weekly progress bar chart section
+  /// Weekly progress bar chart
   Widget _buildWeeklyChart(HomeState homeState) {
     return homeState.when(
       initial: () => _buildEmptyChart(),
@@ -182,7 +163,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
       ),
-      loaded: (weeklyProgress, _) => WeeklyProgressChart(
+      loaded: (weeklyProgress, _, __) => WeeklyProgressChart(
         weeklyProgress: weeklyProgress,
       ),
       error: (_) => _buildEmptyChart(),
@@ -205,155 +186,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  /// Featured plans horizontal list
-  Widget _buildFeaturedPlans(
-    WorkoutPlanState workoutState,
-    NutritionPlanState nutritionState,
-  ) {
-    final cards = <Widget>[];
-
-    // Workout plan or recommended templates cards
-    workoutState.maybeWhen(
-      loaded: (plan, _, __) {
-        // If there is an active/generated workout plan, keep existing behavior
-        cards.add(
-          FeaturedPlanCard(
-            title: plan.planName,
-            subtitle:
-                '${plan.durationWeeks ?? 0} weeks • ${plan.frequencyPerWeek ?? 0}x/week',
-            onTap: () => context.push(Routes.workoutRecommendation),
-            onStartPressed: () => context.push(Routes.workoutRecommendation),
+  /// Active plans section
+  Widget _buildActivePlans(HomeState homeState) {
+    return homeState.maybeWhen(
+      loaded: (_, __, dashboard) {
+        final plans = dashboard?.activePlans ?? [];
+        if (plans.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppDimensions.spacing24),
+          child: ActivePlansSection(
+            plans: plans,
+            onSeeAll: () => context.push(Routes.workouts),
+            onPlanTap: (planId) => context.push(Routes.workoutPlanDetail(planId)),
           ),
         );
       },
-      orElse: () {
-        // If no active plan, show recommended templates from backend
-        final templatesAsync =
-            ref.watch(recommendedWorkoutTemplatesProvider);
-
-        templatesAsync.when(
-          data: (templates) {
-            if (templates.isEmpty) {
-              cards.add(
-                FeaturedPlanCard(
-                  title: 'No recommended plans yet',
-                  subtitle: 'Complete onboarding to get suggestions',
-                  onTap: () => context.push(Routes.workoutRecommendation),
-                ),
-              );
-            } else {
-              for (final template in templates) {
-                final days = template.daysPerWeek;
-                final subtitleParts = <String>[];
-                if (template.goalType != null &&
-                    template.goalType!.trim().isNotEmpty) {
-                  subtitleParts.add(template.goalType!);
-                }
-                if (template.experienceLevel != null &&
-                    template.experienceLevel!.trim().isNotEmpty) {
-                  subtitleParts.add(template.experienceLevel!);
-                }
-                if (days != null && days > 0) {
-                  subtitleParts.add('$days days/week');
-                }
-
-                cards.add(
-                  FeaturedPlanCard(
-                    title: template.name,
-                    subtitle:
-                        subtitleParts.isNotEmpty ? subtitleParts.join(' • ') : null,
-                    onTap: () => context.push(Routes.workoutRecommendation),
-                    onStartPressed: () =>
-                        context.push(Routes.workoutRecommendation),
-                  ),
-                );
-              }
-            }
-          },
-          loading: () {
-            cards.add(
-              const FeaturedPlanCard(
-                title: 'Loading recommendations...',
-                subtitle: 'Fetching your best plans',
-              ),
-            );
-          },
-          error: (_, __) {
-            cards.add(
-              FeaturedPlanCard(
-                title: 'Recommended plans unavailable',
-                subtitle: 'Please try again later',
-                onTap: () => context.push(Routes.workoutRecommendation),
-              ),
-            );
-          },
-        );
-      },
-    );
-
-    // Nutrition plan card
-    nutritionState.maybeWhen(
-      loaded: (plan, _, __) {
-        cards.add(FeaturedPlanCard(
-          title: plan.planName,
-          subtitle: '${plan.dailyCalorieTarget ?? 0} cal/day',
-          onTap: () => context.push(Routes.nutritionRecommendation),
-          onStartPressed: () => context.push(Routes.nutritionRecommendation),
-        ));
-      },
-      orElse: () {
-        cards.add(FeaturedPlanCard(
-          title: 'Smart\nNutrition',
-          subtitle: 'Personalized meals',
-          onTap: () => context.push(Routes.nutritionRecommendation),
-        ));
-      },
-    );
-
-    return SizedBox(
-      height: 170,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: cards,
-      ),
-    );
-  }
-
-  /// Trending workouts grid
-  Widget _buildTrendingWorkoutsGrid() {
-    // Static trending workouts for now — will be dynamic when backend supports it
-    final trendingWorkouts = [
-      {'title': 'Full Body Burn', 'category': 'All Type'},
-      {'title': 'Chest Press', 'category': 'Chest'},
-      {'title': 'HIIT Cardio', 'category': 'Cardio'},
-      {'title': 'Leg Day', 'category': 'Lower'},
-      {'title': 'Push Up Challenge', 'category': 'Chest'},
-      {'title': 'Sprint Training', 'category': 'Cardio'},
-    ];
-
-    final filtered = _selectedCategory == 'All Type'
-        ? trendingWorkouts
-        : trendingWorkouts
-            .where((w) => w['category'] == _selectedCategory)
-            .toList();
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        mainAxisSpacing: AppDimensions.spacing12,
-        crossAxisSpacing: AppDimensions.spacing12,
-        childAspectRatio: 1.1,
-      ),
-      itemCount: filtered.length,
-      itemBuilder: (context, index) {
-        final workout = filtered[index];
-        return TrendingWorkoutCard(
-          title: workout['title']!,
-          onTap: () => context.push(Routes.workoutRecommendation),
-        );
-      },
+      orElse: () => const SizedBox.shrink(),
     );
   }
 
@@ -367,6 +215,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         onOptionSelected: (option) {
           if (option == PlanGenerationOption.fromOnboarding) {
             _showOnboardingConfirmation();
+          } else if (option == PlanGenerationOption.customAI) {
+            context.push(Routes.generateAIPlan);
           } else {
             _showComingSoonSnackbar(option);
           }

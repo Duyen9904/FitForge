@@ -116,6 +116,20 @@ class WorkoutPlanService {
     );
   }
 
+  /// Update an existing workout session
+  Future<ApiResponse<WorkoutSessionResponse>> updateSession(
+      int planId, int sessionId, UpdateWorkoutSessionRequest request) async {
+    final response = await apiClient.put(
+      ApiConstants.workoutSessionById(planId, sessionId),
+      data: request.toJson(),
+    );
+
+    return ApiResponse.fromJson(
+      response.data as Map<String, dynamic>,
+      (json) => WorkoutSessionResponse.fromJson(json as Map<String, dynamic>),
+    );
+  }
+
   /// UC-2.4: Get workout plan details
   Future<ApiResponse<WorkoutPlanResponse>> getPlanById(int planId) async {
     final response = await apiClient.get(
@@ -144,6 +158,19 @@ class WorkoutPlanService {
   Future<ApiResponse<void>> deletePlan(int planId) async {
     final response = await apiClient.delete(
       ApiConstants.workoutPlanById(planId),
+    );
+
+    final data = response.data;
+    if (data == null || data is! Map<String, dynamic>) {
+      return const ApiResponse(success: true, data: null);
+    }
+    return ApiResponse.fromJson(data, (_) {});
+  }
+
+  /// Delete a session from a workout plan
+  Future<ApiResponse<void>> deleteSession(int planId, int sessionId) async {
+    final response = await apiClient.delete(
+      ApiConstants.workoutSessionById(planId, sessionId),
     );
 
     final data = response.data;

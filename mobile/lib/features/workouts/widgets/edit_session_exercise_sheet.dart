@@ -136,7 +136,6 @@ class _EditSessionExerciseSheetState
     if (!_formKey.currentState!.validate()) return;
 
     final request = UpdateSessionExerciseRequest(
-      sessionExerciseId: widget.sessionExercise.sessionExerciseId,
       exerciseId: _selectedExerciseId,
       sets: _setsController.text.isNotEmpty
           ? int.tryParse(_setsController.text)

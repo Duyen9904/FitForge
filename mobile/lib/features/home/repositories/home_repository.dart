@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_response.dart';
 import '../models/home_models.dart';
+import '../models/home_dashboard_models.dart';
 import '../services/home_service.dart';
 
 /// Provider for HomeRepository
@@ -26,6 +27,12 @@ class HomeRepository {
       throw HomeException(message: 'No data in response');
     }
     return response.data as T;
+  }
+
+  /// Get aggregated home dashboard data
+  Future<HomeDashboardResponse> getDashboard({String? date}) async {
+    final response = await _service.getDashboard(date: date);
+    return _unwrapResponse(response);
   }
 
   /// Get weekly workout progress

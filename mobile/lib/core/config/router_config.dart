@@ -31,6 +31,7 @@ import '../../features/splash/screens/splash_screen.dart';
 import '../../features/workouts/screens/workout_plans_screen.dart';
 import '../../features/workouts/screens/workout_plan_detail_screen.dart';
 import '../../features/workouts/screens/create_workout_plan_screen.dart';
+import '../../features/workouts/screens/generate_ai_plan_screen.dart';
 import '../../ui/core/main_navigation_shell.dart';
 import '../state/app_flow_state.dart';
 import 'routes.dart';
@@ -340,6 +341,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.createWorkoutPlan,
         name: RouteNames.createWorkoutPlan,
         builder: (context, state) => const CreateWorkoutPlanScreen(),
+      ),
+
+      // Generate AI workout plan route
+      GoRoute(
+        path: Routes.generateAIPlan,
+        name: RouteNames.generateAIPlan,
+        builder: (context, state) => const GenerateAIPlanScreen(),
       ),
     ],
   );

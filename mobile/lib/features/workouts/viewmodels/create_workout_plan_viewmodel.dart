@@ -14,6 +14,13 @@ final createWorkoutPlanViewModelProvider = StateNotifierProvider.autoDispose<
   return CreateWorkoutPlanViewModel(repository: repository);
 });
 
+/// Active viewmodel provider — used by step widgets
+final activeWorkoutPlanViewModelProvider = StateNotifierProvider.autoDispose<
+    CreateWorkoutPlanViewModel, CreateWorkoutPlanState>((ref) {
+  final repository = ref.watch(workoutPlanRepositoryProvider);
+  return CreateWorkoutPlanViewModel(repository: repository);
+});
+
 /// FutureProvider for fetching all goals from the API
 final goalsProvider = FutureProvider.autoDispose<List<GoalResponse>>((ref) async {
   final service = ref.watch(workoutPlanServiceProvider);
@@ -39,8 +46,9 @@ class CreateWorkoutPlanViewModel
     extends StateNotifier<CreateWorkoutPlanState> {
   final WorkoutPlanRepository _repository;
 
-  CreateWorkoutPlanViewModel({required WorkoutPlanRepository repository})
-      : _repository = repository,
+  CreateWorkoutPlanViewModel({
+    required WorkoutPlanRepository repository,
+  })  : _repository = repository,
         super(CreateWorkoutPlanState.editing(startDate: DateTime.now()));
 
   // ======================== STEP NAVIGATION ========================
@@ -138,32 +146,52 @@ class CreateWorkoutPlanViewModel
     ],
   };
 
+  /// Generate 7 session drafts (one per weekday).
+  /// The first [frequencyPerWeek] days get workout templates;
+  /// the remaining days are marked as rest days.
+  /// Each session gets a scheduledDate based on the plan's startDate.
   void _generateSessionDrafts(CreateWorkoutPlanEditing current) {
-    final sessions = List.generate(
-      current.frequencyPerWeek,
-      (i) {
-        final template = _sessionTemplates[i % _sessionTemplates.length];
-        final focusArea = template['focus'] as String;
-        final exercises = (_sampleExercises[focusArea] ?? _sampleExercises['Chest']!)
-            .map((e) => ExerciseDraft(
-                  exerciseId: e['id'] as int,
-                  exerciseName: e['name'] as String,
-                  sets: 3,
-                  repetitions: 10,
-                  weightKg: 20.0,
-                  restTimeSeconds: 60,
-                ))
-            .toList();
+    final startDate = current.startDate ?? DateTime.now();
+    final freq = current.frequencyPerWeek;
+    int workoutIndex = 0;
 
+    final sessions = List.generate(7, (i) {
+      final date = startDate.add(Duration(days: i));
+      final isRest = i >= freq;
+
+      if (isRest) {
         return SessionDraft(
-          sessionName: template['name'] as String,
+          sessionName: 'Rest Day',
           dayNumber: i + 1,
-          focusArea: focusArea,
-          estimatedDuration: template['duration'] as int,
-          exercises: exercises,
+          scheduledDate: date,
+          isRestDay: true,
         );
-      },
-    );
+      }
+
+      final template = _sessionTemplates[workoutIndex % _sessionTemplates.length];
+      final focusArea = template['focus'] as String;
+      final exercises = (_sampleExercises[focusArea] ?? _sampleExercises['Chest']!)
+          .map((e) => ExerciseDraft(
+                exerciseId: e['id'] as int,
+                exerciseName: e['name'] as String,
+                sets: 3,
+                repetitions: 10,
+                weightKg: 20.0,
+                restTimeSeconds: 60,
+              ))
+          .toList();
+
+      workoutIndex++;
+      return SessionDraft(
+        sessionName: template['name'] as String,
+        dayNumber: i + 1,
+        scheduledDate: date,
+        focusArea: focusArea,
+        estimatedDuration: template['duration'] as int,
+        exercises: exercises,
+      );
+    });
+
     state = current.copyWith(
       currentStep: 1,
       sessions: sessions,
@@ -183,7 +211,21 @@ class CreateWorkoutPlanViewModel
   }
 
   void toggleRestDay(int index) {
-    _updateSession(index, (s) => s.isRestDay = !s.isRestDay);
+    _updateSession(index, (s) {
+      s.isRestDay = !s.isRestDay;
+      if (s.isRestDay) {
+        s.sessionName = 'Rest Day';
+        s.focusArea = null;
+        s.estimatedDuration = null;
+        s.exercises.clear();
+      } else {
+        s.sessionName = '';
+      }
+    });
+  }
+
+  void updateSessionDate(int index, DateTime? date) {
+    _updateSession(index, (s) => s.scheduledDate = date);
   }
 
   // ======================== STEP 3 – EXERCISES ========================
@@ -231,7 +273,6 @@ class CreateWorkoutPlanViewModel
     );
 
     try {
-      // 1. Create the plan
       final startDateStr = current.startDate != null
           ? '${current.startDate!.year}-${current.startDate!.month.toString().padLeft(2, '0')}-${current.startDate!.day.toString().padLeft(2, '0')}'
           : null;
@@ -251,13 +292,12 @@ class CreateWorkoutPlanViewModel
       final planResponse = await _repository.createPlan(planRequest);
       final planId = planResponse.planId;
 
-      // 2. Add sessions (skip rest days with no exercises)
+      // Add sessions
       for (final session in current.sessions) {
         state = CreateWorkoutPlanState.submitting(
           message: 'Adding session: ${session.sessionName}...',
         );
 
-        // Build exercise requests for this session
         final exerciseRequests = session.exercises
             .asMap()
             .entries

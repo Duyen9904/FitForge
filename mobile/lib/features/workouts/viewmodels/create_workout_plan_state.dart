@@ -4,16 +4,20 @@ part 'create_workout_plan_state.freezed.dart';
 
 /// Holds the draft data for each session while the user builds the plan
 class SessionDraft {
+  int? sessionId; // Non-null when editing an existing session
   String sessionName;
   int dayNumber;
+  DateTime? scheduledDate;
   String? focusArea;
   int? estimatedDuration;
   bool isRestDay;
   List<ExerciseDraft> exercises;
 
   SessionDraft({
+    this.sessionId,
     required this.sessionName,
     required this.dayNumber,
+    this.scheduledDate,
     this.focusArea,
     this.estimatedDuration,
     this.isRestDay = false,

@@ -8,14 +8,18 @@ import '../../../ui/core/states/state_widgets.dart';
 import '../../home/widgets/plan_generation_options_sheet.dart';
 import '../../home/models/plan_generation_option.dart';
 import '../../recommendation/viewmodels/workout_plan_viewmodel.dart';
-import '../models/workout_plan_models.dart';
 import '../viewmodels/workout_plans_state.dart';
 import '../viewmodels/workout_plans_viewmodel.dart';
-import '../widgets/workout_plan_card.dart';
+import '../widgets/workout_plans_header.dart';
+import '../widgets/workout_plans_filter_bar.dart';
+import '../widgets/workout_plans_difficulty_chips.dart';
+import '../widgets/workout_plans_empty_state.dart';
+import '../widgets/workout_plans_list.dart';
 import '../widgets/workout_plan_filter_sheet.dart';
 
 /// Workout Plans Screen
-/// Shows paginated list of user workout plans with difficulty filter chips.
+/// Premium paginated list of user workout plans with a gradient collapsing
+/// header, difficulty chips, shimmer loading, and entrance animations.
 class WorkoutPlansScreen extends ConsumerStatefulWidget {
   const WorkoutPlansScreen({super.key});
 
@@ -26,13 +30,10 @@ class WorkoutPlansScreen extends ConsumerStatefulWidget {
 class _WorkoutPlansScreenState extends ConsumerState<WorkoutPlansScreen> {
   final _scrollController = ScrollController();
 
-  static const _difficulties = ['Beginner', 'Intermediate', 'Advanced'];
-
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(workoutPlansViewModelProvider.notifier).loadPlans();
     });
@@ -43,6 +44,8 @@ class _WorkoutPlansScreenState extends ConsumerState<WorkoutPlansScreen> {
     _scrollController.dispose();
     super.dispose();
   }
+
+  // ─── Scroll & Data Handlers ───────────────────────────────────
 
   void _onScroll() {
     if (_scrollController.position.pixels >=
@@ -55,11 +58,66 @@ class _WorkoutPlansScreenState extends ConsumerState<WorkoutPlansScreen> {
     await ref.read(workoutPlansViewModelProvider.notifier).refresh();
   }
 
+  Future<void> _handleToggleActive(int planId) async {
+    try {
+      await ref
+          .read(workoutPlansViewModelProvider.notifier)
+          .togglePlanActive(planId);
+    } catch (e) {
+      if (mounted) _showErrorSnackbar('Failed to toggle active status: $e');
+    }
+  }
+
+  Future<void> _handleDuplicate(int planId, String newName) async {
+    try {
+      await ref
+          .read(workoutPlansViewModelProvider.notifier)
+          .duplicatePlan(planId, newName);
+      if (mounted) _showSuccessSnackbar('Workout plan duplicated successfully');
+    } catch (e) {
+      if (mounted) _showErrorSnackbar('Failed to duplicate plan: $e');
+    }
+  }
+
+  Future<void> _handleDelete(int planId) async {
+    try {
+      await ref
+          .read(workoutPlansViewModelProvider.notifier)
+          .deletePlan(planId);
+      if (mounted) _showSuccessSnackbar('Workout plan deleted successfully');
+    } catch (e) {
+      if (mounted) _showErrorSnackbar('Failed to delete plan: $e');
+    }
+  }
+
+  // ─── Snackbar Helpers ─────────────────────────────────────────
+
+  void _showSuccessSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.success,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showErrorSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  // ─── Bottom Sheet & Dialog Handlers ───────────────────────────
+
   void _showFilterSheet() {
     final currentState = ref.read(workoutPlansViewModelProvider);
-    final currentFilter = currentState is WorkoutPlansLoaded 
-        ? currentState.appliedFilter 
-        : null;
+    final currentFilter =
+        currentState is WorkoutPlansLoaded ? currentState.appliedFilter : null;
 
     showModalBottomSheet(
       context: context,
@@ -72,7 +130,9 @@ class _WorkoutPlansScreenState extends ConsumerState<WorkoutPlansScreen> {
         builder: (_, controller) => WorkoutPlanFilterSheet(
           initialFilter: currentFilter,
           onApply: (filter) {
-            ref.read(workoutPlansViewModelProvider.notifier).applyFilters(filter);
+            ref
+                .read(workoutPlansViewModelProvider.notifier)
+                .applyFilters(filter);
           },
           onClear: () {
             ref.read(workoutPlansViewModelProvider.notifier).clearFilters();
@@ -82,352 +142,6 @@ class _WorkoutPlansScreenState extends ConsumerState<WorkoutPlansScreen> {
     );
   }
 
-  Future<void> _handleDuplicate(int planId, String newName) async {
-    try {
-      await ref.read(workoutPlansViewModelProvider.notifier).duplicatePlan(planId, newName);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Workout plan duplicated successfully'),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to duplicate plan: ${e.toString()}'),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _handleDelete(int planId) async {
-    try {
-      await ref.read(workoutPlansViewModelProvider.notifier).deletePlan(planId);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Workout plan deleted successfully'),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete plan: ${e.toString()}'),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _handleToggleActive(int planId) async {
-    try {
-      await ref.read(workoutPlansViewModelProvider.notifier).togglePlanActive(planId);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to toggle active status: ${e.toString()}'),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final state = ref.watch(workoutPlansViewModelProvider);
-
-    return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
-      appBar: AppBar(
-        backgroundColor: AppColors.white,
-        elevation: 0,
-        title: Text(
-          'Workout Levels',
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add, color: AppColors.grey700),
-            onPressed: _showPlanGenerationOptionsSheet,
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Filter indicator
-          if (state is WorkoutPlansLoaded && state.appliedFilter != null)
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppDimensions.screenPaddingHorizontal,
-                vertical: AppDimensions.spacing8,
-              ),
-              color: AppColors.primary.withValues(alpha: 0.1),
-              child: Row(
-                children: [
-                  Icon(Icons.filter_alt, size: AppDimensions.iconSmall, color: AppColors.primary),
-                  const SizedBox(width: AppDimensions.spacing8),
-                  Text(
-                    'Filters applied',
-                    style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () {
-                      ref.read(workoutPlansViewModelProvider.notifier).clearFilters();
-                    },
-                    child: const Text('Clear'),
-                  ),
-                ],
-              ),
-            ),
-
-          // Difficulty filter chips
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppDimensions.screenPaddingHorizontal,
-              vertical: AppDimensions.spacing2,
-            ),
-            child: state.maybeWhen(
-              loaded: (plans, currentPage, totalPages, hasMore,
-                      selectedDifficulty, appliedFilter) =>
-                  _buildDifficultyChips(
-                      context, theme, colorScheme, selectedDifficulty),
-              orElse: () =>
-                  _buildDifficultyChips(context, theme, colorScheme, null),
-            ),
-          ),
-
-          const SizedBox(height: AppDimensions.spacing8),
-
-          // Content
-          Expanded(
-            child: state.when(
-              initial: () => Center(
-                child: Text(
-                  'Loading workout plans...',
-                  style: theme.textTheme.bodyMedium,
-                ),
-              ),
-              loading: () => Center(
-                child: CircularProgressIndicator(color: colorScheme.primary),
-              ),
-              loaded:
-                  (plans, currentPage, totalPages, hasMore, selectedDifficulty, appliedFilter) {
-                // Check if there are any active plans
-                final hasActivePlans = plans.any((p) => p.isActive);
-
-                // If no active plans, show generate button
-                if (!hasActivePlans) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppDimensions.screenPaddingHorizontal,
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.fitness_center,
-                            size: 80,
-                            color: AppColors.grey300,
-                          ),
-                          const SizedBox(height: AppDimensions.spacing24),
-                          Text(
-                            'No Active Workout Plan',
-                            style: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: AppDimensions.spacing8),
-                          Text(
-                            'Generate your first workout plan to get started',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: AppColors.grey500,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: AppDimensions.spacing32),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 56,
-                            child: ElevatedButton.icon(
-                              onPressed: _showPlanGenerationOptionsSheet,
-                              icon: Icon(Icons.auto_awesome),
-                              label: Text(
-                                'Generate Your First Workout',
-                                style: theme.textTheme.titleSmall?.copyWith(
-                                  color: AppColors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: AppColors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
-                                ),
-                                elevation: 2,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-
-                // Client-side filter by difficulty
-                final filteredPlans = selectedDifficulty == null
-                    ? plans
-                    : plans
-                        .where((p) =>
-                            p.difficultyLevel?.toUpperCase() ==
-                            selectedDifficulty.toUpperCase())
-                        .toList();
-
-                if (filteredPlans.isEmpty) {
-                  return EmptyState(
-                    icon: Icons.fitness_center,
-                    title: 'No workout plans found',
-                    description: selectedDifficulty != null
-                        ? 'No $selectedDifficulty plans available'
-                        : 'Create your first workout plan to get started',
-                  );
-                }
-
-                return RefreshIndicator(
-                  color: colorScheme.primary,
-                  onRefresh: _onRefresh,
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.only(
-                      bottom: AppDimensions.screenPaddingVertical,
-                    ),
-                    itemCount: filteredPlans.length + (hasMore ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index >= filteredPlans.length) {
-                        return Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(
-                                AppDimensions.spacing16),
-                            child: CircularProgressIndicator(
-                                color: colorScheme.primary),
-                          ),
-                        );
-                      }
-
-                      final plan = filteredPlans[index];
-                      return WorkoutPlanCard(
-                        plan: plan,
-                        onTap: () {
-                          context.push(
-                              Routes.workoutPlanDetail(plan.planId));
-                        },
-                        onToggleActive: () => _handleToggleActive(plan.planId),
-                        onDuplicate: (newName) => _handleDuplicate(plan.planId, newName),
-                        onDelete: () => _handleDelete(plan.planId),
-                      );
-                    },
-                  ),
-                );
-              },
-              error: (message) => ErrorState(
-                message: message,
-                onRetry: () => ref
-                    .read(workoutPlansViewModelProvider.notifier)
-                    .loadPlans(),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDifficultyChips(BuildContext context, ThemeData theme,
-      ColorScheme colorScheme, String? selectedDifficulty) {
-    final state = ref.watch(workoutPlansViewModelProvider);
-    final hasFilter = state is WorkoutPlansLoaded && state.appliedFilter != null;
-
-    return Row(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: _difficulties.map((difficulty) {
-                final isSelected = selectedDifficulty == difficulty;
-                return Padding(
-                  padding: const EdgeInsets.only(right: AppDimensions.spacing6),
-                  child: FilterChip(
-                    label: Text(
-                      difficulty,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: isSelected
-                            ? AppColors.white
-                            : AppColors.grey700,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                      ),
-                    ),
-                    selected: isSelected,
-                    onSelected: (_) {
-                      ref
-                          .read(workoutPlansViewModelProvider.notifier)
-                          .selectDifficulty(difficulty);
-                    },
-                    backgroundColor: AppColors.white,
-                    selectedColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusRound),
-                      side: BorderSide(
-                        color: isSelected
-                            ? AppColors.primary
-                            : AppColors.grey300,
-                      ),
-                    ),
-                    showCheckmark: false,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppDimensions.spacing6,
-                      vertical: AppDimensions.spacing6,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ),
-        IconButton(
-          icon: Icon(
-            Icons.filter_list,
-            color: hasFilter ? AppColors.primary : AppColors.grey700,
-          ),
-          onPressed: _showFilterSheet,
-        ),
-      ],
-    );
-  }
-
-  /// Show plan generation options bottom sheet
   void _showPlanGenerationOptionsSheet() {
     showModalBottomSheet(
       context: context,
@@ -439,6 +153,8 @@ class _WorkoutPlansScreenState extends ConsumerState<WorkoutPlansScreen> {
             context.push(Routes.createWorkoutPlan);
           } else if (option == PlanGenerationOption.fromOnboarding) {
             _showOnboardingConfirmation();
+          } else if (option == PlanGenerationOption.customAI) {
+            context.push(Routes.generateAIPlan);
           } else {
             _showComingSoonSnackbar(option);
           }
@@ -447,7 +163,6 @@ class _WorkoutPlansScreenState extends ConsumerState<WorkoutPlansScreen> {
     );
   }
 
-  /// Show confirmation dialog for onboarding-based generation
   void _showOnboardingConfirmation() {
     showDialog(
       context: context,
@@ -480,12 +195,10 @@ class _WorkoutPlansScreenState extends ConsumerState<WorkoutPlansScreen> {
     );
   }
 
-  /// Show coming soon snackbar for unavailable options
   void _showComingSoonSnackbar(PlanGenerationOption option) {
     final optionName = option == PlanGenerationOption.createOwn
         ? 'Manual plan creation'
         : 'Custom AI generation';
-    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('$optionName is coming soon!'),
@@ -495,7 +208,6 @@ class _WorkoutPlansScreenState extends ConsumerState<WorkoutPlansScreen> {
     );
   }
 
-  /// Generate workout plan from onboarding data
   void _generateWorkoutPlan() async {
     final now = DateTime.now();
     final picked = await showDatePicker(
@@ -508,11 +220,112 @@ class _WorkoutPlansScreenState extends ConsumerState<WorkoutPlansScreen> {
     if (picked == null || !mounted) return;
     final startDate =
         '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
-
-    // Call the API to generate the plan
     ref.read(workoutPlanViewModelProvider.notifier).generatePlan(startDate);
-
-    // Navigate to workout recommendation screen to show the generated plan
     context.push(Routes.workoutRecommendation);
+  }
+
+  // ─── Build ────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    final state = ref.watch(workoutPlansViewModelProvider);
+
+    return Scaffold(
+      // backgroundColor: AppColors.backgroundLight,
+      body: _buildBody(state),
+    );
+  }
+
+  Widget _buildBody(WorkoutPlansState state) {
+    final loadedState = state is WorkoutPlansLoaded ? state : null;
+    final selectedDifficulty = loadedState?.selectedDifficulty;
+    final appliedFilter = loadedState?.appliedFilter;
+    final totalPlans = loadedState?.plans.length ?? 0;
+    final activePlans =
+        loadedState?.plans.where((p) => p.isActive).length ?? 0;
+
+    Widget content = state.when(
+      initial: () => const WorkoutPlansShimmer(),
+      loading: () => const WorkoutPlansShimmer(),
+      loaded: (plans, currentPage, totalPages, hasMore, selectedDifficulty,
+          appliedFilter) {
+        final hasActivePlans = plans.any((p) => p.isActive);
+
+        if (!hasActivePlans) {
+          return WorkoutPlansEmptyState(
+            hasPlans: plans.isNotEmpty,
+            onGeneratePlan: _showPlanGenerationOptionsSheet,
+          );
+        }
+
+        return WorkoutPlansList(
+          plans: plans,
+          hasMore: hasMore,
+          selectedDifficulty: selectedDifficulty,
+          scrollController: _scrollController,
+          onRefresh: _onRefresh,
+          onToggleActive: () {},
+          onToggleActivePlan: _handleToggleActive,
+          onDuplicatePlan: _handleDuplicate,
+          onDeletePlan: _handleDelete,
+        );
+      },
+      error: (message) => SliverFillRemaining(
+        hasScrollBody: false,
+        child: ErrorState(
+          message: message,
+          onRetry: () =>
+              ref.read(workoutPlansViewModelProvider.notifier).loadPlans(),
+        ),
+      ),
+    );
+
+    Widget body = CustomScrollView(
+      controller: _scrollController,
+      slivers: [
+        WorkoutPlansHeader(
+          totalPlans: totalPlans,
+          activePlans: activePlans,
+          onAddPressed: _showPlanGenerationOptionsSheet,
+        ),
+        SliverToBoxAdapter(
+          child: WorkoutPlansFilterBar(
+            isVisible: appliedFilter != null,
+            onClear: () {
+              ref.read(workoutPlansViewModelProvider.notifier).clearFilters();
+            },
+          ),
+        ),
+        SliverToBoxAdapter(
+          child: WorkoutPlansDifficultyChips(
+            selectedDifficulty: selectedDifficulty,
+            hasActiveFilter: appliedFilter != null,
+            onDifficultySelected: (difficulty) {
+              ref
+                  .read(workoutPlansViewModelProvider.notifier)
+                  .selectDifficulty(difficulty);
+            },
+            onFilterTap: _showFilterSheet,
+          ),
+        ),
+        const SliverToBoxAdapter(
+          child: SizedBox(height: AppDimensions.spacing8),
+        ),
+        content,
+        const SliverToBoxAdapter(
+          child: SizedBox(height: AppDimensions.screenPaddingVertical),
+        ),
+      ],
+    );
+
+    if (loadedState != null && loadedState.plans.any((p) => p.isActive)) {
+      return RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: _onRefresh,
+        child: body,
+      );
+    }
+
+    return body;
   }
 }

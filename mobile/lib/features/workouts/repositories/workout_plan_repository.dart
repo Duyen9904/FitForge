@@ -82,6 +82,13 @@ class WorkoutPlanRepository {
     return _unwrapResponse(response);
   }
 
+  /// Update an existing workout session
+  Future<WorkoutSessionResponse> updateSession(
+      int planId, int sessionId, UpdateWorkoutSessionRequest request) async {
+    final response = await _service.updateSession(planId, sessionId, request);
+    return _unwrapResponse(response);
+  }
+
   /// UC-2.4: Get workout plan details
   Future<WorkoutPlanResponse> getPlanById(int planId) async {
     final response = await _service.getPlanById(planId);
@@ -97,6 +104,12 @@ class WorkoutPlanRepository {
   /// UC-2.6: Delete a workout plan
   Future<void> deletePlan(int planId) async {
     final response = await _service.deletePlan(planId);
+    _unwrapVoidResponse(response);
+  }
+
+  /// Delete a session from a workout plan (cascades to exercises)
+  Future<void> deleteSession(int planId, int sessionId) async {
+    final response = await _service.deleteSession(planId, sessionId);
     _unwrapVoidResponse(response);
   }
 

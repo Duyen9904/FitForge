@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../viewmodels/create_workout_plan_state.dart';
@@ -13,8 +14,8 @@ class ExercisesStep extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final state = ref.watch(createWorkoutPlanViewModelProvider);
-    final vm = ref.read(createWorkoutPlanViewModelProvider.notifier);
+    final state = ref.watch(activeWorkoutPlanViewModelProvider);
+    final vm = ref.read(activeWorkoutPlanViewModelProvider.notifier);
 
     if (state is! CreateWorkoutPlanEditing) return const SizedBox.shrink();
 
@@ -43,6 +44,9 @@ class ExercisesStep extends ConsumerWidget {
             final session = entry.value;
 
             if (session.isRestDay) {
+              final dateStr = session.scheduledDate != null
+                  ? ' · ${DateFormat('EEE, MMM d').format(session.scheduledDate!)}'
+                  : '';
               return Container(
                 margin: const EdgeInsets.only(bottom: AppDimensions.spacing12),
                 padding: const EdgeInsets.all(AppDimensions.spacing16),
@@ -57,7 +61,7 @@ class ExercisesStep extends ConsumerWidget {
                     Icon(Icons.hotel, color: AppColors.grey400, size: 20),
                     const SizedBox(width: AppDimensions.spacing8),
                     Text(
-                      '${session.sessionName} — Rest Day',
+                      'Day ${session.dayNumber}$dateStr — Rest Day',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: AppColors.grey500,
                         fontStyle: FontStyle.italic,
@@ -123,37 +127,66 @@ class _SessionExerciseCard extends StatelessWidget {
                 topRight: Radius.circular(AppDimensions.radiusXLarge),
               ),
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.fitness_center, color: AppColors.white, size: 20),
-                const SizedBox(width: AppDimensions.spacing8),
-                Expanded(
-                  child: Text(
-                    session.sessionName,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                if (session.focusArea != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppDimensions.spacing8,
-                      vertical: AppDimensions.spacing4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.white.withValues(alpha: 0.2),
-                      borderRadius:
-                          BorderRadius.circular(AppDimensions.radiusRound),
-                    ),
+                // Day info row
+                if (session.scheduledDate != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
                     child: Text(
-                      session.focusArea!,
+                      'Day ${session.dayNumber} · ${DateFormat('EEE, MMM d').format(session.scheduledDate!)}',
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: AppColors.white,
+                        color: AppColors.white.withValues(alpha: 0.8),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      'Day ${session.dayNumber}',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppColors.white.withValues(alpha: 0.8),
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
+                // Session name + focus area
+                Row(
+                  children: [
+                    Icon(Icons.fitness_center, color: AppColors.white, size: 20),
+                    const SizedBox(width: AppDimensions.spacing8),
+                    Expanded(
+                      child: Text(
+                        session.sessionName,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: AppColors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    if (session.focusArea != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimensions.spacing8,
+                          vertical: AppDimensions.spacing4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.white.withValues(alpha: 0.2),
+                          borderRadius:
+                              BorderRadius.circular(AppDimensions.radiusRound),
+                        ),
+                        child: Text(
+                          session.focusArea!,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppColors.white,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
