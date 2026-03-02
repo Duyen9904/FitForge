@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
+import '../../../core/config/routes.dart';
 import '../viewmodels/workout_execution_viewmodel.dart';
 import '../viewmodels/workout_execution_state.dart';
 import '../widgets/congratulations_trophy.dart';
@@ -183,11 +184,11 @@ class _WorkoutCongratulationsScreenState
               NextWorkoutButton(
                 label: 'BACK TO HOME',
                 onPressed: () {
-                  // Reset viewmodel state
+                  // Reset viewmodel state (don't cancel — workout is already completed)
                   ref
                       .read(workoutExecutionViewModelProvider.notifier)
-                      .cancelWorkout();
-                  context.go('/');
+                      .resetState();
+                  context.go(Routes.home);
                 },
               ),
 

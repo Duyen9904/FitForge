@@ -68,6 +68,19 @@ class _RestTimerScreenState extends ConsumerState<RestTimerScreen>
 
   void _onRestComplete() {
     final vm = ref.read(workoutExecutionViewModelProvider.notifier);
+    final currentState = ref.read(workoutExecutionViewModelProvider);
+
+    if (currentState is WorkoutExerciseResting &&
+        currentState.nextSetNumber <= currentState.totalSets) {
+      // Resting between sets — resume same exercise at next set
+      vm.goToNextSet(
+        currentState.currentExerciseIndex,
+        currentState.nextSetNumber,
+        currentState.totalSets,
+      );
+      context.pushReplacement(Routes.exerciseExecution);
+      return;
+    }
 
     if (vm.isLastExercise) {
       // Last exercise done — navigate to congratulations
@@ -88,9 +101,14 @@ class _RestTimerScreenState extends ConsumerState<RestTimerScreen>
     final state = ref.watch(workoutExecutionViewModelProvider);
 
     return state.maybeWhen(
-      resting: (progressId, exercises, currentIndex, restTimeSeconds) {
+      resting: (progressId, exercises, currentIndex, restTimeSeconds,
+          nextSetNumber, totalSets) {
         final vm = ref.read(workoutExecutionViewModelProvider.notifier);
-        final nextName = vm.nextExerciseName;
+        final isBetweenSets = nextSetNumber <= totalSets;
+        final nextName = isBetweenSets
+            ? 'Set $nextSetNumber / $totalSets'
+            : vm.nextExerciseName;
+        final title = isBetweenSets ? 'REST BETWEEN SETS' : 'TAKE A REST';
         // Get next exercise image if available
         final nextIndex = currentIndex + 1;
         final nextImageUrl = nextIndex < exercises.length
@@ -117,7 +135,7 @@ class _RestTimerScreenState extends ConsumerState<RestTimerScreen>
 
                   // Title
                   Text(
-                    'TAKE A REST',
+                    title,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: AppColors.white,

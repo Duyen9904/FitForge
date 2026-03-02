@@ -116,10 +116,11 @@ class WorkoutExecutionRepository {
     return _unwrapResponse(response);
   }
 
-  /// Get current in-progress workout
-  Future<WorkoutProgressResponse> getCurrentWorkout() async {
+  /// Get current in-progress workout (returns null if none)
+  Future<WorkoutProgressResponse?> getCurrentWorkout() async {
     final response = await _service.getCurrentWorkout();
-    return _unwrapResponse(response);
+    if (!response.success) return null;
+    return response.data;
   }
 
   /// Get workout details by ID

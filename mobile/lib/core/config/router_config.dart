@@ -1,10 +1,10 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/screens/login_screen.dart';
 import '../../features/auth/screens/register_screen.dart';
 import '../../features/auth/viewmodels/auth_viewmodel.dart';
-import '../../features/exercises/screens/equipment_exercises_screen.dart';
 import '../../features/exercises/screens/equipment_list_screen.dart';
 import '../../features/exercises/screens/exercise_detail_screen.dart';
 import '../../features/exercises/screens/exercise_library_screen.dart';
@@ -196,7 +196,6 @@ final routerProvider = Provider<GoRouter>((ref) {
                 name: RouteNames.exercisesByType,
                 builder: (context, state) {
                   final typeName = state.pathParameters['typeName']!;
-                  final difficultyLevel = state.extra as String?;
                   return ExerciseCategoriesScreen(
                     typeName: typeName,
                   );
@@ -217,9 +216,12 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: Routes.exerciseDetailSegment,
                 name: RouteNames.exerciseDetail,
-                builder: (context, state) {
+                pageBuilder: (context, state) {
                   final id = int.parse(state.pathParameters['id']!);
-                  return ExerciseDetailScreen(exerciseId: id);
+                  return MaterialPage(
+                    key: ValueKey('exercise-detail-$id'),
+                    child: ExerciseDetailScreen(exerciseId: id),
+                  );
                 },
               ),
             ],
@@ -249,7 +251,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) {
               final id = int.parse(state.pathParameters['id']!);
               final equipmentName = state.extra as String? ?? 'Equipment';
-              return EquipmentExercisesScreen(
+              return ExercisesByTypeScreen(
                 equipmentId: id,
                 equipmentName: equipmentName,
               );

@@ -87,7 +87,7 @@ class _ExerciseExecutionScreenState
         // Still on same exercise (more sets) — reset timer
         _resetTimerForCurrentExercise();
       },
-      resting: (_, __, ___, ____) {
+      resting: (_, __, ___, ____, _____, ______) {
         // Go to rest screen
         context.pushReplacement(Routes.restTimer);
       },

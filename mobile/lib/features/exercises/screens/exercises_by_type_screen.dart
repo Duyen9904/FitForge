@@ -5,20 +5,25 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../ui/core/states/state_widgets.dart';
 import '../models/exercise_filter.dart';
-import '../viewmodels/exercise_list_state.dart';
 import '../viewmodels/exercise_list_viewmodel.dart';
+import '../widgets/difficulty_bottom_sheet.dart';
 import '../widgets/exercise_list_item.dart';
 
-/// Screen that shows exercises filtered by a specific type/category.
-/// Displays exercises in a list view with image, name, and chevron.
+/// Screen that shows exercises filtered by type/category or equipment.
+/// Displays exercises in a list view with search, difficulty bottom sheet,
+/// and pull-to-refresh.
 class ExercisesByTypeScreen extends ConsumerStatefulWidget {
-  final String typeName;
+  final String? typeName;
   final String? categoryName;
+  final int? equipmentId;
+  final String? equipmentName;
 
   const ExercisesByTypeScreen({
     super.key,
-    required this.typeName,
+    this.typeName,
     this.categoryName,
+    this.equipmentId,
+    this.equipmentName,
   });
 
   @override
@@ -31,6 +36,7 @@ class _ExercisesByTypeScreenState
   final _scrollController = ScrollController();
   final _searchController = TextEditingController();
   String _searchQuery = '';
+  String? _selectedDifficulty;
 
   @override
   void initState() {
@@ -53,10 +59,29 @@ class _ExercisesByTypeScreenState
     final filter = ExerciseFilter(
       exerciseType: widget.typeName,
       muscleGroupCategory: widget.categoryName,
+      equipmentIds:
+          widget.equipmentId != null ? [widget.equipmentId!] : null,
+      difficultyLevel: _selectedDifficulty,
     );
     ref.read(exerciseListViewModelProvider.notifier).loadExercises(
           filter: filter,
         );
+  }
+
+  void _onDifficultyChanged(String? difficulty) {
+    setState(() {
+      _selectedDifficulty = difficulty;
+    });
+    _loadExercises();
+  }
+
+  Future<void> _showDifficultyBottomSheet() async {
+    final result = await DifficultyBottomSheet.show(
+      context,
+      currentDifficulty: _selectedDifficulty,
+    );
+    if (!mounted) return;
+    _onDifficultyChanged(result);
   }
 
   void _onScroll() {
@@ -83,9 +108,11 @@ class _ExercisesByTypeScreenState
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(exerciseListViewModelProvider);
-    final displayName = widget.categoryName != null
-        ? _formatName(widget.categoryName!)
-        : _formatName(widget.typeName);
+    final displayName = widget.equipmentName != null
+        ? _formatName(widget.equipmentName!)
+        : widget.categoryName != null
+            ? _formatName(widget.categoryName!)
+            : _formatName(widget.typeName ?? '');
 
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
@@ -106,71 +133,102 @@ class _ExercisesByTypeScreenState
           IconButton(
             icon: const Icon(Icons.bookmark_border),
             onPressed: () {
-              // Navigate to favorites
               context.push('/exercises/favorites');
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.filter_list),
-            onPressed: () {
-              // TODO: Open filter bottom sheet
             },
           ),
         ],
       ),
       body: Column(
         children: [
-          // Search bar
+          // Search bar + filter icon
           Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: AppDimensions.spacing16,
               vertical: AppDimensions.spacing8,
             ),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value.toLowerCase();
-                });
-              },
-              decoration: InputDecoration(
-                hintText: 'Search',
-                hintStyle: TextStyle(color: AppColors.grey400),
-                prefixIcon: Icon(Icons.search, color: AppColors.grey400),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {
-                            _searchQuery = '';
-                          });
-                        },
-                      )
-                    : null,
-                filled: true,
-                fillColor: AppColors.white,
-                border: OutlineInputBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppDimensions.borderRadius12),
-                  borderSide: BorderSide(color: AppColors.grey200),
+            child: Row(
+              children: [
+                // Search bar
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      setState(() {
+                        _searchQuery = value.toLowerCase();
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Search',
+                      hintStyle: TextStyle(color: AppColors.grey400),
+                      prefixIcon:
+                          Icon(Icons.search, color: AppColors.grey400),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                _searchController.clear();
+                                setState(() {
+                                  _searchQuery = '';
+                                });
+                              },
+                            )
+                          : null,
+                      filled: true,
+                      fillColor: AppColors.white,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                            AppDimensions.borderRadius12),
+                        borderSide: BorderSide(color: AppColors.grey200),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                            AppDimensions.borderRadius12),
+                        borderSide: BorderSide(color: AppColors.grey200),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                            AppDimensions.borderRadius12),
+                        borderSide: BorderSide(
+                            color: AppColors.primary, width: 1.5),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppDimensions.spacing16,
+                        vertical: AppDimensions.spacing12,
+                      ),
+                    ),
+                  ),
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppDimensions.borderRadius12),
-                  borderSide: BorderSide(color: AppColors.grey200),
+
+                const SizedBox(width: AppDimensions.spacing8),
+
+                // Filter icon button
+                GestureDetector(
+                  onTap: _showDifficultyBottomSheet,
+                  child: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: _selectedDifficulty != null
+                          ? AppColors.primary
+                          : AppColors.white,
+                      borderRadius: BorderRadius.circular(
+                          AppDimensions.borderRadius12),
+                      border: Border.all(
+                        color: _selectedDifficulty != null
+                            ? AppColors.primary
+                            : AppColors.grey200,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.tune_rounded,
+                      color: _selectedDifficulty != null
+                          ? AppColors.white
+                          : AppColors.grey600,
+                      size: 22,
+                    ),
+                  ),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius:
-                      BorderRadius.circular(AppDimensions.borderRadius12),
-                  borderSide:
-                      BorderSide(color: AppColors.primary, width: 1.5),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppDimensions.spacing16,
-                  vertical: AppDimensions.spacing12,
-                ),
-              ),
+              ],
             ),
           ),
 

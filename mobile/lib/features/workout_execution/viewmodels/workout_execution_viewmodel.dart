@@ -37,6 +37,23 @@ class WorkoutExecutionViewModel
       ..sort((a, b) => (a.orderIndex ?? 0).compareTo(b.orderIndex ?? 0));
 
     try {
+      // Auto-cancel any stale in-progress workout
+      try {
+        final currentWorkout = await _repository.getCurrentWorkout();
+        if (currentWorkout != null &&
+            currentWorkout.progressId != null &&
+            currentWorkout.progressId! > 0 &&
+            !currentWorkout.completed) {
+          developer.log(
+            'Found stale workout ${currentWorkout.progressId}, cancelling...',
+            name: 'WorkoutExecutionViewModel',
+          );
+          await _repository.cancelWorkout(currentWorkout.progressId!);
+        }
+      } catch (_) {
+        // No current workout or failed to fetch — proceed normally
+      }
+
       final request = StartWorkoutRequest(sessionId: sessionId);
       final progress = await _repository.startWorkout(request);
       _progressId = progress.progressId ?? 0;
@@ -87,13 +104,11 @@ class WorkoutExecutionViewModel
 
       // Check if more sets remain
       if (currentState.currentSetNumber < currentState.totalSets) {
-        // Move to next set
-        state = WorkoutExecutionState.exerciseInProgress(
-          progressId: _progressId,
-          exercises: _exercises,
-          currentExerciseIndex: currentState.currentExerciseIndex,
-          currentSetNumber: currentState.currentSetNumber + 1,
-          totalSets: currentState.totalSets,
+        // Rest between sets
+        _goToRestBetweenSets(
+          currentState.currentExerciseIndex,
+          currentState.currentSetNumber + 1,
+          currentState.totalSets,
         );
       } else {
         // All sets done — go to rest (or finish if last exercise)
@@ -154,11 +169,38 @@ class WorkoutExecutionViewModel
     }
 
     final currentExercise = _exercises[currentIndex];
+    final totalSets = currentExercise.sets ?? 3;
     state = WorkoutExecutionState.resting(
       progressId: _progressId,
       exercises: _exercises,
       currentExerciseIndex: currentIndex,
       restTimeSeconds: currentExercise.restTimeSeconds ?? 30,
+      nextSetNumber: totalSets + 1, // signals "done with all sets"
+      totalSets: totalSets,
+    );
+  }
+
+  /// Rest between sets of the same exercise.
+  void _goToRestBetweenSets(int exerciseIndex, int nextSet, int totalSets) {
+    final exercise = _exercises[exerciseIndex];
+    state = WorkoutExecutionState.resting(
+      progressId: _progressId,
+      exercises: _exercises,
+      currentExerciseIndex: exerciseIndex,
+      restTimeSeconds: exercise.restTimeSeconds ?? 30,
+      nextSetNumber: nextSet,
+      totalSets: totalSets,
+    );
+  }
+
+  /// Resume the same exercise at the next set after between-set rest.
+  void goToNextSet(int exerciseIndex, int setNumber, int totalSets) {
+    state = WorkoutExecutionState.exerciseInProgress(
+      progressId: _progressId,
+      exercises: _exercises,
+      currentExerciseIndex: exerciseIndex,
+      currentSetNumber: setNumber,
+      totalSets: totalSets,
     );
   }
 
@@ -251,6 +293,14 @@ class WorkoutExecutionViewModel
         );
       }
     }
+    state = const WorkoutExecutionState.initial();
+  }
+
+  /// Reset viewmodel state without calling any API.
+  /// Use after a workout is already completed (e.g. from congrats screen).
+  void resetState() {
+    _progressId = 0;
+    _exercises = [];
     state = const WorkoutExecutionState.initial();
   }
 

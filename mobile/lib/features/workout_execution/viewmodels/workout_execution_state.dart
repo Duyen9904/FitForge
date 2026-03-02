@@ -28,6 +28,8 @@ class WorkoutExecutionState with _$WorkoutExecutionState {
     required List<SessionExerciseResponse> exercises,
     required int currentExerciseIndex,
     required int restTimeSeconds,
+    required int nextSetNumber,
+    required int totalSets,
   }) = WorkoutExerciseResting;
 
   /// Completing the workout — POST /complete in progress.

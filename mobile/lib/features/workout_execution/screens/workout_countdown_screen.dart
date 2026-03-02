@@ -105,7 +105,7 @@ class _WorkoutCountdownScreenState
       },
       initial: () {},
       starting: () {},
-      resting: (_, __, ___, ____) {},
+      resting: (_, __, ___, ____, _____, ______) {},
       completing: (_) {},
       completed: (_, __, ___, ____) {},
     );

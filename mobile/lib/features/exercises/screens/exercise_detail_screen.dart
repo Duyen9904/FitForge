@@ -8,6 +8,7 @@ import '../models/exercise_models.dart';
 import '../viewmodels/exercise_detail_state.dart';
 import '../viewmodels/exercise_detail_viewmodel.dart';
 import '../widgets/alternative_exercise_card.dart';
+import '../widgets/add_exercise_to_session_sheet.dart';
 import '../widgets/difficulty_badge.dart';
 import '../widgets/equipment_detail_bottom_sheet.dart';
 import '../widgets/equipment_list_item.dart';
@@ -142,6 +143,31 @@ class ExerciseDetailScreen extends ConsumerWidget {
                           const SizedBox(width: AppDimensions.spacing12),
                           DifficultyBadge(
                             difficultyLevel: exercise.difficultyLevel,
+                          ),
+                          const SizedBox(width: AppDimensions.spacing8),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.add_circle_outline,
+                              color: AppColors.primary,
+                            ),
+                            tooltip: 'Add to workout session',
+                            onPressed: () {
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: AppColors.white,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(
+                                        AppDimensions.radiusXLarge),
+                                  ),
+                                ),
+                                builder: (_) => AddExerciseToSessionSheet(
+                                  exerciseId: exercise.exerciseId,
+                                  exerciseName: exercise.exerciseName,
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),

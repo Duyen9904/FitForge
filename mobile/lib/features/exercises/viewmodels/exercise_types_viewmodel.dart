@@ -44,8 +44,7 @@ class ExerciseTypesViewModel extends StateNotifier<ExerciseTypesState> {
     if (currentState is ExerciseTypesLoaded) {
       state = ExerciseTypesLoaded(
         types: currentState.types,
-        selectedDifficulty:
-            currentState.selectedDifficulty == difficulty ? null : difficulty,
+        selectedDifficulty: difficulty,
       );
     }
   }
