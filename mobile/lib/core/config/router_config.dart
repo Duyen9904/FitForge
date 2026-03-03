@@ -16,6 +16,11 @@ import '../../features/nutrition/screens/nutrition_screen.dart';
 import '../../features/measurements/screens/record_measurement_screen.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
+import '../../features/profile/screens/onboarding_review_screen.dart';
+import '../../features/profile/screens/fitness_goals_screen.dart';
+import '../../features/profile/screens/app_settings_screen.dart';
+import '../../features/profile/screens/training_preferences_screen.dart';
+import '../../features/profile/screens/nutrition_targets_screen.dart';
 import '../../features/recommendation/screens/workout_recommendation_screen.dart';
 import '../../features/recommendation/screens/workout_session_detail_screen.dart';
 import '../../features/recommendation/screens/nutrition_recommendation_screen.dart';
@@ -237,6 +242,33 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const ProfileScreen(),
           ),
         ],
+      ),
+
+      // Profile sub-screens (standalone routes with push navigation)
+      GoRoute(
+        path: Routes.onboardingReview,
+        name: RouteNames.onboardingReview,
+        builder: (context, state) => const OnboardingReviewScreen(),
+      ),
+      GoRoute(
+        path: Routes.fitnessGoals,
+        name: RouteNames.fitnessGoals,
+        builder: (context, state) => const FitnessGoalsScreen(),
+      ),
+      GoRoute(
+        path: Routes.appSettings,
+        name: RouteNames.appSettings,
+        builder: (context, state) => const AppSettingsScreen(),
+      ),
+      GoRoute(
+        path: Routes.trainingPreferences,
+        name: RouteNames.trainingPreferences,
+        builder: (context, state) => const TrainingPreferencesScreen(),
+      ),
+      GoRoute(
+        path: Routes.nutritionTargets,
+        name: RouteNames.nutritionTargets,
+        builder: (context, state) => const NutritionTargetsScreen(),
       ),
 
       // Equipment routes (outside shell - standalone routes)

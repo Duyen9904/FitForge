@@ -13,6 +13,7 @@ import com.dev.backend.model.enums.PlanGenerationStrategy;
 import com.dev.backend.repository.*;
 import com.dev.backend.service.AiService;
 import com.dev.backend.service.ExerciseAPIService;
+import com.dev.backend.service.ExerciseSelector;
 import com.dev.backend.service.UserProfileService;
 import com.dev.backend.service.WorkoutRecommendationService;
 import com.dev.backend.service.WorkoutSessionGenerator;
@@ -57,6 +58,7 @@ public class WorkoutRecommendationServiceImpl implements WorkoutRecommendationSe
     private final MissedWorkoutRepository missedWorkoutRepository;
     private final MuscleGroupRepository muscleGroupRepository;
     private final AiService aiService;
+    private final ExerciseSelector exerciseSelector;
     private final ExerciseRepository exerciseRepository;
 
     @Override
@@ -442,26 +444,29 @@ public class WorkoutRecommendationServiceImpl implements WorkoutRecommendationSe
                     .weekNumber(weekNumber)
                     .build();
 
-            AiWorkoutPlanResult aiResult = aiService.generateWorkoutPlan(context);
+            AiStructureResult aiResult = aiService.generateWorkoutStructure(context);
 
             // Materialize all sessions from AI result for this week
+            Set<Long> usedExerciseIds = new HashSet<>();
             if (aiResult.getSessions() != null) {
                 WorkoutSession targetSession = null;
-                for (AiSessionResult sessionResult : aiResult.getSessions()) {
-                    int absoluteDay = (weekNumber - 1) * 7 + sessionResult.getDayNumber();
+                for (AiSessionStructure sessionStructure : aiResult.getSessions()) {
+                    int absoluteDay = (weekNumber - 1) * 7 + sessionStructure.getDayNumber();
                     
                     // Only save if session doesn't already exist
                     Optional<WorkoutSession> existingSession = workoutSessionRepository.findByPlanIdAndDayNumber(
                             plan.getPlanId(), absoluteDay);
                     if (existingSession.isPresent()) {
-                        if (sessionResult.getDayNumber() == dayInWeek) {
+                        if (sessionStructure.getDayNumber() == dayInWeek) {
                             targetSession = existingSession.get();
                         }
                         continue;
                     }
 
-                    WorkoutSession session = materializeAiSession(plan, sessionResult, absoluteDay);
-                    if (sessionResult.getDayNumber() == dayInWeek) {
+                    WorkoutSession session = materializeAiSession(
+                            plan, sessionStructure, absoluteDay, availableEquipment,
+                            plan.getDifficultyLevel(), usedExerciseIds);
+                    if (sessionStructure.getDayNumber() == dayInWeek) {
                         targetSession = session;
                     }
                 }
@@ -484,48 +489,46 @@ public class WorkoutRecommendationServiceImpl implements WorkoutRecommendationSe
         }
     }
 
-    private WorkoutSession materializeAiSession(WorkoutPlan plan, AiSessionResult sessionResult, int absoluteDay) {
+    private WorkoutSession materializeAiSession(WorkoutPlan plan, AiSessionStructure sessionStructure,
+                                                int absoluteDay, List<String> availableEquipment,
+                                                String difficultyLevel, Set<Long> usedExerciseIds) {
         WorkoutSession session = new WorkoutSession();
         session.setWorkoutPlan(plan);
         session.setDayNumber(absoluteDay);
-        session.setSessionName(sessionResult.getSessionName());
-        session.setFocusArea(sessionResult.getFocusArea());
-        session.setEstimatedDuration(sessionResult.getEstimatedDuration());
-        session.setIsRestDay(sessionResult.getIsRestDay() != null ? sessionResult.getIsRestDay() : false);
-        session.setWarmUpNotes(sessionResult.getWarmUpNotes());
-        session.setCoolDownNotes(sessionResult.getCoolDownNotes());
+        session.setSessionName(sessionStructure.getSessionName());
+        session.setFocusArea(sessionStructure.getFocusArea());
+        session.setEstimatedDuration(sessionStructure.getEstimatedDuration());
+        session.setIsRestDay(sessionStructure.getIsRestDay() != null ? sessionStructure.getIsRestDay() : false);
+        session.setWarmUpNotes(sessionStructure.getWarmUpNotes());
+        session.setCoolDownNotes(sessionStructure.getCoolDownNotes());
         if (plan.getStartDate() != null) {
             session.setScheduledDate(plan.getStartDate().plusDays(absoluteDay - 1));
         }
 
         session = workoutSessionRepository.save(session);
 
-        if (sessionResult.getExercises() != null && !Boolean.TRUE.equals(sessionResult.getIsRestDay())) {
-            for (AiExerciseResult exerciseResult : sessionResult.getExercises()) {
-                // Resolve exercise by name (AI returns exerciseName)
-                Exercise exercise = null;
-                if (exerciseResult.getExerciseName() != null) {
-                    exercise = exerciseRepository.findByExerciseName(exerciseResult.getExerciseName()).orElse(null);
-                }
-                if (exercise == null && exerciseResult.getExerciseId() != null) {
-                    // Fallback: try by ID if present
-                    exercise = exerciseRepository.findById(exerciseResult.getExerciseId()).orElse(null);
-                }
+        if (sessionStructure.getExerciseSlots() != null && !Boolean.TRUE.equals(sessionStructure.getIsRestDay())) {
+            for (AiExerciseSlot slot : sessionStructure.getExerciseSlots()) {
+                Exercise exercise = exerciseSelector.selectExercise(
+                        slot, availableEquipment, difficultyLevel, usedExerciseIds);
+
                 if (exercise == null) {
-                    log.warn("AI referenced unknown exercise name='{}', ID={}. Skipping.",
-                            exerciseResult.getExerciseName(), exerciseResult.getExerciseId());
+                    log.warn("No exercise found for slot: muscleGroup={}, pattern={}. Skipping.",
+                            slot.getMuscleGroup(), slot.getMovementPattern());
                     continue;
                 }
+
+                usedExerciseIds.add(exercise.getExerciseId());
 
                 SessionExercise sessionExercise = new SessionExercise();
                 sessionExercise.setWorkoutSession(session);
                 sessionExercise.setExercise(exercise);
-                sessionExercise.setSets(exerciseResult.getSets() != null ? exerciseResult.getSets() : 3);
-                sessionExercise.setRepetitions(parseRepetitions(exerciseResult.getRepetitions()));
-                sessionExercise.setWeightKg(exerciseResult.getWeightKg() != null ? exerciseResult.getWeightKg().floatValue() : null);
-                sessionExercise.setRestTimeSeconds(exerciseResult.getRestTimeSeconds() != null ? exerciseResult.getRestTimeSeconds() : 60);
-                sessionExercise.setOrderIndex(exerciseResult.getOrderIndex() != null ? exerciseResult.getOrderIndex() : 0);
-                sessionExercise.setNotes(exerciseResult.getNotes());
+                sessionExercise.setSets(slot.getSets() != null ? slot.getSets() : 3);
+                sessionExercise.setRepetitions(parseRepetitions(slot.getRepetitions()));
+                sessionExercise.setWeightKg(null);
+                sessionExercise.setRestTimeSeconds(slot.getRestTimeSeconds() != null ? slot.getRestTimeSeconds() : 60);
+                sessionExercise.setOrderIndex(slot.getOrderIndex() != null ? slot.getOrderIndex() : 0);
+                sessionExercise.setNotes(slot.getNotes());
                 sessionExercise.setIsSuperset(false);
 
                 session.getSessionExercises().add(sessionExercise);

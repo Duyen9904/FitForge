@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../shared/enums/onboarding_input_type.dart';
-import '../../../shared/enums/onboarding_step_type.dart';
 import '../models/onboarding_response.dart';
 import 'steps/input_types/multiple_choice_step.dart';
 import 'steps/input_types/number_input_step.dart';
@@ -24,7 +23,7 @@ class OnboardingStepContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveType = _effectiveInputType(step);
+    final effectiveType = step.inputType ?? OnboardingInputType.text;
     final existingData = step.responseData;
 
     switch (effectiveType) {
@@ -65,31 +64,5 @@ class OnboardingStepContent extends StatelessWidget {
         );
     }
   }
-
-  /// Resolve effective input type: use step.inputType when set,
-  /// otherwise derive from step.stepType for backward compatibility.
-  static OnboardingInputType _effectiveInputType(OnboardingStepResponse step) {
-    if (step.inputType != null) {
-      return step.inputType!;
-    }
-    final stepType = step.stepType;
-    if (stepType == null) {
-      return OnboardingInputType.text;
-    }
-    switch (stepType) {
-      case OnboardingStepType.personalInfo:
-        return OnboardingInputType.text;
-      case OnboardingStepType.bodyMetrics:
-        return OnboardingInputType.number;
-      case OnboardingStepType.fitnessLevel:
-        return OnboardingInputType.singleChoice;
-      case OnboardingStepType.fitnessGoal:
-      case OnboardingStepType.equipment:
-      case OnboardingStepType.schedule:
-      case OnboardingStepType.healthLimitations:
-        return OnboardingInputType.multipleChoice;
-      case OnboardingStepType.notifications:
-        return OnboardingInputType.toggle;
-    }
-  }
 }
+

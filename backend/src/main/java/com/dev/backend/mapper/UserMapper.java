@@ -1,7 +1,9 @@
 package com.dev.backend.mapper;
 
+import com.dev.backend.model.dto.response.UserPreferenceResponse;
 import com.dev.backend.model.dto.response.UserProfileResponse;
 import com.dev.backend.model.entity.User;
+import com.dev.backend.model.entity.UserPreference;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -32,6 +34,26 @@ public class UserMapper {
                 .primaryGoal(user.getPrimaryGoal() != null 
                         ? goalMapper.toGoalResponse(user.getPrimaryGoal()) 
                         : null)
+                .userPreference(toUserPreferenceResponse(user.getUserPreference()))
+                .build();
+    }
+
+    private UserPreferenceResponse toUserPreferenceResponse(UserPreference pref) {
+        if (pref == null) {
+            return null;
+        }
+        return UserPreferenceResponse.builder()
+                .preferenceId(pref.getPreferenceId())
+                .preferredWorkoutDuration(pref.getPreferredWorkoutDuration())
+                .preferredWorkoutTime(pref.getPreferredWorkoutTime())
+                .allowAiSuggestions(pref.getAllowAiSuggestions())
+                .notificationEnabled(pref.getNotificationEnabled())
+                .measurementUnit(pref.getMeasurementUnit())
+                .workoutReminderDays(pref.getWorkoutReminderDays())
+                .dailyCalorieTarget(pref.getDailyCalorieTarget())
+                .dailyProteinTargetG(pref.getDailyProteinTargetG())
+                .dailyCarbsTargetG(pref.getDailyCarbsTargetG())
+                .dailyFatsTargetG(pref.getDailyFatsTargetG())
                 .build();
     }
 }

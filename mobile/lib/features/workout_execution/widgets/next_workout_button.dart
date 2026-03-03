@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 
-/// "Next to Another Workout" button with a right arrow icon,
-/// used on the congratulations screen.
+/// "Back to Home" / "Next to Another Workout" button with celebration icon,
+/// subtle gradient background, and arrow icon.
 class NextWorkoutButton extends StatelessWidget {
   final String? label;
   final VoidCallback? onPressed;
@@ -34,12 +34,14 @@ class NextWorkoutButton extends StatelessWidget {
                 borderRadius:
                     BorderRadius.circular(AppDimensions.radiusRound),
               ),
-              elevation: 2,
-              shadowColor: Colors.black.withOpacity(0.15),
+              elevation: 4,
+              shadowColor: AppColors.primary.withValues(alpha: 0.2),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                const Text('🎉', style: TextStyle(fontSize: 18)),
+                const SizedBox(width: AppDimensions.spacing8),
                 Text(
                   label ?? 'Next to Another Workout',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(

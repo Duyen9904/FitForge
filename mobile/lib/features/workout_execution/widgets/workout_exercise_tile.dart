@@ -3,11 +3,12 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 
 /// Reusable exercise tile widget for the Workout Activity screen.
-/// Shows an image, exercise name, and duration in a horizontal layout.
+/// Shows exercise number badge, image, name, subtitle, and chevron indicator.
 class WorkoutExerciseTile extends StatelessWidget {
   final String exerciseName;
   final String duration;
   final String? imageUrl;
+  final int? exerciseNumber;
   final VoidCallback? onTap;
 
   const WorkoutExerciseTile({
@@ -15,6 +16,7 @@ class WorkoutExerciseTile extends StatelessWidget {
     required this.exerciseName,
     required this.duration,
     this.imageUrl,
+    this.exerciseNumber,
     this.onTap,
   });
 
@@ -26,10 +28,16 @@ class WorkoutExerciseTile extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: AppDimensions.spacing16,
-          vertical: AppDimensions.spacing8,
+          vertical: AppDimensions.spacing12,
         ),
         child: Row(
           children: [
+            // Exercise number badge
+            if (exerciseNumber != null) ...[
+              _buildNumberBadge(context),
+              const SizedBox(width: AppDimensions.spacing12),
+            ],
+
             // Exercise image
             _buildImage(),
             const SizedBox(width: AppDimensions.spacing16),
@@ -58,7 +66,36 @@ class WorkoutExerciseTile extends StatelessWidget {
                 ],
               ),
             ),
+
+            // Chevron
+            const SizedBox(width: AppDimensions.spacing8),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.grey400,
+              size: AppDimensions.iconMedium,
+            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNumberBadge(BuildContext context) {
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: AppColors.primary.withValues(alpha: 0.1),
+      ),
+      child: Center(
+        child: Text(
+          '$exerciseNumber',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
         ),
       ),
     );
@@ -68,8 +105,8 @@ class WorkoutExerciseTile extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
       child: Container(
-        width: 72,
-        height: 72,
+        width: 64,
+        height: 64,
         color: AppColors.grey200,
         child: imageUrl != null
             ? Image.network(
@@ -84,12 +121,21 @@ class WorkoutExerciseTile extends StatelessWidget {
 
   Widget _buildPlaceholder() {
     return Container(
-      color: AppColors.grey200,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primary.withValues(alpha: 0.08),
+            AppColors.primaryLight.withValues(alpha: 0.12),
+          ],
+        ),
+      ),
       child: const Center(
         child: Icon(
           Icons.fitness_center,
-          color: AppColors.grey400,
-          size: AppDimensions.iconMedium,
+          color: AppColors.primary,
+          size: 22,
         ),
       ),
     );

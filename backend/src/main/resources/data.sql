@@ -339,17 +339,17 @@ INSERT IGNORE INTO exercise_equipment (exercise_id, equipment_id, is_required, u
 -- =====================================================
 -- 8. ONBOARDING (Steps and options)
 -- =====================================================
-INSERT IGNORE INTO onboarding_step (step_key, title, subtitle, help_text, step_type, display_order, is_required, is_active, icon_url) VALUES
-('gender', 'Gender', 'What is your gender?', 'We use this to personalize your experience.', 'GENDER', 1, 1, 1, NULL),
-('age', 'Age', 'How old are you?', 'Your age helps us tailor your plan.', 'AGE', 2, 1, 1, NULL),
-('weight', 'Weight', 'What is your current weight?', 'Your weight helps us calculate the right load.', 'WEIGHT', 3, 1, 1, NULL),
-('height', 'Height', 'How tall are you?', 'Your height helps us tailor your plan.', 'HEIGHT', 4, 1, 1, NULL),
-('fitness_level', 'Fitness Level', 'How would you describe your experience?', 'This helps us recommend the right intensity.', 'FITNESS_LEVEL', 5, 1, 1, NULL),
-('fitness_goal', 'Fitness Goal', 'What do you want to achieve?', 'Select your primary goal.', 'FITNESS_GOAL', 6, 1, 1, NULL),
-('equipment', 'Equipment', 'What do you have access to?', 'We will suggest workouts that match your gear.', 'EQUIPMENT', 7, 1, 1, NULL),
-('schedule', 'Schedule', 'When can you work out?', 'Pick your preferred days and time.', 'SCHEDULE', 8, 1, 1, NULL),
-('health_limitations', 'Health & Limitations', 'Any we should know about?', 'Optional - helps us keep you safe.', 'HEALTH_LIMITATIONS', 9, 0, 1, NULL),
-('notifications', 'Notifications', 'Stay on track', 'Choose what reminders you want.', 'NOTIFICATIONS', 10, 0, 1, NULL);
+INSERT IGNORE INTO onboarding_step (step_key, title, subtitle, help_text, step_type, input_type, display_order, is_required, is_active, icon_url) VALUES
+('gender', 'Gender', 'What is your gender?', 'We use this to personalize your experience.', 'GENDER', 'SINGLE_CHOICE', 1, 1, 1, NULL),
+('age', 'Age', 'How old are you?', 'Your age helps us tailor your plan.', 'AGE', 'NUMBER', 2, 1, 1, NULL),
+('weight', 'Weight', 'What is your current weight?', 'Your weight helps us calculate the right load.', 'WEIGHT', 'NUMBER', 3, 1, 1, NULL),
+('height', 'Height', 'How tall are you?', 'Your height helps us tailor your plan.', 'HEIGHT', 'NUMBER', 4, 1, 1, NULL),
+('fitness_level', 'Fitness Level', 'How would you describe your experience?', 'This helps us recommend the right intensity.', 'FITNESS_LEVEL', 'SINGLE_CHOICE', 5, 1, 1, NULL),
+('fitness_goal', 'Fitness Goal', 'What do you want to achieve?', 'Select your primary goal.', 'FITNESS_GOAL', 'MULTIPLE_CHOICE', 6, 1, 1, NULL),
+('equipment', 'Equipment', 'What do you have access to?', 'We will suggest workouts that match your gear.', 'EQUIPMENT', 'MULTIPLE_CHOICE', 7, 1, 1, NULL),
+('schedule', 'Schedule', 'When can you work out?', 'Pick your preferred days and time.', 'SCHEDULE', 'MULTIPLE_CHOICE', 8, 1, 1, NULL),
+('health_limitations', 'Health & Limitations', 'Any we should know about?', 'Optional - helps us keep you safe.', 'HEALTH_LIMITATIONS', 'MULTIPLE_CHOICE', 9, 0, 1, NULL),
+('notifications', 'Notifications', 'Stay on track', 'Choose what reminders you want.', 'NOTIFICATIONS', 'TOGGLE', 10, 0, 1, NULL);
 
 -- Onboarding options: GENDER
 INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)

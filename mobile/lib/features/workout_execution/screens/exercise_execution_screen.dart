@@ -12,6 +12,7 @@ import '../widgets/exercise_control_buttons.dart';
 
 /// Exercise Execution Screen — performs a single exercise.
 /// Reads current exercise/set from the viewmodel and logs sets via API.
+/// Features set progress dots, exercise name header, and improved stop dialog.
 class ExerciseExecutionScreen extends ConsumerStatefulWidget {
   const ExerciseExecutionScreen({super.key});
 
@@ -32,9 +33,8 @@ class _ExerciseExecutionScreenState
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 30), // default, will be overridden
+      duration: const Duration(seconds: 30),
     );
-    // Duration will be set after the first build with real data.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _resetTimerForCurrentExercise();
     });
@@ -43,7 +43,6 @@ class _ExerciseExecutionScreenState
   void _resetTimerForCurrentExercise() {
     final vm = ref.read(workoutExecutionViewModelProvider.notifier);
     final exercise = vm.currentExercise;
-    // Estimate duration: sets × reps × 2 seconds per rep (rough)
     final sets = exercise?.sets ?? 3;
     final reps = exercise?.repetitions ?? 10;
     final durationSeconds = sets * reps * 2;
@@ -84,15 +83,12 @@ class _ExerciseExecutionScreenState
     final state = ref.read(workoutExecutionViewModelProvider);
     state.when(
       exerciseInProgress: (_, __, ___, ____, _____) {
-        // Still on same exercise (more sets) — reset timer
         _resetTimerForCurrentExercise();
       },
       resting: (_, __, ___, ____, _____, ______) {
-        // Go to rest screen
         context.pushReplacement(Routes.restTimer);
       },
       completing: (_) {
-        // Last exercise done, go to congratulations
         context.pushReplacement(Routes.workoutCongratulations);
       },
       error: (message) {
@@ -134,23 +130,10 @@ class _ExerciseExecutionScreenState
   }
 
   Future<void> _onStop() async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showModalBottomSheet<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Stop Workout?'),
-        content: const Text('Your progress so far will be lost.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Continue'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Stop'),
-          ),
-        ],
-      ),
+      backgroundColor: Colors.transparent,
+      builder: (context) => _StopWorkoutSheet(),
     );
 
     if (confirmed == true && mounted) {
@@ -179,8 +162,8 @@ class _ExerciseExecutionScreenState
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  AppColors.primary.withValues(alpha: 0.9),
-                  AppColors.primary.withValues(alpha: 0.6),
+                  AppColors.primary.withValues(alpha: 0.95),
+                  AppColors.primaryDark.withValues(alpha: 0.85),
                   AppColors.backgroundLight,
                 ],
               ),
@@ -192,7 +175,7 @@ class _ExerciseExecutionScreenState
                   _buildProgressIndicator(
                       context, currentIndex + 1, exercises.length),
 
-                  const SizedBox(height: AppDimensions.spacing16),
+                  const SizedBox(height: AppDimensions.spacing12),
 
                   // Exercise image
                   ExerciseImageCard(
@@ -202,28 +185,34 @@ class _ExerciseExecutionScreenState
 
                   const SizedBox(height: AppDimensions.spacing16),
 
-                  // Set info
+                  // Set info with progress dots
                   Text(
                     'Set $setNumber / $totalSets',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: AppColors.white,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 18,
                         ),
                   ),
 
+                  const SizedBox(height: AppDimensions.spacing8),
+
+                  // Set progress dots
+                  _buildSetProgressDots(setNumber, totalSets),
+
                   if (exercise.repetitions != null) ...[
-                    const SizedBox(height: AppDimensions.spacing4),
+                    const SizedBox(height: AppDimensions.spacing8),
                     Text(
                       '${exercise.repetitions} reps${exercise.weightKg != null ? " · ${exercise.weightKg!.toStringAsFixed(1)} kg" : ""}',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.white.withValues(alpha: 0.8),
+                            color: AppColors.white.withValues(alpha: 0.7),
                           ),
                     ),
                   ],
 
                   const Spacer(),
 
-                  // Timer / "Done" button
+                  // Timer
                   AnimatedBuilder(
                     animation: _controller,
                     builder: (context, _) {
@@ -257,9 +246,10 @@ class _ExerciseExecutionScreenState
                           foregroundColor: AppColors.primary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(
-                                AppDimensions.radiusLarge),
+                                AppDimensions.radiusRound),
                           ),
-                          elevation: 0,
+                          elevation: 4,
+                          shadowColor: Colors.black.withValues(alpha: 0.15),
                         ),
                         child: _isLogging
                             ? const SizedBox(
@@ -270,23 +260,36 @@ class _ExerciseExecutionScreenState
                                   color: AppColors.primary,
                                 ),
                               )
-                            : Text(
-                                setNumber >= totalSets
-                                    ? 'EXERCISE COMPLETE'
-                                    : 'SET COMPLETE',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 1.0,
-                                    ),
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    setNumber >= totalSets
+                                        ? Icons.check_circle_rounded
+                                        : Icons.check_rounded,
+                                    size: 22,
+                                  ),
+                                  const SizedBox(
+                                      width: AppDimensions.spacing8),
+                                  Text(
+                                    setNumber >= totalSets
+                                        ? 'EXERCISE COMPLETE'
+                                        : 'SET COMPLETE',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 1.0,
+                                        ),
+                                  ),
+                                ],
                               ),
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: AppDimensions.spacing16),
+                  const SizedBox(height: AppDimensions.spacing12),
 
                   // Control buttons
                   ExerciseControlButtons(
@@ -295,7 +298,7 @@ class _ExerciseExecutionScreenState
                     onSkip: _onSkip,
                   ),
 
-                  const SizedBox(height: AppDimensions.spacing24),
+                  const SizedBox(height: AppDimensions.spacing16),
                 ],
               ),
             ),
@@ -303,7 +306,6 @@ class _ExerciseExecutionScreenState
         );
       },
       orElse: () {
-        // Fallback if state is not exerciseInProgress
         return Scaffold(
           body: Center(
             child: Column(
@@ -320,6 +322,38 @@ class _ExerciseExecutionScreenState
           ),
         );
       },
+    );
+  }
+
+  Widget _buildSetProgressDots(int currentSet, int totalSets) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(totalSets, (index) {
+        final isCompleted = index < currentSet - 1;
+        final isCurrent = index == currentSet - 1;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          width: isCurrent ? 24 : 10,
+          height: 10,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(5),
+            color: isCompleted
+                ? AppColors.success
+                : isCurrent
+                    ? AppColors.white
+                    : AppColors.white.withValues(alpha: 0.3),
+            boxShadow: isCurrent
+                ? [
+                    BoxShadow(
+                      color: AppColors.white.withValues(alpha: 0.4),
+                      blurRadius: 6,
+                    ),
+                  ]
+                : null,
+          ),
+        );
+      }),
     );
   }
 
@@ -341,21 +375,146 @@ class _ExerciseExecutionScreenState
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: current / total,
-                backgroundColor: AppColors.white.withValues(alpha: 0.3),
+                backgroundColor: AppColors.white.withValues(alpha: 0.2),
                 color: AppColors.white,
                 minHeight: 6,
               ),
             ),
           ),
           const SizedBox(width: AppDimensions.spacing12),
-          Text(
-            '$current/$total',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.white,
-                  fontWeight: FontWeight.w600,
-                ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '$current/$total',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+            ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Custom bottom sheet for the stop workout confirmation.
+class _StopWorkoutSheet extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
+      ),
+      padding: const EdgeInsets.all(AppDimensions.spacing24),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.grey300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: AppDimensions.spacing24),
+
+            // Warning icon
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.error.withValues(alpha: 0.1),
+              ),
+              child: const Icon(
+                Icons.warning_rounded,
+                color: AppColors.error,
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: AppDimensions.spacing16),
+
+            Text(
+              'Stop Workout?',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.grey900,
+                  ),
+            ),
+            const SizedBox(height: AppDimensions.spacing8),
+            Text(
+              'Your progress so far will be lost.\nAre you sure you want to stop?',
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.grey500,
+                  ),
+            ),
+
+            const SizedBox(height: AppDimensions.spacing24),
+
+            // Continue button
+            SizedBox(
+              width: double.infinity,
+              height: AppDimensions.buttonHeightLarge,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context, false),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppDimensions.radiusRound),
+                  ),
+                  elevation: 0,
+                ),
+                child: Text(
+                  'Continue Workout',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.white,
+                      ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppDimensions.spacing12),
+
+            // Stop button
+            SizedBox(
+              width: double.infinity,
+              height: AppDimensions.buttonHeightLarge,
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                  side: const BorderSide(color: AppColors.error, width: 1.5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(AppDimensions.radiusRound),
+                  ),
+                ),
+                child: Text(
+                  'Stop Workout',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.error,
+                      ),
+                ),
+              ),
+            ),
+            const SizedBox(height: AppDimensions.spacing8),
+          ],
+        ),
       ),
     );
   }

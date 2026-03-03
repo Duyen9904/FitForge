@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,7 +12,8 @@ import '../widgets/workout_stats_row.dart';
 import '../widgets/next_workout_button.dart';
 
 /// Workout Congratulations Screen — workout complete!
-/// Calls completeWorkout API, then shows real stats.
+/// Features animated trophy, motivational quote, count-up stats,
+/// and a share workout button.
 class WorkoutCongratulationsScreen extends ConsumerStatefulWidget {
   const WorkoutCongratulationsScreen({super.key});
 
@@ -24,9 +26,21 @@ class _WorkoutCongratulationsScreenState
     extends ConsumerState<WorkoutCongratulationsScreen> {
   bool _hasCompleted = false;
 
+  static const _motivationalQuotes = [
+    'Every workout counts. You showed up today! 💪',
+    'Consistency beats intensity. Keep going!',
+    'The pain you feel today is the strength you feel tomorrow.',
+    'Strong is the new beautiful. Well done!',
+    'You didn\'t come this far to only come this far.',
+    'Your body hears everything your mind says. Stay positive!',
+  ];
+
+  late String _quote;
+
   @override
   void initState() {
     super.initState();
+    _quote = _motivationalQuotes[Random().nextInt(_motivationalQuotes.length)];
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _completeIfNeeded();
     });
@@ -37,7 +51,6 @@ class _WorkoutCongratulationsScreenState
     _hasCompleted = true;
 
     final state = ref.read(workoutExecutionViewModelProvider);
-    // Only call complete if we're in the completing state (not already completed)
     if (state is WorkoutExecutionCompleting) {
       final vm = ref.read(workoutExecutionViewModelProvider.notifier);
       await vm.completeWorkout(
@@ -64,17 +77,15 @@ class _WorkoutCongratulationsScreenState
         return _buildLoadingScreen(context);
       },
       error: (message) {
-        // Even on error, show a generic congratulations with fallback data
         final vm = ref.read(workoutExecutionViewModelProvider.notifier);
         return _buildSuccessScreen(
           context,
           exercises: vm.exercises.length,
-          calories: 0, // unknown
+          calories: 0,
           minutes: 0,
         );
       },
       orElse: () {
-        // Fallback — show generic congratulations
         return _buildSuccessScreen(
           context,
           exercises: 0,
@@ -93,8 +104,8 @@ class _WorkoutCongratulationsScreenState
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppColors.primary.withValues(alpha: 0.9),
-              AppColors.primary.withValues(alpha: 0.6),
+              AppColors.primary.withValues(alpha: 0.95),
+              AppColors.primaryDark.withValues(alpha: 0.8),
               AppColors.backgroundLight,
             ],
           ),
@@ -136,7 +147,7 @@ class _WorkoutCongratulationsScreenState
             end: Alignment.bottomCenter,
             colors: [
               AppColors.primary.withValues(alpha: 0.95),
-              AppColors.primary.withValues(alpha: 0.7),
+              AppColors.primaryDark.withValues(alpha: 0.8),
               AppColors.backgroundLight,
             ],
           ),
@@ -146,27 +157,36 @@ class _WorkoutCongratulationsScreenState
             children: [
               const Spacer(flex: 2),
 
-              // Trophy
+              // Animated Trophy
               const CongratulationsTrophy(),
 
               const SizedBox(height: AppDimensions.spacing24),
 
               // Title
               Text(
-                'Congratulations!',
+                'Workout Complete!',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: AppColors.white,
                     ),
               ),
 
-              const SizedBox(height: AppDimensions.spacing8),
+              const SizedBox(height: AppDimensions.spacing12),
 
-              Text(
-                'You have completed your workout',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: AppColors.white.withValues(alpha: 0.8),
-                    ),
+              // Motivational quote
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimensions.spacing32,
+                ),
+                child: Text(
+                  _quote,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.white.withValues(alpha: 0.7),
+                        fontStyle: FontStyle.italic,
+                        height: 1.4,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
               ),
 
               const Spacer(flex: 1),
@@ -184,12 +204,57 @@ class _WorkoutCongratulationsScreenState
               NextWorkoutButton(
                 label: 'BACK TO HOME',
                 onPressed: () {
-                  // Reset viewmodel state (don't cancel — workout is already completed)
                   ref
                       .read(workoutExecutionViewModelProvider.notifier)
                       .resetState();
                   context.go(Routes.home);
                 },
+              ),
+
+              const SizedBox(height: AppDimensions.spacing12),
+
+              // Share workout button
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppDimensions.spacing40,
+                ),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: AppDimensions.buttonHeightLarge,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      // TODO: Implement share functionality
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Share feature coming soon!'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    icon: Icon(
+                      Icons.share_rounded,
+                      size: 20,
+                      color: AppColors.white.withValues(alpha: 0.8),
+                    ),
+                    label: Text(
+                      'Share Workout',
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: AppColors.white.withValues(alpha: 0.8),
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(
+                        color: AppColors.white.withValues(alpha: 0.3),
+                        width: 1.5,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppDimensions.radiusRound),
+                      ),
+                    ),
+                  ),
+                ),
               ),
 
               const SizedBox(height: AppDimensions.spacing48),

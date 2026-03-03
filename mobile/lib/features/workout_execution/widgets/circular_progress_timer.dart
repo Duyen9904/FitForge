@@ -2,9 +2,9 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 
-/// Circular countdown timer with a central PAUSE/PLAY icon button.
-/// Shows reps count or seconds remaining inside the circle.
-class CircularProgressTimer extends StatelessWidget {
+/// Circular countdown timer with gradient arc, glow effect, and a central
+/// PAUSE/RESUME icon button. Shows reps count or seconds remaining.
+class CircularProgressTimer extends StatefulWidget {
   final int displayValue;
   final double progress; // 0.0 (empty) → 1.0 (full)
   final bool isPaused;
@@ -18,61 +18,117 @@ class CircularProgressTimer extends StatelessWidget {
     required this.progress,
     required this.isPaused,
     required this.onTogglePause,
-    this.size = 180,
-    this.strokeWidth = 10,
+    this.size = 200,
+    this.strokeWidth = 12,
   });
+
+  @override
+  State<CircularProgressTimer> createState() => _CircularProgressTimerState();
+}
+
+class _CircularProgressTimerState extends State<CircularProgressTimer>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    if (widget.isPaused) {
+      _pulseController.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant CircularProgressTimer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isPaused && !oldWidget.isPaused) {
+      _pulseController.repeat(reverse: true);
+    } else if (!widget.isPaused && oldWidget.isPaused) {
+      _pulseController.stop();
+      _pulseController.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: size,
-      height: size,
+      width: widget.size,
+      height: widget.size,
       child: CustomPaint(
-        painter: _CircularProgressPainter(
-          progress: progress,
-          strokeWidth: strokeWidth,
-          activeColor: AppColors.white,
-          backgroundColor: AppColors.white.withOpacity(0.25),
+        painter: _GradientCircularPainter(
+          progress: widget.progress,
+          strokeWidth: widget.strokeWidth,
+          gradientColors: const [
+            AppColors.white,
+            AppColors.accent,
+          ],
+          backgroundColor: AppColors.white.withValues(alpha: 0.15),
         ),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Reps / seconds value
+              // Value display
               Text(
-                '$displayValue',
+                '${widget.displayValue}',
                 style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                      fontSize: size * 0.3,
+                      fontSize: widget.size * 0.28,
                       fontWeight: FontWeight.bold,
                       color: AppColors.white,
                       height: 1.0,
                     ),
               ),
-              const SizedBox(height: 4),
-              // Pause / Play button
-              GestureDetector(
-                onTap: onTogglePause,
-                child: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.white.withOpacity(0.2),
-                  ),
-                  child: Icon(
-                    isPaused ? Icons.play_arrow : Icons.pause,
-                    color: AppColors.white,
-                    size: size * 0.12,
+              const SizedBox(height: 6),
+              // Pause / Resume button with pulse
+              AnimatedBuilder(
+                animation: _pulseController,
+                builder: (context, child) {
+                  final scale = widget.isPaused
+                      ? 1.0 + (_pulseController.value * 0.15)
+                      : 1.0;
+                  return Transform.scale(
+                    scale: scale,
+                    child: child,
+                  );
+                },
+                child: GestureDetector(
+                  onTap: widget.onTogglePause,
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.white.withValues(alpha: 0.2),
+                      border: Border.all(
+                        color: AppColors.white.withValues(alpha: 0.3),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Icon(
+                      widget.isPaused ? Icons.play_arrow_rounded : Icons.pause_rounded,
+                      color: AppColors.white,
+                      size: widget.size * 0.1,
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
               Text(
-                'PAUSE',
+                widget.isPaused ? 'RESUME' : 'PAUSE',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.white.withOpacity(0.8),
+                      color: AppColors.white.withValues(alpha: 0.8),
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      letterSpacing: 1.2,
+                      letterSpacing: 1.5,
                     ),
               ),
             ],
@@ -83,16 +139,16 @@ class CircularProgressTimer extends StatelessWidget {
   }
 }
 
-class _CircularProgressPainter extends CustomPainter {
+class _GradientCircularPainter extends CustomPainter {
   final double progress;
   final double strokeWidth;
-  final Color activeColor;
+  final List<Color> gradientColors;
   final Color backgroundColor;
 
-  _CircularProgressPainter({
+  _GradientCircularPainter({
     required this.progress,
     required this.strokeWidth,
-    required this.activeColor,
+    required this.gradientColors,
     required this.backgroundColor,
   });
 
@@ -100,6 +156,7 @@ class _CircularProgressPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width - strokeWidth) / 2;
+    final rect = Rect.fromCircle(center: center, radius: radius);
 
     // Background ring
     final bgPaint = Paint()
@@ -107,28 +164,37 @@ class _CircularProgressPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
-
     canvas.drawCircle(center, radius, bgPaint);
 
-    // Active arc
+    if (progress <= 0) return;
+
+    // Glow effect
+    final glowPaint = Paint()
+      ..color = gradientColors.first.withValues(alpha: 0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth + 8
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+
+    final sweepAngle = 2 * pi * progress;
+    canvas.drawArc(rect, -pi / 2, sweepAngle, false, glowPaint);
+
+    // Gradient arc
     final activePaint = Paint()
-      ..color = activeColor
+      ..shader = SweepGradient(
+        startAngle: -pi / 2,
+        endAngle: -pi / 2 + 2 * pi,
+        colors: gradientColors,
+      ).createShader(rect)
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
 
-    final sweepAngle = 2 * pi * progress;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -pi / 2,
-      sweepAngle,
-      false,
-      activePaint,
-    );
+    canvas.drawArc(rect, -pi / 2, sweepAngle, false, activePaint);
   }
 
   @override
-  bool shouldRepaint(covariant _CircularProgressPainter oldDelegate) {
+  bool shouldRepaint(covariant _GradientCircularPainter oldDelegate) {
     return oldDelegate.progress != progress;
   }
 }

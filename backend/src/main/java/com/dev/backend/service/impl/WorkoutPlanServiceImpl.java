@@ -3,9 +3,10 @@ package com.dev.backend.service.impl;
 import com.dev.backend.exception.BadRequestException;
 import com.dev.backend.exception.ResourceNotFoundException;
 import com.dev.backend.mapper.WorkoutPlanMapper;
-import com.dev.backend.model.dto.ai.AiExerciseResult;
+import com.dev.backend.model.dto.ai.AiExerciseSlot;
 import com.dev.backend.model.dto.ai.AiPlanGenerationContext;
-import com.dev.backend.model.dto.ai.AiSessionResult;
+import com.dev.backend.model.dto.ai.AiSessionStructure;
+import com.dev.backend.model.dto.ai.AiStructureResult;
 import com.dev.backend.model.dto.ai.AiWorkoutPlanResult;
 import com.dev.backend.model.dto.profile.UserProfile;
 import com.dev.backend.model.dto.request.*;
@@ -18,6 +19,7 @@ import com.dev.backend.model.entity.*;
 import com.dev.backend.model.enums.PlanGenerationStrategy;
 import com.dev.backend.repository.*;
 import com.dev.backend.service.AiService;
+import com.dev.backend.service.ExerciseSelector;
 import com.dev.backend.service.UserProfileService;
 import com.dev.backend.service.WorkoutDateCalculator;
 import com.dev.backend.service.WorkoutPlanService;
@@ -48,6 +50,7 @@ public class WorkoutPlanServiceImpl implements WorkoutPlanService {
     private final WorkoutPlanMapper workoutPlanMapper;
     private final WorkoutDateCalculator workoutDateCalculator;
     private final AiService aiService;
+    private final ExerciseSelector exerciseSelector;
     private final UserProfileService userProfileService;
     private final WorkoutSessionLogRepository workoutSessionLogRepository;
 
@@ -61,6 +64,7 @@ public class WorkoutPlanServiceImpl implements WorkoutPlanService {
                                   WorkoutPlanMapper workoutPlanMapper,
                                   WorkoutDateCalculator workoutDateCalculator,
                                   AiService aiService,
+                                  ExerciseSelector exerciseSelector,
                                   UserProfileService userProfileService,
                                   WorkoutSessionLogRepository workoutSessionLogRepository) {
         this.workoutPlanRepository = workoutPlanRepository;
@@ -73,6 +77,7 @@ public class WorkoutPlanServiceImpl implements WorkoutPlanService {
         this.workoutPlanMapper = workoutPlanMapper;
         this.workoutDateCalculator = workoutDateCalculator;
         this.aiService = aiService;
+        this.exerciseSelector = exerciseSelector;
         this.userProfileService = userProfileService;
         this.workoutSessionLogRepository = workoutSessionLogRepository;
     }
@@ -397,8 +402,8 @@ public class WorkoutPlanServiceImpl implements WorkoutPlanService {
                 .weekNumber(1)
                 .build();
 
-        // Call AI service
-        AiWorkoutPlanResult aiResult = aiService.generateWorkoutPlan(context);
+        // Call AI service — structure-only (single-shot, ~75-85% fewer tokens)
+        AiStructureResult aiResult = aiService.generateWorkoutStructure(context);
 
         // Resolve primary muscle group (enum name matches the 'category' column, not 'group_name')
         MuscleGroup muscleGroup = null;
@@ -423,58 +428,58 @@ public class WorkoutPlanServiceImpl implements WorkoutPlanService {
         plan.setAllowWorkoutSwaps(true);
         plan.setIsActive(true);
         plan.setGenerationStrategy(PlanGenerationStrategy.AI);
-        plan.setAlgorithmVersion("AI_V1");
+        plan.setAlgorithmVersion("AI_V2_STRUCTURE");
         plan.setGeneratedFrom("AI_GENERATE");
         plan.setVersion(1);
         plan.setRecommendationReason(aiResult.getRecommendationReason());
 
         plan = workoutPlanRepository.save(plan);
 
-        // Materialize AI-generated sessions into entities
+        // Track used exercises to avoid duplicates across the plan
+        java.util.Set<Long> usedExerciseIds = new java.util.HashSet<>();
+
+        // Materialize AI-generated sessions with backend exercise selection
         if (aiResult.getSessions() != null) {
-            for (AiSessionResult sessionResult : aiResult.getSessions()) {
+            for (AiSessionStructure sessionStructure : aiResult.getSessions()) {
                 WorkoutSession session = new WorkoutSession();
                 session.setWorkoutPlan(plan);
-                session.setDayNumber(sessionResult.getDayNumber());
-                session.setSessionName(sessionResult.getSessionName());
-                session.setFocusArea(sessionResult.getFocusArea());
-                session.setEstimatedDuration(sessionResult.getEstimatedDuration());
-                session.setIsRestDay(sessionResult.getIsRestDay() != null ? sessionResult.getIsRestDay() : false);
-                session.setWarmUpNotes(sessionResult.getWarmUpNotes());
-                session.setCoolDownNotes(sessionResult.getCoolDownNotes());
-                if (plan.getStartDate() != null && sessionResult.getDayNumber() != null) {
-                    session.setScheduledDate(plan.getStartDate().plusDays(sessionResult.getDayNumber() - 1));
+                session.setDayNumber(sessionStructure.getDayNumber());
+                session.setSessionName(sessionStructure.getSessionName());
+                session.setFocusArea(sessionStructure.getFocusArea());
+                session.setEstimatedDuration(sessionStructure.getEstimatedDuration());
+                session.setIsRestDay(sessionStructure.getIsRestDay() != null ? sessionStructure.getIsRestDay() : false);
+                session.setWarmUpNotes(sessionStructure.getWarmUpNotes());
+                session.setCoolDownNotes(sessionStructure.getCoolDownNotes());
+                if (plan.getStartDate() != null && sessionStructure.getDayNumber() != null) {
+                    session.setScheduledDate(plan.getStartDate().plusDays(sessionStructure.getDayNumber() - 1));
                 }
 
                 session = workoutSessionRepository.save(session);
 
-                // Add exercises if not a rest day
-                if (sessionResult.getExercises() != null && !sessionResult.getIsRestDay()) {
-                    for (AiExerciseResult exerciseResult : sessionResult.getExercises()) {
-                        // Resolve exercise by name (AI returns exerciseName)
-                        Exercise exercise = null;
-                        if (exerciseResult.getExerciseName() != null) {
-                            exercise = exerciseRepository.findByExerciseName(exerciseResult.getExerciseName()).orElse(null);
-                        }
-                        if (exercise == null && exerciseResult.getExerciseId() != null) {
-                            // Fallback: try by ID if present
-                            exercise = exerciseRepository.findById(exerciseResult.getExerciseId()).orElse(null);
-                        }
+                // Fill exercise slots with real exercises from DB
+                if (sessionStructure.getExerciseSlots() != null && !Boolean.TRUE.equals(sessionStructure.getIsRestDay())) {
+                    for (AiExerciseSlot slot : sessionStructure.getExerciseSlots()) {
+                        // Use ExerciseSelector to find the best matching exercise
+                        Exercise exercise = exerciseSelector.selectExercise(
+                                slot, availableEquipment, difficultyLevel, usedExerciseIds);
+
                         if (exercise == null) {
-                            log.warn("AI referenced unknown exercise name='{}', ID={}. Skipping.",
-                                    exerciseResult.getExerciseName(), exerciseResult.getExerciseId());
+                            log.warn("No exercise found for slot: muscleGroup={}, pattern={}. Skipping.",
+                                    slot.getMuscleGroup(), slot.getMovementPattern());
                             continue;
                         }
+
+                        usedExerciseIds.add(exercise.getExerciseId());
 
                         SessionExercise sessionExercise = new SessionExercise();
                         sessionExercise.setWorkoutSession(session);
                         sessionExercise.setExercise(exercise);
-                        sessionExercise.setSets(exerciseResult.getSets() != null ? exerciseResult.getSets() : 3);
-                        sessionExercise.setRepetitions(parseRepetitions(exerciseResult.getRepetitions()));
-                        sessionExercise.setWeightKg(exerciseResult.getWeightKg() != null ? exerciseResult.getWeightKg().floatValue() : null);
-                        sessionExercise.setRestTimeSeconds(exerciseResult.getRestTimeSeconds() != null ? exerciseResult.getRestTimeSeconds() : 60);
-                        sessionExercise.setOrderIndex(exerciseResult.getOrderIndex() != null ? exerciseResult.getOrderIndex() : 0);
-                        sessionExercise.setNotes(exerciseResult.getNotes());
+                        sessionExercise.setSets(slot.getSets() != null ? slot.getSets() : 3);
+                        sessionExercise.setRepetitions(parseRepetitions(slot.getRepetitions()));
+                        sessionExercise.setWeightKg(null); // weight determined by user during workout
+                        sessionExercise.setRestTimeSeconds(slot.getRestTimeSeconds() != null ? slot.getRestTimeSeconds() : 60);
+                        sessionExercise.setOrderIndex(slot.getOrderIndex() != null ? slot.getOrderIndex() : 0);
+                        sessionExercise.setNotes(slot.getNotes());
                         sessionExercise.setIsSuperset(false);
 
                         sessionExerciseRepository.save(sessionExercise);
@@ -486,8 +491,8 @@ public class WorkoutPlanServiceImpl implements WorkoutPlanService {
             }
         }
 
-        log.info("Generated AI workout plan with ID: {} ({} sessions)", plan.getPlanId(),
-                plan.getWorkoutSessions().size());
+        log.info("Generated AI workout plan with ID: {} ({} sessions, {} total exercises)", plan.getPlanId(),
+                plan.getWorkoutSessions().size(), usedExerciseIds.size());
         return workoutPlanMapper.toResponse(plan);
     }
 

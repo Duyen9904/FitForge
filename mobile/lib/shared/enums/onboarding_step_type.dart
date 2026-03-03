@@ -25,7 +25,19 @@ enum OnboardingStepType {
   healthLimitations,
 
   /// Toggle switches for each notification type
-  notifications;
+  notifications,
+
+  /// Gender selection step
+  gender,
+
+  /// Age input step
+  age,
+
+  /// Weight input step
+  weight,
+
+  /// Height input step
+  height;
 
   String get displayName {
     switch (this) {
@@ -45,6 +57,14 @@ enum OnboardingStepType {
         return 'Health Limitations';
       case OnboardingStepType.notifications:
         return 'Notifications';
+      case OnboardingStepType.gender:
+        return 'Gender';
+      case OnboardingStepType.age:
+        return 'Age';
+      case OnboardingStepType.weight:
+        return 'Weight';
+      case OnboardingStepType.height:
+        return 'Height';
     }
   }
 }

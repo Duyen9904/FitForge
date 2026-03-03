@@ -3,6 +3,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 
 /// Large rounded exercise image card with exercise name overlay at the bottom.
+/// Includes shimmer loading effect and gradient placeholder.
 class ExerciseImageCard extends StatelessWidget {
   final String exerciseName;
   final String? imageUrl;
@@ -17,7 +18,7 @@ class ExerciseImageCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      height: 280,
+      height: 240,
       margin: const EdgeInsets.symmetric(
         horizontal: AppDimensions.spacing20,
       ),
@@ -26,9 +27,9 @@ class ExerciseImageCard extends StatelessWidget {
         color: AppColors.grey200,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -36,7 +37,7 @@ class ExerciseImageCard extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Exercise image
+          // Exercise image with shimmer loading
           _buildImage(),
 
           // Gradient overlay at bottom
@@ -45,9 +46,11 @@ class ExerciseImageCard extends StatelessWidget {
             right: 0,
             bottom: 0,
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppDimensions.spacing16,
-                vertical: AppDimensions.spacing12,
+              padding: const EdgeInsets.fromLTRB(
+                AppDimensions.spacing16,
+                AppDimensions.spacing32,
+                AppDimensions.spacing16,
+                AppDimensions.spacing16,
               ),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -55,7 +58,7 @@ class ExerciseImageCard extends StatelessWidget {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    Colors.black.withOpacity(0.7),
+                    Colors.black.withValues(alpha: 0.75),
                   ],
                 ),
               ),
@@ -64,7 +67,7 @@ class ExerciseImageCard extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: AppColors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 22,
+                      fontSize: 20,
                     ),
               ),
             ),
@@ -79,6 +82,10 @@ class ExerciseImageCard extends StatelessWidget {
       return Image.network(
         imageUrl!,
         fit: BoxFit.cover,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return _ShimmerPlaceholder();
+        },
         errorBuilder: (_, __, ___) => _buildPlaceholder(),
       );
     }
@@ -87,14 +94,83 @@ class ExerciseImageCard extends StatelessWidget {
 
   Widget _buildPlaceholder() {
     return Container(
-      color: AppColors.grey300,
-      child: const Center(
-        child: Icon(
-          Icons.fitness_center,
-          color: AppColors.grey500,
-          size: 64,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.grey200,
+            AppColors.grey300,
+          ],
         ),
       ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary.withValues(alpha: 0.1),
+              ),
+              child: const Icon(
+                Icons.fitness_center,
+                color: AppColors.primary,
+                size: 48,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Simple shimmer loading effect for image loading state.
+class _ShimmerPlaceholder extends StatefulWidget {
+  @override
+  State<_ShimmerPlaceholder> createState() => _ShimmerPlaceholderState();
+}
+
+class _ShimmerPlaceholderState extends State<_ShimmerPlaceholder>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment(-1.0 + 2.0 * _controller.value, 0),
+              end: Alignment(-0.5 + 2.0 * _controller.value, 0),
+              colors: [
+                AppColors.grey200,
+                AppColors.grey100,
+                AppColors.grey200,
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -27,4 +27,5 @@ public class UserProfileResponse {
     private String fitnessLevel;
     private String profileImageUrl;
     private GoalResponse primaryGoal;
+    private UserPreferenceResponse userPreference;
 }

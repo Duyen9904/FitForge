@@ -2,6 +2,7 @@ package com.dev.backend.service;
 
 import com.dev.backend.model.dto.ai.AiPlanAdjustmentContext;
 import com.dev.backend.model.dto.ai.AiPlanGenerationContext;
+import com.dev.backend.model.dto.ai.AiStructureResult;
 import com.dev.backend.model.dto.ai.AiWorkoutPlanResult;
 
 /**
@@ -11,12 +12,14 @@ import com.dev.backend.model.dto.ai.AiWorkoutPlanResult;
 public interface AiService {
 
     /**
-     * Generate a workout plan with week 1 sessions based on user context.
+     * Generate a workout plan structure with exercise slots (not concrete exercises).
+     * The AI outputs muscle groups + movement patterns; the backend ExerciseSelector
+     * fills in real exercises from the database.
      *
-     * @param context all inputs the AI needs (user profile, exercises, preferences)
-     * @return structured plan result with sessions and exercises
+     * @param context all inputs the AI needs (user profile, preferences)
+     * @return structured plan with exercise slots (muscle group + pattern + sets/reps)
      */
-    AiWorkoutPlanResult generateWorkoutPlan(AiPlanGenerationContext context);
+    AiStructureResult generateWorkoutStructure(AiPlanGenerationContext context);
 
     /**
      * Adjust a workout plan based on behavior data (adherence, RPE, pain flags).

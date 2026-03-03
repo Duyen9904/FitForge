@@ -231,7 +231,6 @@ class _WorkoutPlansScreenState extends ConsumerState<WorkoutPlansScreen> {
     final state = ref.watch(workoutPlansViewModelProvider);
 
     return Scaffold(
-      // backgroundColor: AppColors.backgroundLight,
       body: _buildBody(state),
     );
   }
@@ -240,9 +239,6 @@ class _WorkoutPlansScreenState extends ConsumerState<WorkoutPlansScreen> {
     final loadedState = state is WorkoutPlansLoaded ? state : null;
     final selectedDifficulty = loadedState?.selectedDifficulty;
     final appliedFilter = loadedState?.appliedFilter;
-    final totalPlans = loadedState?.plans.length ?? 0;
-    final activePlans =
-        loadedState?.plans.where((p) => p.isActive).length ?? 0;
 
     Widget content = state.when(
       initial: () => const WorkoutPlansShimmer(),
@@ -252,9 +248,12 @@ class _WorkoutPlansScreenState extends ConsumerState<WorkoutPlansScreen> {
         final hasActivePlans = plans.any((p) => p.isActive);
 
         if (!hasActivePlans) {
-          return WorkoutPlansEmptyState(
-            hasPlans: plans.isNotEmpty,
-            onGeneratePlan: _showPlanGenerationOptionsSheet,
+          return SliverFillRemaining(
+            hasScrollBody: false,
+            child: WorkoutPlansEmptyState(
+              hasPlans: plans.isNotEmpty,
+              onGeneratePlan: _showPlanGenerationOptionsSheet,
+            ),
           );
         }
 
@@ -284,8 +283,6 @@ class _WorkoutPlansScreenState extends ConsumerState<WorkoutPlansScreen> {
       controller: _scrollController,
       slivers: [
         WorkoutPlansHeader(
-          totalPlans: totalPlans,
-          activePlans: activePlans,
           onAddPressed: _showPlanGenerationOptionsSheet,
         ),
         SliverToBoxAdapter(

@@ -1,5 +1,6 @@
 package com.dev.backend.model.entity;
 
+import com.dev.backend.model.enums.OnboardingInputType;
 import com.dev.backend.model.enums.OnboardingStepType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -47,8 +48,12 @@ public class OnboardingStep {
     private String helpText;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
+    @Column(length = 30)
     private OnboardingStepType stepType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "input_type", length = 30)
+    private OnboardingInputType inputType;
 
     @Column(nullable = false)
     private Integer displayOrder;

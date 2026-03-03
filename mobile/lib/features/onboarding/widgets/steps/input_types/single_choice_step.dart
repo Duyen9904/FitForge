@@ -24,7 +24,7 @@ class SingleChoiceStep extends StatefulWidget {
 }
 
 class _SingleChoiceStepState extends State<SingleChoiceStep> {
-  String? _selectedOptionKey;
+  int? _selectedOptionId;
 
   @override
   void initState() {
@@ -38,19 +38,29 @@ class _SingleChoiceStepState extends State<SingleChoiceStep> {
     try {
       final map = jsonDecode(data) as Map<String, dynamic>?;
       if (map == null) return;
-      final selected = map['selectedOption'];
-      if (selected != null) _selectedOptionKey = selected.toString();
+      final selected = map['optionId'] ?? map['selectedOption'];
+      if (selected != null) {
+        if (selected is int) {
+          _selectedOptionId = selected;
+        } else {
+          // Legacy string key — resolve to optionId
+          final match = widget.step.options.where(
+            (o) => o.optionKey == selected.toString(),
+          );
+          if (match.isNotEmpty) _selectedOptionId = match.first.optionId;
+        }
+      }
     } catch (_) {}
   }
 
   void _submit() {
-    if (_selectedOptionKey == null) {
+    if (_selectedOptionId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select an option')),
       );
       return;
     }
-    widget.onSubmit({'selectedOption': _selectedOptionKey});
+    widget.onSubmit({'optionId': _selectedOptionId});
   }
 
   @override
@@ -80,16 +90,15 @@ class _SingleChoiceStepState extends State<SingleChoiceStep> {
           ],
           const SizedBox(height: 24),
           ...options.map((option) {
-            final key = option.optionKey ?? option.optionId?.toString() ?? '';
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: OnboardingOptionCard(
                 label: option.label ?? option.optionKey ?? '',
                 description: option.description,
                 iconUrl: option.iconUrl,
-                isSelected: _selectedOptionKey == key,
+                isSelected: _selectedOptionId == option.optionId,
                 onTap: () {
-                  setState(() => _selectedOptionKey = key);
+                  setState(() => _selectedOptionId = option.optionId);
                 },
               ),
             );

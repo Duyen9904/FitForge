@@ -187,7 +187,7 @@ public class OnboardingServiceImpl implements OnboardingService {
         return OnboardingProgressResponse.builder()
                 .stepId(currentStep.getStepId())
                 .stepKey(currentStep.getStepKey())
-                .inputType(currentStep.getStepType().getInputType())
+                .inputType(currentStep.getInputType())
                 .status(currentProgress != null ? currentProgress.getStatus() : OnboardingStepStatus.PENDING)
                 .responseData(currentProgress != null ? currentProgress.getResponseData() : null)
                 .completedAt(currentProgress != null ? currentProgress.getCompletedAt() : null)

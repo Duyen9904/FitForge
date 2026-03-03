@@ -15,6 +15,8 @@ class ApiConstants {
   // User endpoints
   static const String users = '/users';
   static const String currentUser = '/users/me';
+  static const String userPreferences = '/users/me/preferences';
+  static const String userPrimaryGoal = '/users/me/primary-goal';
 
   // Workout Plan endpoints
   static const String workoutPlans = '/workout-plans';
