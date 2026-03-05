@@ -77,19 +77,9 @@ public interface NutritionService {
     // ========== Meal Templates (UC-7.6) ==========
 
     /**
-     * Create a meal template (UC-7.6)
+     * Get all system-provided meal templates
      */
-    MealTemplateResponse createMealTemplate(Long userId, CreateMealTemplateRequest request);
-
-    /**
-     * Get all meal templates for user
-     */
-    List<MealTemplateResponse> getMealTemplates(Long userId);
-
-    /**
-     * Delete a meal template
-     */
-    void deleteMealTemplate(Long userId, Long templateId);
+    List<MealTemplateResponse> getMealTemplates();
 
     // ========== Weekly View ==========
 

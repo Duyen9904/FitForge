@@ -21,9 +21,6 @@ public class MealTemplate {
     @EqualsAndHashCode.Include
     private Long mealTemplateId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "nutrition_plan_id", nullable = false)
-    private NutritionPlan nutritionPlan;
 
     @Column(nullable = false, length = 100)
     private String mealName;

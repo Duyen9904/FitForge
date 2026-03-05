@@ -4,6 +4,8 @@ import com.dev.backend.service.MissedWorkoutService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -19,8 +21,42 @@ public class MissedWorkoutScheduler {
     @Value("${missed-workout.scheduler.enabled:true}")
     private boolean schedulerEnabled;
 
+    @Value("${missed-workout.scheduler.catchup-on-startup:false}")
+    private boolean catchupOnStartup;
+
+    @Value("${missed-workout.scheduler.catchup-days:7}")
+    private int catchupDays;
+
     public MissedWorkoutScheduler(MissedWorkoutService missedWorkoutService) {
         this.missedWorkoutService = missedWorkoutService;
+    }
+
+    /**
+     * On application startup, catch up on any missed cron runs
+     * by scanning the last N days (default 7).
+     * This handles the case where the server was down and the daily cron never fired.
+     * The detectAndLogMissedWorkoutsForDate method is idempotent,
+     * so re-processing an already-processed date is safe.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void catchUpMissedWorkouts() {
+        if (!schedulerEnabled || !catchupOnStartup) {
+            return;
+        }
+
+        logger.info("Startup catch-up: checking missed workouts for the last {} days", catchupDays);
+        LocalDate today = LocalDate.now();
+
+        for (int i = 1; i <= catchupDays; i++) {
+            LocalDate targetDate = today.minusDays(i);
+            try {
+                missedWorkoutService.detectAndLogMissedWorkoutsForDate(targetDate);
+            } catch (Exception ex) {
+                logger.error("Startup catch-up error for {}: {}", targetDate, ex.getMessage(), ex);
+            }
+        }
+
+        logger.info("Startup catch-up completed");
     }
 
     /**

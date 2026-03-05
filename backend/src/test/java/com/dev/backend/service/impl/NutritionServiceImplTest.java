@@ -99,7 +99,6 @@ class NutritionServiceImplTest {
 
         testTemplate = new MealTemplate();
         testTemplate.setMealTemplateId(1L);
-        testTemplate.setNutritionPlan(testPlan);
         testTemplate.setMealName("Protein Shake");
         testTemplate.setMealType("SNACK");
         testTemplate.setCalories(200);
@@ -268,7 +267,7 @@ class NutritionServiceImplTest {
                     .logDate(LocalDate.now())
                     .build();
 
-            when(templateRepository.findByMealTemplateIdAndNutritionPlanUserUserId(1L, 1L))
+            when(templateRepository.findById(1L))
                     .thenReturn(Optional.of(testTemplate));
             when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
             when(logRepository.save(any(NutritionLog.class))).thenReturn(testLog);
@@ -289,7 +288,7 @@ class NutritionServiceImplTest {
                     .templateId(999L)
                     .build();
 
-            when(templateRepository.findByMealTemplateIdAndNutritionPlanUserUserId(999L, 1L))
+            when(templateRepository.findById(999L))
                     .thenReturn(Optional.empty());
 
             // Act & Assert
@@ -454,58 +453,18 @@ class NutritionServiceImplTest {
     class MealTemplateTests {
 
         @Test
-        @DisplayName("Should create meal template successfully")
-        void createMealTemplate_Success() {
+        @DisplayName("Should return all system meal templates")
+        void getMealTemplates_Success() {
             // Arrange
-            CreateMealTemplateRequest request = CreateMealTemplateRequest.builder()
-                    .mealName("Post-Workout Shake")
-                    .mealType(MealType.SNACK)
-                    .calories(300)
-                    .proteinG(40.0f)
-                    .build();
-
-            when(planRepository.findByUserUserIdAndIsActiveTrue(1L)).thenReturn(Optional.of(testPlan));
-            when(templateRepository.save(any(MealTemplate.class))).thenReturn(testTemplate);
+            when(templateRepository.findAll()).thenReturn(List.of(testTemplate));
 
             // Act
-            MealTemplateResponse response = nutritionService.createMealTemplate(1L, request);
+            List<MealTemplateResponse> response = nutritionService.getMealTemplates();
 
             // Assert
-            assertThat(response).isNotNull();
-            assertThat(response.getMealName()).isEqualTo("Protein Shake");
-            verify(templateRepository, times(1)).save(any(MealTemplate.class));
-        }
-
-        @Test
-        @DisplayName("Should throw exception when no nutrition plan exists")
-        void createMealTemplate_NoPlan() {
-            // Arrange
-            CreateMealTemplateRequest request = CreateMealTemplateRequest.builder()
-                    .mealName("Test Meal")
-                    .mealType(MealType.SNACK)
-                    .calories(200)
-                    .build();
-
-            when(planRepository.findByUserUserIdAndIsActiveTrue(1L)).thenReturn(Optional.empty());
-
-            // Act & Assert
-            assertThatThrownBy(() -> nutritionService.createMealTemplate(1L, request))
-                    .isInstanceOf(ResourceNotFoundException.class)
-                    .hasMessageContaining("No active nutrition plan");
-        }
-
-        @Test
-        @DisplayName("Should delete meal template")
-        void deleteMealTemplate_Success() {
-            // Arrange
-            when(templateRepository.findByMealTemplateIdAndNutritionPlanUserUserId(1L, 1L))
-                    .thenReturn(Optional.of(testTemplate));
-
-            // Act
-            nutritionService.deleteMealTemplate(1L, 1L);
-
-            // Assert
-            verify(templateRepository, times(1)).delete(testTemplate);
+            assertThat(response).hasSize(1);
+            assertThat(response.get(0).getMealName()).isEqualTo("Protein Shake");
+            verify(templateRepository, times(1)).findAll();
         }
     }
 

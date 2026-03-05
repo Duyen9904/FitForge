@@ -2,7 +2,6 @@ import 'dart:developer' as developer;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/nutrition_models.dart';
 import '../models/nutrition_requests.dart';
 import '../repositories/nutrition_repository.dart';
 import 'nutrition_plan_state.dart';
@@ -82,6 +81,41 @@ class NutritionPlanViewModel extends StateNotifier<NutritionPlanState> {
     final planId = await _repository.getActiveNutritionPlanId();
     if (planId != null) {
       await loadActivePlan();
+    }
+  }
+
+  Future<void> generateRecommendedPlan() async {
+    state = const NutritionPlanState.generating();
+    try {
+      final plan = await _repository.generateRecommendedPlan();
+      state = NutritionPlanState.loaded(plan: plan);
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to generate recommended plan',
+        name: 'NutritionPlanViewModel',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      state = NutritionPlanState.error(e.toString());
+    }
+  }
+
+  Future<void> adjustPlanBasedOnBehavior(int planId) async {
+    final currentState = state;
+    if (currentState is! NutritionPlanLoaded) return;
+
+    state = NutritionPlanState.updating(currentPlan: currentState.plan);
+    try {
+      final plan = await _repository.adjustPlanBasedOnBehavior(planId);
+      state = NutritionPlanState.loaded(plan: plan);
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to adjust plan based on behavior',
+        name: 'NutritionPlanViewModel',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      state = NutritionPlanState.error(e.toString());
     }
   }
 

@@ -122,12 +122,8 @@ public class NutritionRecommendationServiceImpl implements NutritionRecommendati
         try {
             List<MealTemplate> mealTemplates = mealTemplateGenerator.generateDayMeals(plan, 1);
             
-            // Save meal templates with plan
-            for (MealTemplate template : mealTemplates) {
-                template.setNutritionPlan(plan);
-            }
+            // Save meal templates (standalone system entries)
             mealTemplateRepository.saveAll(mealTemplates);
-            plan.setMealTemplates(mealTemplates);
             
             log.info("Generated {} meal templates (Day 1) for plan {}", mealTemplates.size(), plan.getNutritionPlanId());
         } catch (Exception e) {
@@ -240,13 +236,11 @@ public class NutritionRecommendationServiceImpl implements NutritionRecommendati
             throw new ResourceNotFoundException("NutritionPlan not found for user: " + userId);
         }
 
-        // Check if meals already exist for this day
-        // Note: Since MealTemplate doesn't have dayNumber field, we'll treat all templates as Day 1
-        // In production, you may need to add dayNumber field to MealTemplate entity
-        List<MealTemplate> existing = mealTemplateRepository.findByNutritionPlanNutritionPlanId(planId);
+        // Check if meals already exist (system-level templates)
+        List<MealTemplate> existing = mealTemplateRepository.findAll();
         
-        if (!existing.isEmpty() && dayNumber == 1) {
-            log.info("Found {} existing meal templates for day {}", existing.size(), dayNumber);
+        if (!existing.isEmpty()) {
+            log.info("Found {} existing meal templates", existing.size());
             return existing;
         }
 
@@ -254,11 +248,6 @@ public class NutritionRecommendationServiceImpl implements NutritionRecommendati
         log.info("Generating new meal templates for day {}", dayNumber);
         try {
             List<MealTemplate> meals = mealTemplateGenerator.generateDayMeals(plan, dayNumber);
-            
-            // Save meal templates
-            for (MealTemplate template : meals) {
-                template.setNutritionPlan(plan);
-            }
             return mealTemplateRepository.saveAll(meals);
         } catch (Exception e) {
             log.error("Error generating meals for day {}", dayNumber, e);

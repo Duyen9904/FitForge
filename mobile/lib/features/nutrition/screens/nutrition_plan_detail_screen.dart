@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../models/nutrition_requests.dart';
 import '../viewmodels/nutrition_plan_viewmodel.dart';
@@ -14,16 +15,91 @@ class NutritionPlanDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nutrition plan'),
+        title: const Text('Nutrition Plan'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(AppDimensions.spacing16),
-        child: state.maybeWhen(
+        child: state.when(
+          initial: () => _buildNoPlan(context, ref),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          generating: () => const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: AppDimensions.spacing12),
+                Text('Generating your plan...'),
+              ],
+            ),
+          ),
+          updating: (currentPlan) => const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: AppDimensions.spacing12),
+                Text('Adjusting your plan...'),
+              ],
+            ),
+          ),
           loaded: (plan) => _PlanForm(planId: plan.nutritionPlanId),
-          orElse: () => const Center(
-            child: Text('No active nutrition plan'),
+          error: (message) => Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                const SizedBox(height: AppDimensions.spacing12),
+                Text(message, textAlign: TextAlign.center),
+                const SizedBox(height: AppDimensions.spacing16),
+                TextButton.icon(
+                  onPressed: () {
+                    ref
+                        .read(nutritionPlanViewModelProvider.notifier)
+                        .loadActivePlan();
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildNoPlan(BuildContext context, WidgetRef ref) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.restaurant_menu, size: 56, color: AppColors.grey300),
+          const SizedBox(height: AppDimensions.spacing12),
+          Text(
+            'No Active Nutrition Plan',
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              color: AppColors.grey700,
+            ),
+          ),
+          const SizedBox(height: AppDimensions.spacing8),
+          Text(
+            'Generate a personalized plan based on your profile.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: AppColors.grey500),
+          ),
+          const SizedBox(height: AppDimensions.spacing24),
+          ElevatedButton.icon(
+            onPressed: () {
+              ref
+                  .read(nutritionPlanViewModelProvider.notifier)
+                  .generateRecommendedPlan();
+            },
+            icon: const Icon(Icons.auto_awesome),
+            label: const Text('Generate Plan'),
+          ),
+        ],
       ),
     );
   }
@@ -105,7 +181,20 @@ class _PlanFormState extends ConsumerState<_PlanForm> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _submit,
-              child: const Text('Save changes'),
+              child: const Text('Save Changes'),
+            ),
+          ),
+          const SizedBox(height: AppDimensions.spacing12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                ref
+                    .read(nutritionPlanViewModelProvider.notifier)
+                    .adjustPlanBasedOnBehavior(widget.planId);
+              },
+              icon: const Icon(Icons.tune),
+              label: const Text('Auto-Adjust Based on Behavior'),
             ),
           ),
         ],
@@ -138,4 +227,3 @@ class _PlanFormState extends ConsumerState<_PlanForm> {
     Navigator.of(context).pop();
   }
 }
-

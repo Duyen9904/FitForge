@@ -135,6 +135,28 @@ class NutritionRepository {
     _unwrapResponse(response);
   }
 
+  Future<NutritionPlan> generateRecommendedPlan() async {
+    final response = await _service.generateRecommendedPlan();
+    final plan = _unwrapResponse(response);
+    await _localStorage.setInt(_activeNutritionPlanKey, plan.nutritionPlanId);
+    return plan;
+  }
+
+  Future<NutritionPlan> adjustPlanBasedOnBehavior(int planId) async {
+    final response = await _service.adjustPlanBasedOnBehavior(planId);
+    final plan = _unwrapResponse(response);
+    await _localStorage.setInt(_activeNutritionPlanKey, plan.nutritionPlanId);
+    return plan;
+  }
+
+  Future<List<MealTemplate>> getMealsForDay(
+    int planId,
+    int dayNumber,
+  ) async {
+    final response = await _service.getMealsForDay(planId, dayNumber);
+    return _unwrapResponse(response);
+  }
+
 
 
   Future<int?> getActiveNutritionPlanId() async {

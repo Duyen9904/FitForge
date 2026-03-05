@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/config/routes.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../viewmodels/nutrition_tab_viewmodel.dart';
@@ -47,6 +49,13 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
         backgroundColor: AppColors.backgroundLight,
         elevation: 0,
         scrolledUnderElevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.restaurant_menu),
+            tooltip: 'Meal Templates',
+            onPressed: () => context.push(Routes.mealTemplates),
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -103,7 +112,7 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
       // FAB for quick-adding meals
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // TODO: wire to add meal screen
+          context.push(Routes.logMeal);
         },
         backgroundColor: AppColors.primary,
         child: const Icon(Icons.add, color: Colors.white),

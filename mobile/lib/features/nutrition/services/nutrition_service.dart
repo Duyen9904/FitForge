@@ -238,6 +238,52 @@ class NutritionService {
       (json) => null,
     );
   }
+
+  Future<ApiResponse<NutritionPlan>> generateRecommendedPlan() async {
+    final response = await apiClient.post(
+      ApiConstants.recommendationsNutritionGenerate,
+    );
+
+    return ApiResponse.fromJson(
+      response.data as Map<String, dynamic>,
+      (json) => NutritionPlan.fromJson(json as Map<String, dynamic>),
+    );
+  }
+
+  Future<ApiResponse<NutritionPlan>> adjustPlanBasedOnBehavior(
+    int planId,
+  ) async {
+    final response = await apiClient.post(
+      ApiConstants.recommendationsNutritionAdjust(planId),
+    );
+
+    return ApiResponse.fromJson(
+      response.data as Map<String, dynamic>,
+      (json) => NutritionPlan.fromJson(json as Map<String, dynamic>),
+    );
+  }
+
+  Future<ApiResponse<List<MealTemplate>>> getMealsForDay(
+    int planId,
+    int dayNumber,
+  ) async {
+    final response = await apiClient.get(
+      ApiConstants.recommendationsNutritionMealsDay(planId, dayNumber),
+    );
+
+    return ApiResponse.fromJson(
+      response.data as Map<String, dynamic>,
+      (json) {
+        final list = json as List;
+        return list
+            .map(
+              (item) => MealTemplate.fromJson(item as Map<String, dynamic>),
+            )
+            .toList();
+      },
+    );
+  }
+
   Future<ApiResponse<List<DailyNutritionSummary>>> getWeeklyTotals(
     DateTime weekStart,
   ) async {

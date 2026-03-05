@@ -201,34 +201,11 @@ public class NutritionController {
 
     // ========== Meal Templates (UC-7.6) ==========
 
-    @Operation(summary = "Create meal template", description = "UC-7.6: Save frequently eaten meal")
-    @PostMapping("/templates")
-    @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<MealTemplateResponse> createMealTemplate(
-            @AuthenticationPrincipal Jwt jwt,
-            @Valid @RequestBody CreateMealTemplateRequest request) {
-        Long userId = Long.parseLong(jwt.getSubject());
-        MealTemplateResponse response = nutritionService.createMealTemplate(userId, request);
-        return ApiResponse.success(response, "Meal template created successfully");
-    }
-
-    @Operation(summary = "Get meal templates", description = "List all saved meal templates")
+    @Operation(summary = "Get meal templates", description = "List all system-provided meal templates")
     @GetMapping("/templates")
-    public ApiResponse<List<MealTemplateResponse>> getMealTemplates(@AuthenticationPrincipal Jwt jwt) {
-        Long userId = Long.parseLong(jwt.getSubject());
-        List<MealTemplateResponse> response = nutritionService.getMealTemplates(userId);
+    public ApiResponse<List<MealTemplateResponse>> getMealTemplates() {
+        List<MealTemplateResponse> response = nutritionService.getMealTemplates();
         return ApiResponse.success(response);
-    }
-
-    @Operation(summary = "Delete meal template", description = "Remove a saved meal template")
-    @DeleteMapping("/templates/{templateId}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public ApiResponse<Void> deleteMealTemplate(
-            @AuthenticationPrincipal Jwt jwt,
-            @PathVariable Long templateId) {
-        Long userId = Long.parseLong(jwt.getSubject());
-        nutritionService.deleteMealTemplate(userId, templateId);
-        return ApiResponse.success(null, "Meal template deleted");
     }
 
     // ========== Weekly View ==========

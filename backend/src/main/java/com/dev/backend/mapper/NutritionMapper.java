@@ -1,6 +1,5 @@
 package com.dev.backend.mapper;
 
-import com.dev.backend.model.dto.request.CreateMealTemplateRequest;
 import com.dev.backend.model.dto.request.CreateNutritionPlanRequest;
 import com.dev.backend.model.dto.request.LogMealRequest;
 import com.dev.backend.model.dto.response.*;
@@ -67,12 +66,6 @@ public class NutritionMapper {
             }
         }
 
-        // Include meal templates if present
-        if (entity.getMealTemplates() != null && !entity.getMealTemplates().isEmpty()) {
-            builder.mealTemplates(entity.getMealTemplates().stream()
-                    .map(this::toResponse)
-                    .toList());
-        }
 
         return builder.build();
     }
@@ -162,19 +155,6 @@ public class NutritionMapper {
 
     // ========== Meal Template ==========
 
-    public MealTemplate toEntity(CreateMealTemplateRequest request, NutritionPlan plan) {
-        MealTemplate template = new MealTemplate();
-        template.setNutritionPlan(plan);
-        template.setMealName(request.getMealName());
-        template.setMealType(request.getMealType() != null ? request.getMealType().name() : null);
-        template.setDescription(request.getDescription());
-        template.setCalories(request.getCalories());
-        template.setProteinG(request.getProteinG());
-        template.setCarbsG(request.getCarbsG());
-        template.setFatsG(request.getFatsG());
-        template.setRecipeInstructions(request.getRecipeInstructions());
-        return template;
-    }
 
     public MealTemplateResponse toResponse(MealTemplate entity) {
         return MealTemplateResponse.builder()

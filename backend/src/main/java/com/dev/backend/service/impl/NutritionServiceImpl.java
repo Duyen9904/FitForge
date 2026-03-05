@@ -124,8 +124,7 @@ public class NutritionServiceImpl implements NutritionService {
 
     @Override
     public NutritionLogResponse logMealFromTemplate(Long userId, LogMealFromTemplateRequest request) {
-        MealTemplate template = templateRepository.findByMealTemplateIdAndNutritionPlanUserUserId(
-                request.getTemplateId(), userId)
+        MealTemplate template = templateRepository.findById(request.getTemplateId())
                 .orElseThrow(() -> new ResourceNotFoundException("Meal template not found"));
 
         float multiplier = request.getQuantityMultiplier() != null ? request.getQuantityMultiplier() : 1.0f;
@@ -455,29 +454,12 @@ public class NutritionServiceImpl implements NutritionService {
     // ========== Meal Templates (UC-7.6) ==========
 
     @Override
-    public MealTemplateResponse createMealTemplate(Long userId, CreateMealTemplateRequest request) {
-        NutritionPlan plan = planRepository.findByUserUserIdAndIsActiveTrue(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("No active nutrition plan. Create a plan first."));
-
-        MealTemplate template = mapper.toEntity(request, plan);
-        template = templateRepository.save(template);
-        return mapper.toResponse(template);
-    }
-
-    @Override
     @Transactional(readOnly = true)
-    public List<MealTemplateResponse> getMealTemplates(Long userId) {
-        return templateRepository.findByNutritionPlanUserUserId(userId)
+    public List<MealTemplateResponse> getMealTemplates() {
+        return templateRepository.findAll()
                 .stream()
                 .map(mapper::toResponse)
                 .collect(Collectors.toList());
-    }
-
-    @Override
-    public void deleteMealTemplate(Long userId, Long templateId) {
-        MealTemplate template = templateRepository.findByMealTemplateIdAndNutritionPlanUserUserId(templateId, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Meal template not found"));
-        templateRepository.delete(template);
     }
 
     // ========== Weekly View ==========

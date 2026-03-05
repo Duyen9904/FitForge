@@ -335,65 +335,19 @@ class NutritionControllerTest {
     }
 
     @Nested
-    @DisplayName("POST /api/v1/nutrition/templates")
-    class CreateMealTemplateTests {
-
-        @Test
-        @DisplayName("Should create meal template successfully")
-        void createMealTemplate_Success() throws Exception {
-            CreateMealTemplateRequest request = CreateMealTemplateRequest.builder()
-                    .mealName("Protein Shake")
-                    .mealType(MealType.SNACK)
-                    .calories(200)
-                    .proteinG(30.0f)
-                    .build();
-
-            when(nutritionService.createMealTemplate(eq(1L), any(CreateMealTemplateRequest.class)))
-                    .thenReturn(mockTemplateResponse);
-
-            mockMvc.perform(post("/api/v1/nutrition/templates")
-                            .with(jwt().jwt(j -> j.subject("1")))
-                            .with(csrf())
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(request)))
-                    .andExpect(status().isCreated())
-                    .andExpect(jsonPath("$.success").value(true))
-                    .andExpect(jsonPath("$.data.mealName").value("Protein Shake"));
-        }
-    }
-
-    @Nested
     @DisplayName("GET /api/v1/nutrition/templates")
     class GetMealTemplatesTests {
 
         @Test
         @DisplayName("Should return meal templates")
         void getMealTemplates_Success() throws Exception {
-            when(nutritionService.getMealTemplates(1L)).thenReturn(List.of(mockTemplateResponse));
+            when(nutritionService.getMealTemplates()).thenReturn(List.of(mockTemplateResponse));
 
             mockMvc.perform(get("/api/v1/nutrition/templates")
                             .with(jwt().jwt(j -> j.subject("1"))))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data[0].mealName").value("Protein Shake"));
-        }
-    }
-
-    @Nested
-    @DisplayName("DELETE /api/v1/nutrition/templates/{id}")
-    class DeleteMealTemplateTests {
-
-        @Test
-        @DisplayName("Should delete meal template")
-        void deleteMealTemplate_Success() throws Exception {
-            doNothing().when(nutritionService).deleteMealTemplate(1L, 1L);
-
-            mockMvc.perform(delete("/api/v1/nutrition/templates/1")
-                            .with(jwt().jwt(j -> j.subject("1")))
-                            .with(csrf()))
-                    .andExpect(status().isNoContent());
-
-            verify(nutritionService, times(1)).deleteMealTemplate(1L, 1L);
         }
     }
 }

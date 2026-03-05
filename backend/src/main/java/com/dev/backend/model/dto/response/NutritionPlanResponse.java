@@ -40,7 +40,4 @@ public class NutritionPlanResponse {
     private Integer cheatMealsPerWeek;
     private Boolean autoAdjustEnabled;
     private Boolean isActive;
-    
-    // Meal templates (Day 1 initially, more on-demand)
-    private List<MealTemplateResponse> mealTemplates;
 }

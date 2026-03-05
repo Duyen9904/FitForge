@@ -77,8 +77,6 @@ public class NutritionPlan extends BaseEntity {
     @Column(nullable = false)
     private Boolean isActive = true;
 
-    @OneToMany(mappedBy = "nutritionPlan", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<MealTemplate> mealTemplates = new ArrayList<>();
 
     @OneToMany(mappedBy = "nutritionPlan", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<NutritionAdjustment> nutritionAdjustments = new ArrayList<>();
