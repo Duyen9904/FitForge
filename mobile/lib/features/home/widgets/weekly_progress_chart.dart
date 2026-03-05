@@ -27,6 +27,12 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
         d.caloriesBurned > 0 || d.minutesExercised > 0 || d.workoutsCompleted > 0);
   }
 
+  /// A day is "missed" when the backend marks it as missed.
+  bool _isDayMissed(DailyWorkoutData? day) {
+    if (day == null) return false;
+    return day.isMissed;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -145,9 +151,10 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
           if (day == null) return null;
 
           final dayName = _dayLabels[groupIndex];
+          final isMissed = _isDayMissed(day);
           return BarTooltipItem(
-            '$dayName\n',
-            const TextStyle(
+            '$dayName${isMissed ? ' · MISSED' : ''}\n',
+            TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w700,
               fontSize: 12,
@@ -180,15 +187,21 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
             if (index < 0 || index >= _dayLabels.length) {
               return const SizedBox.shrink();
             }
-            final isToday = _getDayData(index)?.isToday ?? false;
+            final day = _getDayData(index);
+            final isToday = day?.isToday ?? false;
+            final isMissed = _isDayMissed(day);
             return Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Text(
                 _dayLabels[index],
                 style: TextStyle(
-                  color: isToday ? AppColors.primary : AppColors.grey400,
+                  color: isMissed
+                      ? AppColors.error
+                      : isToday
+                          ? AppColors.primary
+                          : AppColors.grey400,
                   fontSize: 11,
-                  fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: (isToday || isMissed) ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
             );
@@ -229,10 +242,18 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
       final value = _getValueForMetric(day);
       final isToday = day?.isToday ?? false;
       final hasWorkout = (day?.workoutsCompleted ?? 0) > 0;
+      final isMissed = _isDayMissed(day);
 
       // Determine bar colors
       LinearGradient gradient;
-      if (isToday && hasWorkout) {
+      if (isMissed) {
+        // Missed day — red/error gradient
+        gradient = LinearGradient(
+          colors: [AppColors.error.withOpacity(0.6), AppColors.error],
+          begin: Alignment.bottomCenter,
+          end: Alignment.topCenter,
+        );
+      } else if (isToday && hasWorkout) {
         gradient = const LinearGradient(
           colors: [AppColors.accentLight, AppColors.accent],
           begin: Alignment.bottomCenter,
@@ -266,14 +287,14 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
           x: i,
           barRods: [
             BarChartRodData(
-              toY: value,
+              toY: isMissed && value == 0 ? maxBg * 0.12 : value,
               gradient: gradient,
               width: 18,
               borderRadius: BorderRadius.circular(9),
               backDrawRodData: BackgroundBarChartRodData(
                 show: true,
                 toY: maxBg,
-                color: AppColors.grey50,
+                color: isMissed ? AppColors.error.withOpacity(0.06) : AppColors.grey50,
               ),
             ),
           ],

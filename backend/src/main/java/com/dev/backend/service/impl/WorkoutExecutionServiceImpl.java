@@ -43,6 +43,7 @@ public class WorkoutExecutionServiceImpl implements WorkoutExecutionService {
     private final WorkoutPlanRepository workoutPlanRepository;
     private final ExerciseRepository exerciseRepository;
     private final UserRepository userRepository;
+    private final MissedWorkoutRepository missedWorkoutRepository;
     private final WorkoutExecutionMapper mapper;
 
     public WorkoutExecutionServiceImpl(WorkoutProgressRepository workoutProgressRepository,
@@ -51,6 +52,7 @@ public class WorkoutExecutionServiceImpl implements WorkoutExecutionService {
                                        WorkoutPlanRepository workoutPlanRepository,
                                        ExerciseRepository exerciseRepository,
                                        UserRepository userRepository,
+                                       MissedWorkoutRepository missedWorkoutRepository,
                                        WorkoutExecutionMapper mapper) {
         this.workoutProgressRepository = workoutProgressRepository;
         this.exerciseLogRepository = exerciseLogRepository;
@@ -58,6 +60,7 @@ public class WorkoutExecutionServiceImpl implements WorkoutExecutionService {
         this.workoutPlanRepository = workoutPlanRepository;
         this.exerciseRepository = exerciseRepository;
         this.userRepository = userRepository;
+        this.missedWorkoutRepository = missedWorkoutRepository;
         this.mapper = mapper;
     }
 
@@ -329,6 +332,11 @@ public class WorkoutExecutionServiceImpl implements WorkoutExecutionService {
         Map<LocalDate, DailyWorkoutAggregate> dataMap = workoutData.stream()
             .collect(Collectors.toMap(DailyWorkoutAggregate::getWorkoutDate, d -> d));
         
+        // Query missed workout dates for this user in the week
+        List<LocalDate> missedDates = missedWorkoutRepository
+            .findMissedDatesByUserAndDateRange(userId, startDate, endDate);
+        java.util.Set<LocalDate> missedDateSet = new java.util.HashSet<>(missedDates);
+        
         for (int i = 0; i < 7; i++) {
             LocalDate date = startDate.plusDays(i);
             DailyWorkoutAggregate data = dataMap.get(date);
@@ -337,6 +345,7 @@ public class WorkoutExecutionServiceImpl implements WorkoutExecutionService {
                 .date(date)
                 .dayOfWeek(date.getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.ENGLISH))
                 .isToday(date.equals(LocalDate.now()))
+                .isMissed(missedDateSet.contains(date))
                 .workoutsCompleted(data != null ? data.getTotalWorkouts().intValue() : 0)
                 .minutesExercised(data != null ? data.getTotalMinutes().intValue() : 0)
                 .caloriesBurned(data != null ? data.getTotalCalories() : 0)

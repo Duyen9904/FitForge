@@ -31,6 +31,7 @@ public class WeeklyWorkoutProgressResponse {
         private LocalDate date;
         private String dayOfWeek;          // "Sun", "Mon", etc.
         private boolean isToday;
+        private boolean isMissed;
         private Integer workoutsCompleted;
         private Integer minutesExercised;
         private Integer caloriesBurned;

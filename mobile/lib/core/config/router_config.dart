@@ -18,7 +18,7 @@ import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
 import '../../features/profile/screens/onboarding_review_screen.dart';
 import '../../features/profile/screens/fitness_goals_screen.dart';
-import '../../features/profile/screens/app_settings_screen.dart';
+import '../../features/settings/screens/settings_screen.dart';
 import '../../features/profile/screens/training_preferences_screen.dart';
 import '../../features/profile/screens/nutrition_targets_screen.dart';
 import '../../features/recommendation/screens/workout_recommendation_screen.dart';
@@ -256,9 +256,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const FitnessGoalsScreen(),
       ),
       GoRoute(
-        path: Routes.appSettings,
-        name: RouteNames.appSettings,
-        builder: (context, state) => const AppSettingsScreen(),
+        path: Routes.settings,
+        name: RouteNames.settings,
+        builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
         path: Routes.trainingPreferences,

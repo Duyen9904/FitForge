@@ -41,4 +41,14 @@ public interface WorkoutSessionRepository extends JpaRepository<WorkoutSession, 
            "WHERE ws.scheduledDate = :date AND ws.isRestDay = false " +
            "AND ws.workoutPlan.isActive = true")
     List<WorkoutSession> findScheduledSessionsByDate(@Param("date") LocalDate date);
+
+    @Query("SELECT ws FROM WorkoutSession ws " +
+           "WHERE ws.scheduledDate BETWEEN :startDate AND :endDate " +
+           "AND ws.isRestDay = false " +
+           "AND ws.workoutPlan.isActive = true " +
+           "AND ws.workoutPlan.user.userId = :userId")
+    List<WorkoutSession> findScheduledSessionsByUserAndDateRange(
+            @Param("userId") Long userId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate);
 }

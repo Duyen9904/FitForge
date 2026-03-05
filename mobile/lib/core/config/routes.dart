@@ -58,10 +58,13 @@ class Routes {
   static const String createWorkoutPlan = '/create-workout-plan';
   static const String generateAIPlan = '/generate-ai-plan';
 
+  // Settings route
+  static const String settings = '/settings';
+
   // Profile sub-routes
   static const String onboardingReview = '/profile/onboarding-review';
   static const String fitnessGoals = '/profile/fitness-goals';
-  static const String appSettings = '/profile/settings';
+  static const String appSettings = '/settings'; // alias
   static const String trainingPreferences = '/profile/training-preferences';
   static const String nutritionTargets = '/profile/nutrition-targets';
 }
@@ -109,10 +112,13 @@ class RouteNames {
   static const String createWorkoutPlan = 'createWorkoutPlan';
   static const String generateAIPlan = 'generateAIPlan';
 
+  // Settings route
+  static const String settings = 'settings';
+
   // Profile sub-routes
   static const String onboardingReview = 'onboardingReview';
   static const String fitnessGoals = 'fitnessGoals';
-  static const String appSettings = 'appSettings';
+  static const String appSettings = 'settings'; // alias
   static const String trainingPreferences = 'trainingPreferences';
   static const String nutritionTargets = 'nutritionTargets';
 }

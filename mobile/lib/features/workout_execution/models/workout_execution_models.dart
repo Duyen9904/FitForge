@@ -97,6 +97,7 @@ class DailyWorkoutData with _$DailyWorkoutData {
     DateTime? date,
     String? dayOfWeek,
     @Default(false) bool isToday,
+    @Default(false) bool isMissed,
     @Default(0) int workoutsCompleted,
     @Default(0) int minutesExercised,
     @Default(0) int caloriesBurned,

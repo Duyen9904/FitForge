@@ -136,6 +136,7 @@ class _SessionDaySelectorState extends State<SessionDaySelector> {
                 final session = widget.weekSessions[index];
                 final isSelected = index == widget.selectedIndex;
                 final isRestDay = session.isRestDay;
+                final isMissed = session.isMissed && !isRestDay;
                 final dateStr = session.scheduledDate != null
                     ? _formatDate(session.scheduledDate!)
                     : null;
@@ -143,28 +144,38 @@ class _SessionDaySelectorState extends State<SessionDaySelector> {
                 return Padding(
                   padding: const EdgeInsets.only(right: AppDimensions.spacing8),
                   child: ChoiceChip(
-                    avatar: isRestDay
+                    avatar: isMissed && !isSelected
                         ? Icon(
-                            Icons.hotel_rounded,
+                            Icons.warning_rounded,
                             size: 16,
-                            color:
-                                isSelected ? AppColors.white : AppColors.grey600,
+                            color: isSelected ? AppColors.white : AppColors.error,
                           )
-                        : null,
+                        : isRestDay
+                            ? Icon(
+                                Icons.hotel_rounded,
+                                size: 16,
+                                color:
+                                    isSelected ? AppColors.white : AppColors.grey600,
+                              )
+                            : null,
                     label: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
                           isRestDay
                               ? 'Day ${session.dayNumber} · Rest'
-                              : 'Day ${session.dayNumber}',
+                              : isMissed
+                                  ? 'Day ${session.dayNumber} · Missed'
+                                  : 'Day ${session.dayNumber}',
                           style:
                               Theme.of(context).textTheme.labelMedium?.copyWith(
                                     color: isSelected
                                         ? AppColors.white
-                                        : isRestDay
-                                            ? AppColors.grey600
-                                            : AppColors.grey700,
+                                        : isMissed
+                                            ? AppColors.error
+                                            : isRestDay
+                                                ? AppColors.grey600
+                                                : AppColors.grey700,
                                     fontWeight: isSelected
                                         ? FontWeight.w600
                                         : FontWeight.normal,
@@ -181,7 +192,9 @@ class _SessionDaySelectorState extends State<SessionDaySelector> {
                                       color: isSelected
                                           ? AppColors.white
                                               .withValues(alpha: 0.8)
-                                          : AppColors.grey500,
+                                          : isMissed
+                                              ? AppColors.error.withOpacity(0.7)
+                                              : AppColors.grey500,
                                       fontSize: 10,
                                     ),
                           ),
@@ -189,19 +202,29 @@ class _SessionDaySelectorState extends State<SessionDaySelector> {
                     ),
                     selected: isSelected,
                     onSelected: (_) => widget.onDaySelected(index),
-                    backgroundColor:
-                        isRestDay ? AppColors.grey100 : AppColors.grey200,
-                    selectedColor:
-                        isRestDay ? AppColors.grey600 : AppColors.primary,
+                    backgroundColor: isMissed
+                        ? AppColors.error.withOpacity(0.08)
+                        : isRestDay
+                            ? AppColors.grey100
+                            : AppColors.grey200,
+                    selectedColor: isMissed
+                        ? AppColors.error
+                        : isRestDay
+                            ? AppColors.grey600
+                            : AppColors.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius:
                           BorderRadius.circular(AppDimensions.radiusRound),
                       side: BorderSide(
                         color: isSelected
-                            ? (isRestDay
-                                ? AppColors.grey600
-                                : AppColors.primary)
-                            : AppColors.grey300,
+                            ? (isMissed
+                                ? AppColors.error
+                                : isRestDay
+                                    ? AppColors.grey600
+                                    : AppColors.primary)
+                            : isMissed
+                                ? AppColors.error.withOpacity(0.4)
+                                : AppColors.grey300,
                       ),
                     ),
                     showCheckmark: false,
