@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../models/nutrition_models.dart';
 import '../models/nutrition_requests.dart';
+import '../repositories/nutrition_repository.dart';
+import '../viewmodels/nutrition_tab_viewmodel.dart';
 
-class LogMealFromTemplateScreen extends StatefulWidget {
+class LogMealFromTemplateScreen extends ConsumerStatefulWidget {
   final List<MealTemplate> templates;
 
   const LogMealFromTemplateScreen({
@@ -13,14 +17,15 @@ class LogMealFromTemplateScreen extends StatefulWidget {
   });
 
   @override
-  State<LogMealFromTemplateScreen> createState() =>
+  ConsumerState<LogMealFromTemplateScreen> createState() =>
       _LogMealFromTemplateScreenState();
 }
 
 class _LogMealFromTemplateScreenState
-    extends State<LogMealFromTemplateScreen> {
+    extends ConsumerState<LogMealFromTemplateScreen> {
   MealTemplate? _selectedTemplate;
   final _quantityController = TextEditingController(text: '1');
+  bool _isSubmitting = false;
 
   @override
   void dispose() {
@@ -32,7 +37,7 @@ class _LogMealFromTemplateScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Log from template'),
+        title: const Text('Log from Template'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(AppDimensions.spacing16),
@@ -65,9 +70,19 @@ class _LogMealFromTemplateScreenState
             const Spacer(),
             SizedBox(
               width: double.infinity,
+              height: 48,
               child: ElevatedButton(
-                onPressed: _submit,
-                child: const Text('Log meal'),
+                onPressed: _isSubmitting ? null : _submit,
+                child: _isSubmitting
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.5,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Log Meal'),
               ),
             ),
           ],
@@ -76,8 +91,10 @@ class _LogMealFromTemplateScreenState
     );
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (_selectedTemplate == null) return;
+
+    setState(() => _isSubmitting = true);
 
     final dto = LogMealFromTemplateRequestDto(
       templateId: _selectedTemplate!.mealTemplateId,
@@ -86,7 +103,34 @@ class _LogMealFromTemplateScreenState
       logDate: DateTime.now(),
     );
 
-    Navigator.of(context).pop(dto);
+    try {
+      final repo = ref.read(nutritionRepositoryProvider);
+      await repo.logMealFromTemplate(dto);
+
+      // Refresh nutrition tab data after logging
+      ref.read(nutritionTabViewModelProvider.notifier).loadAll();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Meal logged from template!'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to log meal: $e'),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 }
-
