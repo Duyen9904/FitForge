@@ -13,6 +13,11 @@ import '../../features/exercises/screens/exercises_by_type_screen.dart';
 import '../../features/exercises/screens/favorites_screen.dart';
 import '../../features/home/screens/home_screen.dart';
 import '../../features/nutrition/screens/nutrition_screen.dart';
+import '../../features/nutrition/screens/meal_templates_screen.dart';
+import '../../features/nutrition/screens/add_meal_plan_screen.dart';
+import '../../features/nutrition/screens/template_meal_detail_screen.dart';
+import '../../features/nutrition/screens/log_meal_screen.dart';
+import '../../features/nutrition/models/nutrition_models.dart';
 import '../../features/measurements/screens/record_measurement_screen.dart';
 import '../../features/onboarding/screens/onboarding_screen.dart';
 import '../../features/profile/screens/profile_screen.dart';
@@ -269,6 +274,32 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.nutritionTargets,
         name: RouteNames.nutritionTargets,
         builder: (context, state) => const NutritionTargetsScreen(),
+      ),
+      GoRoute(
+        path: Routes.mealTemplates,
+        name: RouteNames.mealTemplates,
+        builder: (context, state) => const MealTemplatesScreen(),
+      ),
+      GoRoute(
+        path: Routes.addMealPlan,
+        name: RouteNames.addMealPlan,
+        builder: (context, state) {
+          final template = state.extra as MealTemplate;
+          return AddMealPlanScreen(template: template);
+        },
+      ),
+      GoRoute(
+        path: Routes.templateMealDetail,
+        name: RouteNames.templateMealDetail,
+        builder: (context, state) {
+          final template = state.extra as MealTemplate;
+          return TemplateMealDetailScreen(template: template);
+        },
+      ),
+      GoRoute(
+        path: Routes.logMeal,
+        name: RouteNames.logMeal,
+        builder: (context, state) => const LogMealScreen(),
       ),
 
       // Equipment routes (outside shell - standalone routes)

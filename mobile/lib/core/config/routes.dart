@@ -13,6 +13,10 @@ class Routes {
   static const String workoutPlanDetailSegment = ':planId';
   static const String exercises = '/exercises';
   static const String nutrition = '/nutrition';
+  static const String mealTemplates = '/nutrition/meal-templates';
+  static const String addMealPlan = '/nutrition/add-meal-plan';
+  static const String templateMealDetail = '/nutrition/template-detail';
+  static const String logMeal = '/nutrition/log-meal';
   static const String profile = '/profile';
   
   // Exercise child routes (full paths)
@@ -83,6 +87,10 @@ class RouteNames {
   static const String workoutPlanDetail = 'workoutPlanDetail';
   static const String exercises = 'exercises';
   static const String nutrition = 'nutrition';
+  static const String mealTemplates = 'mealTemplates';
+  static const String addMealPlan = 'addMealPlan';
+  static const String templateMealDetail = 'templateMealDetail';
+  static const String logMeal = 'logMeal';
   static const String profile = 'profile';
   
   // Exercise child routes
