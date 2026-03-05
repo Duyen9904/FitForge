@@ -84,6 +84,7 @@ class ApiConstants {
   static const String nutritionTemplates = '/nutrition/templates';
   static String nutritionTemplateById(int templateId) =>
       '/nutrition/templates/$templateId';
+  static const String nutritionWeekly = '/nutrition/weekly';
 
 
   // Recovery endpoints

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_dimensions.dart';
 import '../models/nutrition_requests.dart';
-import '../viewmodels/nutrition_plan_state.dart';
 import '../viewmodels/nutrition_plan_viewmodel.dart';
 
 class NutritionPlanDetailScreen extends ConsumerWidget {

@@ -238,6 +238,29 @@ class NutritionService {
       (json) => null,
     );
   }
+  Future<ApiResponse<List<DailyNutritionSummary>>> getWeeklyTotals(
+    DateTime weekStart,
+  ) async {
+    final response = await apiClient.get(
+      ApiConstants.nutritionWeekly,
+      queryParameters: {
+        'weekStart': weekStart.toIso8601String().split('T').first,
+      },
+    );
+
+    return ApiResponse.fromJson(
+      response.data as Map<String, dynamic>,
+      (json) {
+        final list = json as List;
+        return list
+            .map(
+              (item) => DailyNutritionSummary.fromJson(
+                  item as Map<String, dynamic>),
+            )
+            .toList();
+      },
+    );
+  }
 
 
 }
