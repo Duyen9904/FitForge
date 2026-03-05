@@ -480,6 +480,20 @@ public class NutritionServiceImpl implements NutritionService {
         templateRepository.delete(template);
     }
 
+    // ========== Weekly View ==========
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<DailyNutritionSummaryResponse> getWeeklyTotals(Long userId, LocalDate weekStart, LocalDate weekEnd) {
+        List<DailyNutritionSummaryResponse> result = new ArrayList<>();
+        LocalDate current = weekStart;
+        while (!current.isAfter(weekEnd)) {
+            result.add(getDailySummary(userId, current));
+            current = current.plusDays(1);
+        }
+        return result;
+    }
+
     // ========== Helper Methods ==========
 
     private User findUserOrThrow(Long userId) {
@@ -487,3 +501,4 @@ public class NutritionServiceImpl implements NutritionService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 }
+

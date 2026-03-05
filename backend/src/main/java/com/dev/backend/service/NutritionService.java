@@ -91,4 +91,11 @@ public interface NutritionService {
      */
     void deleteMealTemplate(Long userId, Long templateId);
 
+    // ========== Weekly View ==========
+
+    /**
+     * Get daily nutrition totals for a date range (weekly calendar view).
+     */
+    List<DailyNutritionSummaryResponse> getWeeklyTotals(Long userId, LocalDate weekStart, LocalDate weekEnd);
+
 }

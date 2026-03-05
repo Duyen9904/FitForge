@@ -231,4 +231,19 @@ public class NutritionController {
         return ApiResponse.success(null, "Meal template deleted");
     }
 
+    // ========== Weekly View ==========
+
+    @Operation(summary = "Get weekly nutrition totals", description = "Get daily nutrition summaries for a week range")
+    @GetMapping("/weekly")
+    public ApiResponse<List<DailyNutritionSummaryResponse>> getWeeklyTotals(
+            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(description = "Week start date (YYYY-MM-DD), defaults to current week Monday")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        LocalDate start = weekStart != null ? weekStart : LocalDate.now().with(java.time.DayOfWeek.MONDAY);
+        LocalDate end = start.plusDays(6);
+        List<DailyNutritionSummaryResponse> response = nutritionService.getWeeklyTotals(userId, start, end);
+        return ApiResponse.success(response);
+    }
+
 }

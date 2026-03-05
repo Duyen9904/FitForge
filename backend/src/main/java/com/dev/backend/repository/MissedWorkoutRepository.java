@@ -40,4 +40,10 @@ public interface MissedWorkoutRepository extends JpaRepository<MissedWorkout, Lo
                                            @Param("end") LocalDate end);
 
     long countByUserUserIdAndIsReplannedTrue(Long userId);
+
+    @Query("SELECT mw.scheduledDate FROM MissedWorkout mw " +
+           "WHERE mw.user.userId = :userId AND mw.scheduledDate BETWEEN :start AND :end")
+    List<LocalDate> findMissedDatesByUserAndDateRange(@Param("userId") Long userId,
+                                                      @Param("start") LocalDate start,
+                                                      @Param("end") LocalDate end);
 }
