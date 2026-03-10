@@ -18,7 +18,7 @@ import java.util.List;
 public class NutritionDashboardResponse {
 
     private DailyNutritionSummaryResponse todaySummary;
-    private List<NutritionLogResponse> recentMeals;
+    private List<PlanMealResponse> recentMeals;
     private WeeklyCheatMealSummary weeklyCheatMeals;
     private List<CompensationActionResponse> activeCompensations;
     private NutritionTrendSummary trends;

@@ -16,7 +16,8 @@ class NutritionTodayData with _$NutritionTodayData {
     required double carbsTarget,
     required double fatConsumed,
     required double fatTarget,
-    @Default(<NutritionLog>[]) List<NutritionLog> recentMeals,
+    @Default(<PlanMeal>[]) List<PlanMeal> recentMeals,
+    NutritionDay? plannedDay,
     required DateTime selectedDate,
   }) = _NutritionTodayData;
 }
@@ -27,7 +28,7 @@ class NutritionHistoryDay with _$NutritionHistoryDay {
   const factory NutritionHistoryDay({
     required DateTime date,
     @Default(0) int totalCalories,
-    @Default(<NutritionLog>[]) List<NutritionLog> meals,
+    @Default(<PlanMeal>[]) List<PlanMeal> meals,
   }) = _NutritionHistoryDay;
 }
 
@@ -38,7 +39,7 @@ class NutritionHistoryData with _$NutritionHistoryData {
     required DateTime weekStartDate,
     @Default(<NutritionHistoryDay>[]) List<NutritionHistoryDay> weekDays,
     required DateTime selectedDate,
-    @Default(<NutritionLog>[]) List<NutritionLog> selectedDayMeals,
+    @Default(<PlanMeal>[]) List<PlanMeal> selectedDayMeals,
   }) = _NutritionHistoryData;
 }
 

@@ -9,7 +9,7 @@ import '../models/nutrition_models.dart';
 /// meal thumbnails row, and a "+" add button.
 class MealGroupSection extends StatelessWidget {
   final MealType mealType;
-  final List<NutritionLog> meals;
+  final List<PlanMeal> meals;
   final VoidCallback? onAddMeal;
 
   const MealGroupSection({
@@ -135,7 +135,7 @@ class MealGroupSection extends StatelessWidget {
 }
 
 class _MealThumbnail extends StatelessWidget {
-  final NutritionLog meal;
+  final PlanMeal meal;
 
   const _MealThumbnail({required this.meal});
 

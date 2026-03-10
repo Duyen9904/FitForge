@@ -2,7 +2,7 @@
 class ApiConstants {
   ApiConstants._();
 
-  static const String baseUrl = 'http://192.168.1.16:8080/api/v1';
+  static const String baseUrl = 'http://192.168.1.17:8080/api/v1';
 
   // Auth endpoints
   static const String login = '/auth/login';
@@ -72,8 +72,15 @@ class ApiConstants {
   static const String nutritionPlans = '/nutrition/plans';
   static const String nutritionPlansActive = '/nutrition/plans/active';
   static String nutritionPlanById(int planId) => '/nutrition/plans/$planId';
+  static String nutritionPlanDeactivate(int planId) =>
+      '/nutrition/plans/$planId/deactivate';
+  static String nutritionPlanDays(int planId) =>
+      '/nutrition/plans/$planId/days';
+  static String nutritionPlanDay(int planId, int dayNumber) =>
+      '/nutrition/plans/$planId/days/$dayNumber';
+  static String nutritionDayMealComplete(int dayMealId) =>
+      '/nutrition/day-meals/$dayMealId/complete';
   static const String nutritionMeals = '/nutrition/meals';
-  static const String nutritionMealsFromTemplate = '/nutrition/meals/from-template';
   static const String nutritionSummary = '/nutrition/summary';
   static const String nutritionCheatMeals = '/nutrition/cheat-meals';
   static String nutritionCompensationOptions(int cheatMealLogId) =>
@@ -85,6 +92,21 @@ class ApiConstants {
   static String nutritionTemplateById(int templateId) =>
       '/nutrition/templates/$templateId';
   static const String nutritionWeekly = '/nutrition/weekly';
+  static const String nutritionPlansGenerate = '/nutrition/plans/generate';
+  static String nutritionPlanDayMeals(int planId, int dayNumber) =>
+      '/nutrition/plans/$planId/meals/day/$dayNumber';
+
+  // Plan Meal endpoints (under /nutrition/meals)
+  static const String nutritionMealsSchedule = '/nutrition/meals/schedule';
+  static String nutritionMealComplete(int planMealId) =>
+      '/nutrition/meals/$planMealId/complete';
+  static String nutritionMealSkip(int planMealId) =>
+      '/nutrition/meals/$planMealId/skip';
+
+  // AI-based nutrition endpoints
+  static const String nutritionGenerateAi = '/nutrition/plans/generate-ai';
+  static String nutritionAdjustAi(int planId) =>
+      '/nutrition/plans/$planId/adjust-ai';
 
 
   // Recovery endpoints
@@ -145,6 +167,11 @@ class ApiConstants {
   static String missedWorkoutMakeup(int id) => '/missed-workouts/$id/makeup';
   static String missedWorkoutReschedule(int id) =>
       '/missed-workouts/$id/reschedule';
+
+  // GCP Media endpoints
+  static const String gcpUpload = '/gcp/upload';
+  static const String gcpSignedUrl = '/gcp/signed-url';
+  static const String gcpDelete = '/gcp';
 
   // Timeouts
   static const Duration connectTimeout = Duration(seconds: 120);

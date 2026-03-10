@@ -366,20 +366,69 @@ class _AddMealPlanScreenState extends ConsumerState<AddMealPlanScreen> {
       _selectedDate.day,
       _selectedTime.hour,
       _selectedTime.minute,
-    );
+    ).toUtc();
 
     try {
       final repo = ref.read(nutritionRepositoryProvider);
 
+      // Check for existing meals on the selected date
+      final existingMeals = await repo.getDailyMeals(_selectedDate);
+      final existingTypes = existingMeals
+          .map((m) => m.mealType)
+          .toSet();
+
+      // Find which selected types conflict with existing meals
+      final conflictingTypes = _selectedTypes
+          .where((type) => existingTypes.contains(type))
+          .toList();
+
+      bool replaceExisting = false;
+
+      if (conflictingTypes.isNotEmpty && mounted) {
+        final typeNames =
+            conflictingTypes.map((t) => t.displayName).join(', ');
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Meal Already Exists'),
+            content: Text(
+              '$typeNames already exists for this date. '
+              'Do you want to replace the existing meal(s)?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                ),
+                child: const Text('Replace'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmed != true) {
+          setState(() => _isSubmitting = false);
+          return;
+        }
+        replaceExisting = true;
+      }
+
       // Log one entry per selected meal type
-      for (final _ in _selectedTypes) {
-        final dto = LogMealFromTemplateRequestDto(
+      for (final type in _selectedTypes) {
+        final dto = LogMealRequestDto(
           templateId: widget.template.mealTemplateId,
           quantityMultiplier: 1.0,
+          mealType: type,
           logDate: _selectedDate,
           mealTime: mealDateTime,
+          replaceExisting: replaceExisting,
         );
-        await repo.logMealFromTemplate(dto);
+        await repo.logMeal(dto);
       }
 
       if (mounted) {

@@ -1,5 +1,6 @@
 package com.dev.backend.model.dto.response;
 
+import com.dev.backend.model.enums.MealTemplateSource;
 import com.dev.backend.model.enums.MealType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,6 +19,7 @@ public class MealTemplateResponse {
     private Long mealTemplateId;
     private String mealName;
     private MealType mealType;
+    private MealTemplateSource source;
     private String description;
     private Integer calories;
     private Float proteinG;

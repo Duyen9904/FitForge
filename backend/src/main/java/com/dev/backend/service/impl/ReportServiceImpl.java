@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 public class ReportServiceImpl implements ReportService {
 
     private final WorkoutProgressRepository workoutProgressRepository;
-    private final NutritionLogRepository nutritionLogRepository;
+    private final PlanMealRepository planMealRepository;
     private final NutritionPlanRepository nutritionPlanRepository;
     private final UserMeasurementRepository userMeasurementRepository;
     private final ProgressPhotoRepository progressPhotoRepository;
@@ -32,7 +32,7 @@ public class ReportServiceImpl implements ReportService {
 
     public ReportServiceImpl(
             WorkoutProgressRepository workoutProgressRepository,
-            NutritionLogRepository nutritionLogRepository,
+            PlanMealRepository planMealRepository,
             NutritionPlanRepository nutritionPlanRepository,
             UserMeasurementRepository userMeasurementRepository,
             ProgressPhotoRepository progressPhotoRepository,
@@ -40,7 +40,7 @@ public class ReportServiceImpl implements ReportService {
             MissedWorkoutRepository missedWorkoutRepository,
             ExerciseLogRepository exerciseLogRepository) {
         this.workoutProgressRepository = workoutProgressRepository;
-        this.nutritionLogRepository = nutritionLogRepository;
+        this.planMealRepository = planMealRepository;
         this.nutritionPlanRepository = nutritionPlanRepository;
         this.userMeasurementRepository = userMeasurementRepository;
         this.progressPhotoRepository = progressPhotoRepository;
@@ -101,7 +101,7 @@ public class ReportServiceImpl implements ReportService {
     @Override
     public NutritionReportResponse generateNutritionReport(Long userId, LocalDate startDate, LocalDate endDate) {
         // Get daily totals
-        List<DailyNutritionTrendAggregate> dailyTotals = nutritionLogRepository.getDailyTotals(userId, startDate, endDate);
+        List<DailyNutritionTrendAggregate> dailyTotals = planMealRepository.getDailyTotals(userId, startDate, endDate);
 
         if (dailyTotals.isEmpty()) {
             return NutritionReportResponse.builder()
@@ -149,7 +149,7 @@ public class ReportServiceImpl implements ReportService {
         double fatsPct = totalMacroCalories > 0 ? (avgFats * 9 * 100 / totalMacroCalories) : 0;
 
         // Count cheat meal days
-        long cheatDays = nutritionLogRepository.countCheatDaysBetween(userId, startDate, endDate);
+        long cheatDays = planMealRepository.countCheatDaysBetween(userId, startDate, endDate);
         long totalDays = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
         double cheatFrequency = totalDays > 0 ? (cheatDays * 7.0 / totalDays) : 0;
 

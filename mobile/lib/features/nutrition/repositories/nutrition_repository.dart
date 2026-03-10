@@ -71,19 +71,36 @@ class NutritionRepository {
     return plan;
   }
 
-  Future<NutritionLog> logMeal(LogMealRequestDto dto) async {
+  Future<void> deletePlan(int planId) async {
+    final response = await _service.deletePlan(planId);
+    _unwrapResponse(response);
+    await _localStorage.remove(_activeNutritionPlanKey);
+  }
+
+  Future<NutritionPlan> deactivatePlan(int planId) async {
+    final response = await _service.deactivatePlan(planId);
+    final plan = _unwrapResponse(response);
+    await _localStorage.remove(_activeNutritionPlanKey);
+    return plan;
+  }
+
+  Future<List<NutritionDay>> getPlanDays(int planId) async {
+    final response = await _service.getPlanDays(planId);
+    return _unwrapResponse(response);
+  }
+
+  Future<NutritionDay> getPlanDay(int planId, int dayNumber) async {
+    final response = await _service.getPlanDay(planId, dayNumber);
+    return _unwrapResponse(response);
+  }
+
+  Future<PlanMeal> logMeal(LogMealRequestDto dto) async {
     final response = await _service.logMeal(dto);
     return _unwrapResponse(response);
   }
 
-  Future<NutritionLog> logMealFromTemplate(
-    LogMealFromTemplateRequestDto dto,
-  ) async {
-    final response = await _service.logMealFromTemplate(dto);
-    return _unwrapResponse(response);
-  }
 
-  Future<List<NutritionLog>> getDailyMeals(DateTime? date) async {
+  Future<List<PlanMeal>> getDailyMeals(DateTime? date) async {
     final response = await _service.getDailyMeals(date);
     return _unwrapResponse(response);
   }
@@ -166,6 +183,44 @@ class NutritionRepository {
   Future<void> clearCache() async {
     await _localStorage.remove(_activeNutritionPlanKey);
   }
+
+  // ========== Plan Meals ==========
+
+  Future<PlanMeal> scheduleMeal(
+    ScheduleMealRequestDto dto,
+  ) async {
+    final response = await _service.scheduleMeal(dto);
+    return _unwrapResponse(response);
+  }
+
+  Future<PlanMeal> completePlanMeal(int planMealId) async {
+    final response = await _service.completePlanMeal(planMealId);
+    return _unwrapResponse(response);
+  }
+
+  Future<PlanMeal> skipPlanMeal(int planMealId) async {
+    final response = await _service.skipPlanMeal(planMealId);
+    return _unwrapResponse(response);
+  }
+
+  Future<MealTemplate> getMealTemplateById(int templateId) async {
+    final response = await _service.getMealTemplateById(templateId);
+    return _unwrapResponse(response);
+  }
+
+  Future<NutritionPlan> generateAiPlan() async {
+    final response = await _service.generateAiPlan();
+    final plan = _unwrapResponse(response);
+    await _localStorage.setInt(_activeNutritionPlanKey, plan.nutritionPlanId);
+    return plan;
+  }
+
+  Future<NutritionPlan> adjustPlanWithAi(int planId) async {
+    final response = await _service.adjustPlanWithAi(planId);
+    final plan = _unwrapResponse(response);
+    await _localStorage.setInt(_activeNutritionPlanKey, plan.nutritionPlanId);
+    return plan;
+  }
 }
 
 class NutritionException implements Exception {
@@ -177,4 +232,3 @@ class NutritionException implements Exception {
   @override
   String toString() => message;
 }
-

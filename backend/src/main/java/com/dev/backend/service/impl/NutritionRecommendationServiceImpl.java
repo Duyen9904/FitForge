@@ -3,20 +3,23 @@ package com.dev.backend.service.impl;
 import com.dev.backend.exception.BadRequestException;
 import com.dev.backend.exception.DuplicateResourceException;
 import com.dev.backend.exception.ResourceNotFoundException;
+import com.dev.backend.model.dto.ai.AiMealResult;
+import com.dev.backend.model.dto.ai.AiNutritionPlanContext;
+import com.dev.backend.model.dto.ai.AiNutritionPlanResult;
 import com.dev.backend.model.dto.profile.UserProfile;
-import com.dev.backend.model.entity.Goal;
-import com.dev.backend.model.entity.MealTemplate;
-import com.dev.backend.model.entity.NutritionPlan;
-import com.dev.backend.model.entity.User;
-import com.dev.backend.model.entity.UserOnboardingProgress;
+import com.dev.backend.model.entity.*;
+import com.dev.backend.model.enums.MealTemplateSource;
+import com.dev.backend.model.enums.MealType;
 import com.dev.backend.model.enums.OnboardingStepType;
 import com.dev.backend.repository.GoalRepository;
 import com.dev.backend.repository.MealTemplateRepository;
-import com.dev.backend.repository.NutritionLogRepository;
+import com.dev.backend.repository.NutritionDayRepository;
+import com.dev.backend.repository.PlanMealRepository;
 import com.dev.backend.repository.NutritionPlanRepository;
 import com.dev.backend.repository.OnboardingStepRepository;
 import com.dev.backend.repository.UserOnboardingProgressRepository;
 import com.dev.backend.repository.UserRepository;
+import com.dev.backend.service.AiService;
 import com.dev.backend.service.MealTemplateGenerator;
 import com.dev.backend.service.NutritionRecommendationService;
 import com.dev.backend.service.UserProfileService;
@@ -28,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -39,24 +43,28 @@ public class NutritionRecommendationServiceImpl implements NutritionRecommendati
     private final UserProfileService userProfileService;
     private final UserRepository userRepository;
     private final NutritionPlanRepository nutritionPlanRepository;
-    private final NutritionLogRepository nutritionLogRepository;
+    private final PlanMealRepository planMealRepository;
     private final GoalRepository goalRepository;
     private final MealTemplateRepository mealTemplateRepository;
+    private final NutritionDayRepository nutritionDayRepository;
     private final MealTemplateGenerator mealTemplateGenerator;
     private final UserOnboardingProgressRepository progressRepository;
     private final OnboardingStepRepository stepRepository;
     private final ObjectMapper objectMapper;
+    private final AiService aiService;
 
     @Override
     @Transactional
-    public NutritionPlan generateInitialPlan(Long userId) {
-        log.info("Generating initial nutrition plan for user: {}", userId);
+    public NutritionPlan generateInitialPlan(Long userId, int totalDays) {
+        log.info("Generating initial nutrition plan for user: {} with {} days", userId, totalDays);
+
+        if (totalDays < 1 || totalDays > 7) {
+            throw new BadRequestException("Total days must be between 1 and 7");
+        }
 
         // Enforce single active nutrition plan per user.
-        // If a plan already exists, surface a clear business error instead of
-        // letting the database unique constraint fail with a 500.
-        if (nutritionPlanRepository.existsByUserUserId(userId)) {
-            throw new DuplicateResourceException("User already has a nutrition plan. Use update or adjust endpoints instead.");
+        if (nutritionPlanRepository.existsByUserUserIdAndIsActiveTrue(userId)) {
+            throw new DuplicateResourceException("User already has an active nutrition plan. Deactivate or delete the current plan first.");
         }
 
         User user = userRepository.findById(userId)
@@ -110,6 +118,7 @@ public class NutritionRecommendationServiceImpl implements NutritionRecommendati
         plan.setIsActive(true);
         plan.setAlgorithmVersion("RULE_BASED_V1");
         plan.setVersion(1);
+        plan.setTotalDays(totalDays);
         plan.setRecommendationReason(adjustmentReason.trim());
 
         // Link to user's primary goal (with fallback)
@@ -118,18 +127,8 @@ public class NutritionRecommendationServiceImpl implements NutritionRecommendati
         plan = nutritionPlanRepository.save(plan);
         log.info("Generated initial nutrition plan {} for user {}", plan.getNutritionPlanId(), userId);
 
-        // NEW: Generate meal templates for Day 1 only (lightweight initial load)
-        try {
-            List<MealTemplate> mealTemplates = mealTemplateGenerator.generateDayMeals(plan, 1);
-            
-            // Save meal templates (standalone system entries)
-            mealTemplateRepository.saveAll(mealTemplates);
-            
-            log.info("Generated {} meal templates (Day 1) for plan {}", mealTemplates.size(), plan.getNutritionPlanId());
-        } catch (Exception e) {
-            log.error("Error generating meal templates for plan {}", plan.getNutritionPlanId(), e);
-            // Continue without meal templates - they can be generated on-demand
-        }
+        // Generate NutritionDays with DayMeals for each day
+        createNutritionDays(plan, totalDays);
 
         return plan;
     }
@@ -151,7 +150,7 @@ public class NutritionRecommendationServiceImpl implements NutritionRecommendati
         LocalDate today = LocalDate.now();
 
         // Adherence based on distinct logged days in range
-        long loggedDays = nutritionLogRepository.countDistinctLogDatesByUserAndDateRange(userId, weekAgo, today);
+        long loggedDays = planMealRepository.countDistinctLogDatesByUserAndDateRange(userId, weekAgo, today);
         float adherence = loggedDays / 7.0f;
 
         log.info("User {} nutrition adherence over last week: {}", userId, adherence);
@@ -236,11 +235,11 @@ public class NutritionRecommendationServiceImpl implements NutritionRecommendati
             throw new ResourceNotFoundException("NutritionPlan not found for user: " + userId);
         }
 
-        // Check if meals already exist (system-level templates)
-        List<MealTemplate> existing = mealTemplateRepository.findAll();
-        
+        // Check if meals already exist for this specific plan
+        List<MealTemplate> existing = mealTemplateRepository.findByNutritionPlanNutritionPlanId(planId);
+
         if (!existing.isEmpty()) {
-            log.info("Found {} existing meal templates", existing.size());
+            log.info("Found {} existing meal templates for plan {}", existing.size(), planId);
             return existing;
         }
 
@@ -252,6 +251,197 @@ public class NutritionRecommendationServiceImpl implements NutritionRecommendati
         } catch (Exception e) {
             log.error("Error generating meals for day {}", dayNumber, e);
             throw new RuntimeException("Failed to generate meal templates for day " + dayNumber, e);
+        }
+    }
+
+    // ==================== AI-POWERED NUTRITION PLAN ====================
+
+    @Override
+    @Transactional
+    public NutritionPlan generateAiPlan(Long userId, int totalDays) {
+        log.info("Generating AI nutrition plan for user: {} with {} days", userId, totalDays);
+
+        if (totalDays < 1 || totalDays > 7) {
+            throw new BadRequestException("Total days must be between 1 and 7");
+        }
+
+        // Enforce single active nutrition plan per user
+        if (nutritionPlanRepository.existsByUserUserId(userId)) {
+            throw new DuplicateResourceException("User already has a nutrition plan. Use update or adjust endpoints instead.");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+
+        UserProfile profile = userProfileService.buildProfile(userId);
+
+        // Build AI context
+        AiNutritionPlanContext context = AiNutritionPlanContext.builder()
+                .profile(profile)
+                .goalName(profile.getPrimaryGoalName())
+                .build();
+
+        // Call AI service
+        AiNutritionPlanResult aiResult = aiService.generateNutritionPlan(context);
+
+        // Map AI result to NutritionPlan entity
+        NutritionPlan plan = new NutritionPlan();
+        plan.setUser(user);
+        plan.setPlanName(aiResult.getPlanName() != null ? aiResult.getPlanName() : "AI Nutrition Plan");
+        plan.setDailyCalorieTarget(aiResult.getDailyCalorieTarget());
+        plan.setProteinPercentage(aiResult.getProteinPercentage());
+        plan.setCarbsPercentage(aiResult.getCarbsPercentage());
+        plan.setFatsPercentage(aiResult.getFatsPercentage());
+        plan.setCheatMealsPerWeek(aiResult.getCheatMealsPerWeek() != null ? aiResult.getCheatMealsPerWeek() : 2);
+        plan.setAutoAdjustEnabled(true);
+        plan.setIsActive(true);
+        plan.setAlgorithmVersion("AI_V1");
+        plan.setVersion(1);
+        plan.setTotalDays(totalDays);
+        plan.setRecommendationReason(aiResult.getRecommendationReason());
+
+        // Link to user's primary goal
+        plan.setGoal(getOrFetchUserGoal(user));
+
+        plan = nutritionPlanRepository.save(plan);
+        log.info("Generated AI nutrition plan {} for user {}", plan.getNutritionPlanId(), userId);
+
+        // Save AI-generated meal templates and create NutritionDays
+        saveMealTemplatesFromAi(aiResult, plan);
+        createNutritionDays(plan, totalDays);
+
+        return plan;
+    }
+
+    @Override
+    @Transactional
+    public NutritionPlan adjustPlanWithAi(Long userId, Long planId) {
+        log.info("Adjusting nutrition plan {} with AI for user {}", planId, userId);
+
+        NutritionPlan currentPlan = nutritionPlanRepository.findById(planId)
+                .filter(p -> p.getUser().getUserId().equals(userId))
+                .orElseThrow(() -> new ResourceNotFoundException("NutritionPlan not found: " + planId));
+
+        UserProfile profile = userProfileService.buildProfile(userId);
+
+        // Calculate adherence
+        LocalDate weekAgo = LocalDate.now().minusDays(7);
+        LocalDate today = LocalDate.now();
+        long loggedDays = planMealRepository.countDistinctLogDatesByUserAndDateRange(userId, weekAgo, today);
+        float adherence = loggedDays / 7.0f;
+
+        // Build AI context with current plan data
+        AiNutritionPlanContext context = AiNutritionPlanContext.builder()
+                .profile(profile)
+                .goalName(profile.getPrimaryGoalName())
+                .currentPlanName(currentPlan.getPlanName())
+                .currentDailyCalorieTarget(currentPlan.getDailyCalorieTarget())
+                .currentProteinPercentage(currentPlan.getProteinPercentage())
+                .currentCarbsPercentage(currentPlan.getCarbsPercentage())
+                .currentFatsPercentage(currentPlan.getFatsPercentage())
+                .nutritionAdherence(adherence)
+                .build();
+
+        // Call AI service
+        AiNutritionPlanResult aiResult = aiService.adjustNutritionPlan(context);
+
+        // Update plan with AI results
+        currentPlan.setDailyCalorieTarget(aiResult.getDailyCalorieTarget());
+        currentPlan.setProteinPercentage(aiResult.getProteinPercentage());
+        currentPlan.setCarbsPercentage(aiResult.getCarbsPercentage());
+        currentPlan.setFatsPercentage(aiResult.getFatsPercentage());
+        if (aiResult.getCheatMealsPerWeek() != null) {
+            currentPlan.setCheatMealsPerWeek(aiResult.getCheatMealsPerWeek());
+        }
+        currentPlan.setRecommendationReason(aiResult.getRecommendationReason());
+        currentPlan.setAlgorithmVersion("AI_V1");
+        currentPlan.setVersion(currentPlan.getVersion() + 1);
+
+        currentPlan = nutritionPlanRepository.save(currentPlan);
+
+        // Save new AI-generated meal templates
+        saveMealTemplatesFromAi(aiResult, currentPlan);
+
+        log.info("AI-adjusted nutrition plan {} for user {}", planId, userId);
+        return currentPlan;
+    }
+
+    private void saveMealTemplatesFromAi(AiNutritionPlanResult aiResult, NutritionPlan plan) {
+        if (aiResult.getMeals() != null && !aiResult.getMeals().isEmpty()) {
+            try {
+                List<MealTemplate> mealTemplates = new ArrayList<>();
+                for (AiMealResult aiMeal : aiResult.getMeals()) {
+                    MealTemplate template = new MealTemplate();
+                    template.setNutritionPlan(plan);
+                    template.setMealName(aiMeal.getMealName());
+                    template.setMealType(aiMeal.getMealType());
+                    template.setDescription(aiMeal.getDescription());
+                    template.setCalories(aiMeal.getCalories());
+                    template.setProteinG(aiMeal.getProteinG());
+                    template.setCarbsG(aiMeal.getCarbsG());
+                    template.setFatsG(aiMeal.getFatsG());
+                    template.setRecipeInstructions(aiMeal.getRecipeInstructions());
+                    template.setSource(MealTemplateSource.SYSTEM);
+                    mealTemplates.add(template);
+                }
+                mealTemplateRepository.saveAll(mealTemplates);
+                log.info("Saved {} AI-generated meal templates for plan {}", mealTemplates.size(), plan.getNutritionPlanId());
+            } catch (Exception e) {
+                log.error("Error saving AI meal templates for plan {}", plan.getNutritionPlanId(), e);
+            }
+        }
+    }
+
+    /**
+     * Create NutritionDay entities with DayMeal slots for each day in the plan.
+     * Generates meal templates via MealTemplateGenerator and links them as DayMeals.
+     */
+    private void createNutritionDays(NutritionPlan plan, int totalDays) {
+        String[] mealTypes = {"BREAKFAST", "LUNCH", "DINNER"};
+
+        for (int dayNum = 1; dayNum <= totalDays; dayNum++) {
+            try {
+                // Generate meal templates for this day
+                List<MealTemplate> templates = mealTemplateGenerator.generateDayMeals(plan, dayNum);
+                templates.forEach(t -> t.setSource(MealTemplateSource.SYSTEM));
+                templates = mealTemplateRepository.saveAll(templates);
+
+                // Create the NutritionDay
+                NutritionDay day = new NutritionDay();
+                day.setNutritionPlan(plan);
+                day.setDayNumber(dayNum);
+                day.setDayName("Day " + dayNum);
+                day.setIsRestDay(false);
+                day = nutritionDayRepository.save(day);
+
+                // Create DayMeal for each template
+                List<DayMeal> dayMeals = new ArrayList<>();
+                for (int i = 0; i < templates.size(); i++) {
+                    MealTemplate t = templates.get(i);
+                    DayMeal dayMeal = new DayMeal();
+                    dayMeal.setNutritionDay(day);
+                    dayMeal.setMealTemplate(t);
+                    dayMeal.setOrderIndex(i);
+
+                    // Map meal type string to enum
+                    if (t.getMealType() != null) {
+                        try {
+                            dayMeal.setMealType(MealType.valueOf(t.getMealType().toUpperCase()));
+                        } catch (IllegalArgumentException e) {
+                            dayMeal.setMealType(MealType.SNACK);
+                        }
+                    }
+
+                    dayMeals.add(dayMeal);
+                }
+                day.setDayMeals(dayMeals);
+                nutritionDayRepository.save(day);
+
+                log.info("Created NutritionDay {} with {} meals for plan {}",
+                        dayNum, templates.size(), plan.getNutritionPlanId());
+            } catch (Exception e) {
+                log.error("Error creating NutritionDay {} for plan {}", dayNum, plan.getNutritionPlanId(), e);
+            }
         }
     }
 

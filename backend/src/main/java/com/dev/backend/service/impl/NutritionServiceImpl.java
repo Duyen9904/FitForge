@@ -4,17 +4,17 @@ import com.dev.backend.exception.ResourceNotFoundException;
 import com.dev.backend.mapper.NutritionMapper;
 import com.dev.backend.model.dto.request.*;
 import com.dev.backend.model.dto.response.*;
-import com.dev.backend.model.dto.response.NutritionDashboardResponse.*;
 import com.dev.backend.model.entity.*;
 import com.dev.backend.model.enums.CompensationType;
+import com.dev.backend.model.enums.PlanMealStatus;
 import com.dev.backend.repository.*;
 import com.dev.backend.service.NutritionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.temporal.TemporalAdjusters;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -24,28 +24,34 @@ import java.util.stream.Collectors;
 public class NutritionServiceImpl implements NutritionService {
 
     private final NutritionPlanRepository planRepository;
-    private final NutritionLogRepository logRepository;
+    private final PlanMealRepository planMealRepository;
     private final CheatMealLogRepository cheatMealLogRepository;
     private final MealTemplateRepository templateRepository;
     private final CompensationActionRepository compensationRepository;
+    private final NutritionDayRepository nutritionDayRepository;
+    private final DayMealRepository dayMealRepository;
     private final UserRepository userRepository;
     private final GoalRepository goalRepository;
     private final NutritionMapper mapper;
 
     public NutritionServiceImpl(
             NutritionPlanRepository planRepository,
-            NutritionLogRepository logRepository,
+            PlanMealRepository planMealRepository,
             CheatMealLogRepository cheatMealLogRepository,
             MealTemplateRepository templateRepository,
             CompensationActionRepository compensationRepository,
+            NutritionDayRepository nutritionDayRepository,
+            DayMealRepository dayMealRepository,
             UserRepository userRepository,
             GoalRepository goalRepository,
             NutritionMapper mapper) {
         this.planRepository = planRepository;
-        this.logRepository = logRepository;
+        this.planMealRepository = planMealRepository;
         this.cheatMealLogRepository = cheatMealLogRepository;
         this.templateRepository = templateRepository;
         this.compensationRepository = compensationRepository;
+        this.nutritionDayRepository = nutritionDayRepository;
+        this.dayMealRepository = dayMealRepository;
         this.userRepository = userRepository;
         this.goalRepository = goalRepository;
         this.mapper = mapper;
@@ -105,51 +111,92 @@ public class NutritionServiceImpl implements NutritionService {
         return mapper.toResponse(plan);
     }
 
-    // ========== Meal Logging (UC-7.2, UC-7.3) ==========
-
     @Override
-    public NutritionLogResponse logMeal(Long userId, LogMealRequest request) {
-        User user = findUserOrThrow(userId);
-        
-        NutritionLog log = mapper.toEntity(request, user);
-        log = logRepository.save(log);
-
-        // Handle cheat meal
-        if (Boolean.TRUE.equals(request.getIsCheatMeal())) {
-            createCheatMealLog(user, log);
-        }
-
-        return mapper.toResponse(log);
+    @Transactional
+    public void deletePlan(Long userId, Long planId) {
+        NutritionPlan plan = planRepository.findById(planId)
+                .filter(p -> p.getUser().getUserId().equals(userId))
+                .orElseThrow(() -> new ResourceNotFoundException("Nutrition plan not found: " + planId));
+        planRepository.delete(plan);
     }
 
     @Override
-    public NutritionLogResponse logMealFromTemplate(Long userId, LogMealFromTemplateRequest request) {
-        MealTemplate template = templateRepository.findById(request.getTemplateId())
-                .orElseThrow(() -> new ResourceNotFoundException("Meal template not found"));
+    @Transactional
+    public NutritionPlanResponse deactivatePlan(Long userId, Long planId) {
+        NutritionPlan plan = planRepository.findById(planId)
+                .filter(p -> p.getUser().getUserId().equals(userId))
+                .orElseThrow(() -> new ResourceNotFoundException("Nutrition plan not found: " + planId));
+        plan.setIsActive(false);
+        plan = planRepository.save(plan);
+        return mapper.toResponse(plan);
+    }
 
-        float multiplier = request.getQuantityMultiplier() != null ? request.getQuantityMultiplier() : 1.0f;
+    // ========== Meal Logging (UC-7.2, UC-7.3) ==========
 
-        LogMealRequest mealRequest = LogMealRequest.builder()
-                .mealType(template.getMealType() != null ? 
-                        com.dev.backend.model.enums.MealType.valueOf(template.getMealType()) : null)
-                .foodName(template.getMealName())
-                .calories(Math.round(template.getCalories() * multiplier))
-                .proteinG(template.getProteinG() != null ? template.getProteinG() * multiplier : null)
-                .carbsG(template.getCarbsG() != null ? template.getCarbsG() * multiplier : null)
-                .fatsG(template.getFatsG() != null ? template.getFatsG() * multiplier : null)
-                .mealTime(request.getMealTime())
-                .logDate(request.getLogDate())
-                .isCheatMeal(request.getIsCheatMeal())
-                .build();
+    @Override
+    public PlanMealResponse logMeal(Long userId, LogMealRequest request) {
+        User user = findUserOrThrow(userId);
 
-        return logMeal(userId, mealRequest);
+        PlanMeal meal;
+        if (request.getTemplateId() != null) {
+            // Template-based log
+            MealTemplate template = templateRepository.findById(request.getTemplateId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Meal template not found"));
+
+            float multiplier = request.getQuantityMultiplier() != null ? request.getQuantityMultiplier() : 1.0f;
+
+            meal = new PlanMeal();
+            meal.setUser(user);
+            meal.setMealTemplate(template);
+            meal.setScheduledDate(request.getLogDate() != null ? request.getLogDate() : LocalDate.now());
+            meal.setMealType(request.getMealType() != null ? request.getMealType()
+                    : (template.getMealType() != null ? com.dev.backend.model.enums.MealType.valueOf(template.getMealType()) : null));
+            meal.setFoodName(template.getMealName());
+            meal.setCalories(template.getCalories() != null ? Math.round(template.getCalories() * multiplier) : null);
+            meal.setProteinG(template.getProteinG() != null ? template.getProteinG() * multiplier : null);
+            meal.setCarbsG(template.getCarbsG() != null ? template.getCarbsG() * multiplier : null);
+            meal.setFatsG(template.getFatsG() != null ? template.getFatsG() * multiplier : null);
+            meal.setMealTime(request.getMealTime());
+            meal.setIsCheatMeal(request.getIsCheatMeal() != null ? request.getIsCheatMeal() : false);
+            meal.setNotes(request.getNotes());
+            meal.setStatus(PlanMealStatus.COMPLETED);
+            meal.setCompletedAt(Instant.now());
+            meal.setSource(com.dev.backend.model.enums.PlanMealSource.TEMPLATE);
+        } else {
+            // Manual free-form log
+            meal = mapper.toPlanMealEntity(request, user);
+        }
+
+        // If replaceExisting is true, delete existing meals of the same type on the same date
+        if (Boolean.TRUE.equals(request.getReplaceExisting())) {
+            com.dev.backend.model.enums.MealType resolvedType = meal.getMealType();
+            LocalDate resolvedDate = meal.getScheduledDate();
+            if (resolvedType != null && resolvedDate != null) {
+                List<PlanMeal> existing = planMealRepository
+                        .findByUserUserIdAndScheduledDateAndMealTypeAndStatusNot(
+                                userId, resolvedDate, resolvedType, PlanMealStatus.SKIPPED);
+                if (!existing.isEmpty()) {
+                    planMealRepository.deleteAll(existing);
+                }
+            }
+        }
+
+        meal = planMealRepository.save(meal);
+
+        // Create cheat meal log if flagged
+        if (Boolean.TRUE.equals(meal.getIsCheatMeal())) {
+            createCheatMealLog(user, meal);
+        }
+
+        return mapper.toResponse(meal);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<NutritionLogResponse> getDailyLogs(Long userId, LocalDate date) {
+    public List<PlanMealResponse> getDailyMeals(Long userId, LocalDate date) {
         LocalDate logDate = date != null ? date : LocalDate.now();
-        return logRepository.findByUserUserIdAndLogDateOrderByMealTimeAsc(userId, logDate)
+        return planMealRepository.findByUserUserIdAndScheduledDateAndStatusNotOrderByMealTimeAsc(
+                userId, logDate, PlanMealStatus.SKIPPED)
                 .stream()
                 .map(mapper::toResponse)
                 .collect(Collectors.toList());
@@ -160,32 +207,48 @@ public class NutritionServiceImpl implements NutritionService {
     public DailyNutritionSummaryResponse getDailySummary(Long userId, LocalDate date) {
         LocalDate logDate = date != null ? date : LocalDate.now();
 
-        // Get totals from database using a typed projection to avoid ClassCastException
-        com.dev.backend.model.projection.DailyNutritionAggregate aggregate =
-                logRepository.getDailySummary(userId, logDate);
+        // Get totals from completed PlanMeal records
+        com.dev.backend.model.projection.DailyNutritionAggregate planAggregate =
+                planMealRepository.getDailySummary(userId, logDate);
 
         int totalCalories = 0;
         float totalProtein = 0;
         float totalCarbs = 0;
         float totalFats = 0;
 
-        if (aggregate != null) {
-            Number caloriesNumber = aggregate.getTotalCalories();
-            Number proteinNumber = aggregate.getTotalProtein();
-            Number carbsNumber = aggregate.getTotalCarbs();
-            Number fatsNumber = aggregate.getTotalFats();
+        if (planAggregate != null) {
+            if (planAggregate.getTotalCalories() != null) {
+                totalCalories += planAggregate.getTotalCalories().intValue();
+            }
+            if (planAggregate.getTotalProtein() != null) {
+                totalProtein += planAggregate.getTotalProtein().floatValue();
+            }
+            if (planAggregate.getTotalCarbs() != null) {
+                totalCarbs += planAggregate.getTotalCarbs().floatValue();
+            }
+            if (planAggregate.getTotalFats() != null) {
+                totalFats += planAggregate.getTotalFats().floatValue();
+            }
+        }
 
-            if (caloriesNumber != null) {
-                totalCalories = caloriesNumber.intValue();
+        // Also include completed DayMeal records (meals completed from the plan day view)
+        Instant dayStart = logDate.atStartOfDay(ZoneId.systemDefault()).toInstant();
+        Instant dayEnd = logDate.plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant();
+        com.dev.backend.model.projection.DailyNutritionAggregate dayMealAggregate =
+                dayMealRepository.getCompletedDayMealSummary(userId, dayStart, dayEnd);
+
+        if (dayMealAggregate != null) {
+            if (dayMealAggregate.getTotalCalories() != null) {
+                totalCalories += dayMealAggregate.getTotalCalories().intValue();
             }
-            if (proteinNumber != null) {
-                totalProtein = proteinNumber.floatValue();
+            if (dayMealAggregate.getTotalProtein() != null) {
+                totalProtein += dayMealAggregate.getTotalProtein().floatValue();
             }
-            if (carbsNumber != null) {
-                totalCarbs = carbsNumber.floatValue();
+            if (dayMealAggregate.getTotalCarbs() != null) {
+                totalCarbs += dayMealAggregate.getTotalCarbs().floatValue();
             }
-            if (fatsNumber != null) {
-                totalFats = fatsNumber.floatValue();
+            if (dayMealAggregate.getTotalFats() != null) {
+                totalFats += dayMealAggregate.getTotalFats().floatValue();
             }
         }
 
@@ -221,7 +284,8 @@ public class NutritionServiceImpl implements NutritionService {
         }
 
         // Count cheat meals for the day
-        long cheatCount = logRepository.countByUserUserIdAndLogDateAndIsCheatMealTrue(userId, logDate);
+        long cheatCount = planMealRepository.countByUserUserIdAndScheduledDateAndIsCheatMealTrueAndStatus(
+                userId, logDate, PlanMealStatus.COMPLETED);
         builder.cheatMealCount((int) cheatCount);
 
         return builder.build();
@@ -229,7 +293,7 @@ public class NutritionServiceImpl implements NutritionService {
 
     // ========== Cheat Meal Management (UC-7.3, UC-7.4) ==========
 
-    private void createCheatMealLog(User user, NutritionLog mealLog) {
+    private void createCheatMealLog(User user, PlanMeal mealLog) {
         // Get plan to calculate excess calories
         NutritionPlan plan = planRepository.findByUserUserIdAndIsActiveTrue(user.getUserId()).orElse(null);
         
@@ -244,9 +308,9 @@ public class NutritionServiceImpl implements NutritionService {
         }
 
         CheatMealLog cheatLog = new CheatMealLog();
-        cheatLog.setNutritionLog(mealLog);
+        cheatLog.setPlanMeal(mealLog);
         cheatLog.setUser(user);
-        cheatLog.setCheatDate(mealLog.getLogDate());
+        cheatLog.setCheatDate(mealLog.getScheduledDate());
         cheatLog.setExcessCalories(excessCalories);
         cheatLog.setIsCompensated(false);
 
@@ -354,101 +418,32 @@ public class NutritionServiceImpl implements NutritionService {
         return selectedOption;
     }
 
-    // ========== Dashboard (UC-7.5) ==========
+    // ========== Nutrition Days ==========
 
     @Override
     @Transactional(readOnly = true)
-    public NutritionDashboardResponse getDashboard(Long userId) {
-        // Today's summary
-        DailyNutritionSummaryResponse todaySummary = getDailySummary(userId, LocalDate.now());
+    public List<NutritionDayResponse> getPlanDays(Long userId, Long planId) {
+        NutritionPlan plan = planRepository.findById(planId)
+                .filter(p -> p.getUser().getUserId().equals(userId))
+                .orElseThrow(() -> new ResourceNotFoundException("Nutrition plan not found"));
 
-        // Recent meals (last 10)
-        List<NutritionLogResponse> recentMeals = logRepository
-                .findByUserUserIdOrderByLogDateDescMealTimeDesc(userId, 
-                        org.springframework.data.domain.PageRequest.of(0, 10))
-                .stream()
+        List<NutritionDay> days = nutritionDayRepository.findByPlanIdWithMeals(planId);
+        return days.stream()
                 .map(mapper::toResponse)
                 .collect(Collectors.toList());
-
-        // Weekly cheat meal count
-        LocalDate weekStart = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
-        long cheatCount = cheatMealLogRepository.countByUserUserIdAndCheatDateBetween(
-                userId, weekStart, LocalDate.now());
-        
-        NutritionPlan plan = planRepository.findByUserUserIdAndIsActiveTrue(userId).orElse(null);
-        int allowedCheatMeals = plan != null && plan.getCheatMealsPerWeek() != null ? 
-                plan.getCheatMealsPerWeek() : 2;
-
-        WeeklyCheatMealSummary cheatSummary = WeeklyCheatMealSummary.builder()
-                .usedThisWeek((int) cheatCount)
-                .allowedPerWeek(allowedCheatMeals)
-                .remaining(Math.max(0, allowedCheatMeals - (int) cheatCount))
-                .build();
-
-        // Active compensations (cheat meal source only)
-        List<CompensationActionResponse> activeCompensations = compensationRepository
-                .findByCheatMealLogUserUserIdAndIsCompletedFalse(userId)
-                .stream()
-                .map(mapper::toResponse)
-                .collect(Collectors.toList());
-
-        // Weekly trends
-        NutritionTrendSummary trends = buildTrendSummary(userId);
-
-        return NutritionDashboardResponse.builder()
-                .todaySummary(todaySummary)
-                .recentMeals(recentMeals)
-                .weeklyCheatMeals(cheatSummary)
-                .activeCompensations(activeCompensations)
-                .trends(trends)
-                .build();
     }
 
-    private NutritionTrendSummary buildTrendSummary(Long userId) {
-        LocalDate today = LocalDate.now();
-        LocalDate weekAgo = today.minusDays(7);
+    @Override
+    @Transactional(readOnly = true)
+    public NutritionDayResponse getPlanDay(Long userId, Long planId, int dayNumber) {
+        NutritionPlan plan = planRepository.findById(planId)
+                .filter(p -> p.getUser().getUserId().equals(userId))
+                .orElseThrow(() -> new ResourceNotFoundException("Nutrition plan not found"));
 
-        List<com.dev.backend.model.projection.DailyNutritionTrendAggregate> dailyTotals =
-                logRepository.getDailyTotals(userId, weekAgo, today);
+        NutritionDay day = nutritionDayRepository.findByPlanIdAndDayNumberWithMeals(planId, dayNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Nutrition day not found"));
 
-        List<DailyTrendPoint> trendPoints = dailyTotals.stream()
-                .map(row -> DailyTrendPoint.builder()
-                        .date(row.getLogDate())
-                        .calories(row.getTotalCalories() != null ? row.getTotalCalories().intValue() : 0)
-                        .proteinG(row.getTotalProtein() != null ? row.getTotalProtein().floatValue() : 0)
-                        .carbsG(row.getTotalCarbs() != null ? row.getTotalCarbs().floatValue() : 0)
-                        .fatsG(row.getTotalFats() != null ? row.getTotalFats().floatValue() : 0)
-                        .build())
-                .collect(Collectors.toList());
-
-        float avgCalories = (float) trendPoints.stream()
-                .mapToInt(DailyTrendPoint::getCalories)
-                .average()
-                .orElse(0);
-
-        float avgProtein = (float) trendPoints.stream()
-                .mapToDouble(p -> p.getProteinG() != null ? p.getProteinG() : 0)
-                .average()
-                .orElse(0);
-
-        // Determine adherence status
-        NutritionPlan plan = planRepository.findByUserUserIdAndIsActiveTrue(userId).orElse(null);
-        String adherenceStatus = "on_track";
-        if (plan != null && plan.getDailyCalorieTarget() != null) {
-            int target = plan.getDailyCalorieTarget();
-            if (avgCalories > target * 1.1) {
-                adherenceStatus = "over_target";
-            } else if (avgCalories < target * 0.8) {
-                adherenceStatus = "under_target";
-            }
-        }
-
-        return NutritionTrendSummary.builder()
-                .last7Days(trendPoints)
-                .averageDailyCalories(avgCalories)
-                .averageDailyProtein(avgProtein)
-                .adherenceStatus(adherenceStatus)
-                .build();
+        return mapper.toResponse(day);
     }
 
     // ========== Meal Templates (UC-7.6) ==========
@@ -460,6 +455,14 @@ public class NutritionServiceImpl implements NutritionService {
                 .stream()
                 .map(mapper::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MealTemplateResponse getMealTemplateById(Long templateId) {
+        MealTemplate template = templateRepository.findById(templateId)
+                .orElseThrow(() -> new ResourceNotFoundException("Meal template not found"));
+        return mapper.toResponse(template);
     }
 
     // ========== Weekly View ==========
@@ -476,6 +479,75 @@ public class NutritionServiceImpl implements NutritionService {
         return result;
     }
 
+    // ========== Plan Meals ==========
+
+    @Override
+    public PlanMealResponse scheduleMeal(Long userId, ScheduleMealRequest request) {
+        User user = findUserOrThrow(userId);
+
+        // Use provided planId, or fall back to active plan
+        NutritionPlan plan;
+        if (request.getPlanId() != null) {
+            plan = planRepository.findById(request.getPlanId())
+                    .filter(p -> p.getUser().getUserId().equals(userId))
+                    .orElseThrow(() -> new ResourceNotFoundException("Nutrition plan not found"));
+        } else {
+            plan = planRepository.findByUserUserIdAndIsActiveTrue(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("No active nutrition plan found"));
+        }
+
+        MealTemplate template = templateRepository.findById(request.getTemplateId())
+                .orElseThrow(() -> new ResourceNotFoundException("Meal template not found"));
+
+        PlanMeal meal = mapper.toPlanMealEntity(request, template, plan, user);
+        meal = planMealRepository.save(meal);
+        return mapper.toResponse(meal);
+    }
+
+    @Override
+    public PlanMealResponse completePlanMeal(Long userId, Long planMealId) {
+        PlanMeal meal = planMealRepository.findById(planMealId)
+                .filter(m -> m.getUser().getUserId().equals(userId))
+                .orElseThrow(() -> new ResourceNotFoundException("Plan meal not found"));
+
+        meal.setStatus(PlanMealStatus.COMPLETED);
+        meal.setCompletedAt(Instant.now());
+        meal = planMealRepository.save(meal);
+        return mapper.toResponse(meal);
+    }
+
+    @Override
+    public PlanMealResponse skipPlanMeal(Long userId, Long planMealId) {
+        PlanMeal meal = planMealRepository.findById(planMealId)
+                .filter(m -> m.getUser().getUserId().equals(userId))
+                .orElseThrow(() -> new ResourceNotFoundException("Plan meal not found"));
+
+        meal.setStatus(PlanMealStatus.SKIPPED);
+        meal = planMealRepository.save(meal);
+        return mapper.toResponse(meal);
+    }
+
+    // ========== Day Meals ==========
+
+    @Override
+    public DayMealResponse completeDayMeal(Long userId, Long dayMealId) {
+        DayMeal dayMeal = dayMealRepository.findById(dayMealId)
+                .orElseThrow(() -> new ResourceNotFoundException("Day meal not found"));
+
+        // Verify ownership: dayMeal → nutritionDay → nutritionPlan → user
+        Long planOwnerId = dayMeal.getNutritionDay()
+                .getNutritionPlan()
+                .getUser()
+                .getUserId();
+        if (!planOwnerId.equals(userId)) {
+            throw new ResourceNotFoundException("Day meal not found");
+        }
+
+        dayMeal.setCompletedAt(Instant.now());
+        dayMeal = dayMealRepository.save(dayMeal);
+        return mapper.toResponse(dayMeal);
+    }
+
     // ========== Helper Methods ==========
 
     private User findUserOrThrow(Long userId) {
@@ -483,4 +555,3 @@ public class NutritionServiceImpl implements NutritionService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 }
-

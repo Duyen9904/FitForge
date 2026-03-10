@@ -56,7 +56,61 @@ class NutritionService {
     );
   }
 
-  Future<ApiResponse<NutritionLog>> logMeal(
+  Future<ApiResponse<void>> deletePlan(int planId) async {
+    final response = await apiClient.delete(
+      ApiConstants.nutritionPlanById(planId),
+    );
+
+    return ApiResponse.fromJson(
+      response.data as Map<String, dynamic>,
+      (json) => null,
+    );
+  }
+
+  Future<ApiResponse<NutritionPlan>> deactivatePlan(int planId) async {
+    final response = await apiClient.patch(
+      ApiConstants.nutritionPlanDeactivate(planId),
+    );
+
+    return ApiResponse.fromJson(
+      response.data as Map<String, dynamic>,
+      (json) => NutritionPlan.fromJson(json as Map<String, dynamic>),
+    );
+  }
+
+  Future<ApiResponse<List<NutritionDay>>> getPlanDays(int planId) async {
+    final response = await apiClient.get(
+      ApiConstants.nutritionPlanDays(planId),
+    );
+
+    return ApiResponse.fromJson(
+      response.data as Map<String, dynamic>,
+      (json) {
+        final list = json as List;
+        return list
+            .map(
+              (item) => NutritionDay.fromJson(item as Map<String, dynamic>),
+            )
+            .toList();
+      },
+    );
+  }
+
+  Future<ApiResponse<NutritionDay>> getPlanDay(
+    int planId,
+    int dayNumber,
+  ) async {
+    final response = await apiClient.get(
+      ApiConstants.nutritionPlanDay(planId, dayNumber),
+    );
+
+    return ApiResponse.fromJson(
+      response.data as Map<String, dynamic>,
+      (json) => NutritionDay.fromJson(json as Map<String, dynamic>),
+    );
+  }
+
+  Future<ApiResponse<PlanMeal>> logMeal(
     LogMealRequestDto dto,
   ) async {
     final response = await apiClient.post(
@@ -66,25 +120,12 @@ class NutritionService {
 
     return ApiResponse.fromJson(
       response.data as Map<String, dynamic>,
-      (json) => NutritionLog.fromJson(json as Map<String, dynamic>),
+      (json) => PlanMeal.fromJson(json as Map<String, dynamic>),
     );
   }
 
-  Future<ApiResponse<NutritionLog>> logMealFromTemplate(
-    LogMealFromTemplateRequestDto dto,
-  ) async {
-    final response = await apiClient.post(
-      ApiConstants.nutritionMealsFromTemplate,
-      data: dto.toJson(),
-    );
 
-    return ApiResponse.fromJson(
-      response.data as Map<String, dynamic>,
-      (json) => NutritionLog.fromJson(json as Map<String, dynamic>),
-    );
-  }
-
-  Future<ApiResponse<List<NutritionLog>>> getDailyMeals(DateTime? date) async {
+  Future<ApiResponse<List<PlanMeal>>> getDailyMeals(DateTime? date) async {
     final response = await apiClient.get(
       ApiConstants.nutritionMeals,
       queryParameters: date != null
@@ -99,7 +140,7 @@ class NutritionService {
       (json) {
         final list = json as List;
         return list
-            .map((item) => NutritionLog.fromJson(item as Map<String, dynamic>))
+            .map((item) => PlanMeal.fromJson(item as Map<String, dynamic>))
             .toList();
       },
     );
@@ -308,6 +349,97 @@ class NutritionService {
     );
   }
 
+  // ========== Plan Meals ==========
 
+  Future<ApiResponse<PlanMeal>> scheduleMeal(
+    ScheduleMealRequestDto dto,
+  ) async {
+    final response = await apiClient.post(
+      ApiConstants.nutritionMealsSchedule,
+      data: dto.toJson(),
+    );
+
+    return ApiResponse.fromJson(
+      response.data as Map<String, dynamic>,
+      (json) => PlanMeal.fromJson(json as Map<String, dynamic>),
+    );
+  }
+
+  Future<ApiResponse<PlanMeal>> completePlanMeal(
+    int planMealId,
+  ) async {
+    final response = await apiClient.put(
+      ApiConstants.nutritionMealComplete(planMealId),
+    );
+
+    return ApiResponse.fromJson(
+      response.data as Map<String, dynamic>,
+      (json) => PlanMeal.fromJson(json as Map<String, dynamic>),
+    );
+  }
+
+  Future<ApiResponse<DayMeal>> completeDayMeal(
+    int dayMealId, {
+    String? proofPhotoUrl,
+  }) async {
+    final response = await apiClient.put(
+      ApiConstants.nutritionDayMealComplete(dayMealId),
+      data: proofPhotoUrl != null ? {'proofPhotoUrl': proofPhotoUrl} : null,
+    );
+
+    return ApiResponse.fromJson(
+      response.data as Map<String, dynamic>,
+      (json) => DayMeal.fromJson(json as Map<String, dynamic>),
+    );
+  }
+
+  Future<ApiResponse<PlanMeal>> skipPlanMeal(
+    int planMealId,
+  ) async {
+    final response = await apiClient.put(
+      ApiConstants.nutritionMealSkip(planMealId),
+    );
+
+    return ApiResponse.fromJson(
+      response.data as Map<String, dynamic>,
+      (json) => PlanMeal.fromJson(json as Map<String, dynamic>),
+    );
+  }
+
+  Future<ApiResponse<MealTemplate>> getMealTemplateById(
+    int templateId,
+  ) async {
+    final response = await apiClient.get(
+      ApiConstants.nutritionTemplateById(templateId),
+    );
+
+    return ApiResponse.fromJson(
+      response.data as Map<String, dynamic>,
+      (json) => MealTemplate.fromJson(json as Map<String, dynamic>),
+    );
+  }
+
+  Future<ApiResponse<NutritionPlan>> generateAiPlan() async {
+    final response = await apiClient.post(
+      ApiConstants.nutritionGenerateAi,
+    );
+
+    return ApiResponse.fromJson(
+      response.data as Map<String, dynamic>,
+      (json) => NutritionPlan.fromJson(json as Map<String, dynamic>),
+    );
+  }
+
+  Future<ApiResponse<NutritionPlan>> adjustPlanWithAi(
+    int planId,
+  ) async {
+    final response = await apiClient.post(
+      ApiConstants.nutritionAdjustAi(planId),
+    );
+
+    return ApiResponse.fromJson(
+      response.data as Map<String, dynamic>,
+      (json) => NutritionPlan.fromJson(json as Map<String, dynamic>),
+    );
+  }
 }
-

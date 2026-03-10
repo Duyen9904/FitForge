@@ -14,4 +14,6 @@ public interface NutritionPlanRepository extends JpaRepository<NutritionPlan, Lo
     Optional<NutritionPlan> findByUserUserId(Long userId);
 
     boolean existsByUserUserId(Long userId);
+
+    boolean existsByUserUserIdAndIsActiveTrue(Long userId);
 }

@@ -86,7 +86,7 @@ public class User {
     private List<UserMeasurement> userMeasurements = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<NutritionLog> nutritionLogs = new ArrayList<>();
+    private List<PlanMeal> planMeals = new ArrayList<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserAchievement> userAchievements = new ArrayList<>();

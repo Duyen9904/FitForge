@@ -12,6 +12,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -74,13 +76,35 @@ public class NutritionController {
         return ApiResponse.success(response, "Nutrition plan updated successfully");
     }
 
+    @Operation(summary = "Delete nutrition plan", description = "Delete a nutrition plan and all associated days, meals, and templates")
+    @DeleteMapping("/plans/{planId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deletePlan(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long planId) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        nutritionService.deletePlan(userId, planId);
+    }
+
+    @Operation(summary = "Deactivate nutrition plan", description = "Deactivate a nutrition plan so a new one can be generated")
+    @PatchMapping("/plans/{planId}/deactivate")
+    public ApiResponse<NutritionPlanResponse> deactivatePlan(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long planId) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        NutritionPlanResponse response = nutritionService.deactivatePlan(userId, planId);
+        return ApiResponse.success(response, "Nutrition plan deactivated successfully");
+    }
+
     @Operation(summary = "Generate recommended nutrition plan",
                description = "Generate a nutrition plan based on onboarding profile using Mifflin-St Jeor equation and goal-based adjustments")
     @PostMapping("/plans/generate")
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<NutritionPlanResponse> generateRecommendedPlan(@AuthenticationPrincipal Jwt jwt) {
+    public ApiResponse<NutritionPlanResponse> generateRecommendedPlan(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(defaultValue = "7") @Min(1) @Max(7) int totalDays) {
         Long userId = Long.parseLong(jwt.getSubject());
-        NutritionPlan plan = nutritionRecommendationService.generateInitialPlan(userId);
+        NutritionPlan plan = nutritionRecommendationService.generateInitialPlan(userId, totalDays);
         NutritionPlanResponse response = nutritionMapper.toResponse(plan);
         return ApiResponse.success(response, "Nutrition plan generated successfully");
     }
@@ -95,6 +119,54 @@ public class NutritionController {
         NutritionPlan plan = nutritionRecommendationService.adjustPlanBasedOnBehavior(userId, planId);
         NutritionPlanResponse response = nutritionMapper.toResponse(plan);
         return ApiResponse.success(response, "Nutrition plan adjusted based on behavior");
+    }
+
+    @Operation(summary = "Generate AI nutrition plan",
+               description = "Generate a nutrition plan using AI (OpenRouter) based on user profile and fitness goal")
+    @PostMapping("/plans/generate-ai")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<NutritionPlanResponse> generateAiPlan(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(defaultValue = "7") @Min(1) @Max(7) int totalDays) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        NutritionPlan plan = nutritionRecommendationService.generateAiPlan(userId, totalDays);
+        NutritionPlanResponse response = nutritionMapper.toResponse(plan);
+        return ApiResponse.success(response, "AI nutrition plan generated successfully");
+    }
+
+    @Operation(summary = "Adjust nutrition plan with AI",
+               description = "Use AI to adjust nutrition plan based on adherence data and weight trends")
+    @PostMapping("/plans/{planId}/adjust-ai")
+    public ApiResponse<NutritionPlanResponse> adjustPlanWithAi(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long planId) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        NutritionPlan plan = nutritionRecommendationService.adjustPlanWithAi(userId, planId);
+        NutritionPlanResponse response = nutritionMapper.toResponse(plan);
+        return ApiResponse.success(response, "Nutrition plan adjusted with AI successfully");
+    }
+
+    // ========== Nutrition Days ==========
+
+    @Operation(summary = "Get all days in a plan", description = "Get all nutrition days with their meals for a plan")
+    @GetMapping("/plans/{planId}/days")
+    public ApiResponse<List<NutritionDayResponse>> getPlanDays(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long planId) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        List<NutritionDayResponse> response = nutritionService.getPlanDays(userId, planId);
+        return ApiResponse.success(response);
+    }
+
+    @Operation(summary = "Get a specific day in a plan", description = "Get a nutrition day with its meals by day number")
+    @GetMapping("/plans/{planId}/days/{dayNumber}")
+    public ApiResponse<NutritionDayResponse> getPlanDay(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long planId,
+            @PathVariable int dayNumber) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        NutritionDayResponse response = nutritionService.getPlanDay(userId, planId, dayNumber);
+        return ApiResponse.success(response);
     }
 
     @Operation(summary = "Get or generate meals for specific day",
@@ -114,36 +186,25 @@ public class NutritionController {
 
     // ========== Meal Logging (UC-7.2, UC-7.7) ==========
 
-    @Operation(summary = "Log a meal", description = "UC-7.2: Record food intake")
+    @Operation(summary = "Log a meal", description = "Log a meal (free-form manual entry or from a template)")
     @PostMapping("/meals")
     @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<NutritionLogResponse> logMeal(
+    public ApiResponse<PlanMealResponse> logMeal(
             @AuthenticationPrincipal Jwt jwt,
             @Valid @RequestBody LogMealRequest request) {
         Long userId = Long.parseLong(jwt.getSubject());
-        NutritionLogResponse response = nutritionService.logMeal(userId, request);
+        PlanMealResponse response = nutritionService.logMeal(userId, request);
         return ApiResponse.success(response, "Meal logged successfully");
     }
 
-    @Operation(summary = "Log meal from template", description = "UC-7.7: Quick log using saved template")
-    @PostMapping("/meals/from-template")
-    @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<NutritionLogResponse> logMealFromTemplate(
-            @AuthenticationPrincipal Jwt jwt,
-            @Valid @RequestBody LogMealFromTemplateRequest request) {
-        Long userId = Long.parseLong(jwt.getSubject());
-        NutritionLogResponse response = nutritionService.logMealFromTemplate(userId, request);
-        return ApiResponse.success(response, "Meal logged from template successfully");
-    }
-
-    @Operation(summary = "Get daily meals", description = "Get meal logs for a specific date")
+    @Operation(summary = "Get daily meals", description = "Get all meals (planned + logged) for a specific date")
     @GetMapping("/meals")
-    public ApiResponse<List<NutritionLogResponse>> getDailyMeals(
+    public ApiResponse<List<PlanMealResponse>> getDailyMeals(
             @AuthenticationPrincipal Jwt jwt,
             @Parameter(description = "Date (YYYY-MM-DD), defaults to today")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         Long userId = Long.parseLong(jwt.getSubject());
-        List<NutritionLogResponse> response = nutritionService.getDailyLogs(userId, date);
+        List<PlanMealResponse> response = nutritionService.getDailyMeals(userId, date);
         return ApiResponse.success(response);
     }
 
@@ -189,22 +250,19 @@ public class NutritionController {
         return ApiResponse.success(response, "Compensation strategy selected");
     }
 
-    // ========== Dashboard (UC-7.5) ==========
-
-    @Operation(summary = "Get nutrition dashboard", description = "UC-7.5: View comprehensive nutrition status")
-    @GetMapping("/dashboard")
-    public ApiResponse<NutritionDashboardResponse> getDashboard(@AuthenticationPrincipal Jwt jwt) {
-        Long userId = Long.parseLong(jwt.getSubject());
-        NutritionDashboardResponse response = nutritionService.getDashboard(userId);
-        return ApiResponse.success(response);
-    }
-
     // ========== Meal Templates (UC-7.6) ==========
 
     @Operation(summary = "Get meal templates", description = "List all system-provided meal templates")
     @GetMapping("/templates")
     public ApiResponse<List<MealTemplateResponse>> getMealTemplates() {
         List<MealTemplateResponse> response = nutritionService.getMealTemplates();
+        return ApiResponse.success(response);
+    }
+
+    @Operation(summary = "Get meal template by ID", description = "Get a single meal template by its ID")
+    @GetMapping("/templates/{templateId}")
+    public ApiResponse<MealTemplateResponse> getMealTemplateById(@PathVariable Long templateId) {
+        MealTemplateResponse response = nutritionService.getMealTemplateById(templateId);
         return ApiResponse.success(response);
     }
 
@@ -221,6 +279,48 @@ public class NutritionController {
         LocalDate end = start.plusDays(6);
         List<DailyNutritionSummaryResponse> response = nutritionService.getWeeklyTotals(userId, start, end);
         return ApiResponse.success(response);
+    }
+
+    // ========== Plan Meals ==========
+
+    @Operation(summary = "Schedule a meal", description = "Schedule a meal template on a specific date")
+    @PostMapping("/meals/schedule")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ApiResponse<PlanMealResponse> scheduleMeal(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody ScheduleMealRequest request) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        PlanMealResponse response = nutritionService.scheduleMeal(userId, request);
+        return ApiResponse.success(response, "Meal scheduled successfully");
+    }
+
+    @Operation(summary = "Complete a meal", description = "Mark a meal as completed")
+    @PutMapping("/meals/{planMealId}/complete")
+    public ApiResponse<PlanMealResponse> completePlanMeal(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long planMealId) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        PlanMealResponse response = nutritionService.completePlanMeal(userId, planMealId);
+        return ApiResponse.success(response, "Meal marked as completed");
+    }
+
+    @Operation(summary = "Skip a meal", description = "Mark a meal as skipped")
+    @PutMapping("/meals/{planMealId}/skip")
+    public ApiResponse<PlanMealResponse> skipPlanMeal(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long planMealId) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        PlanMealResponse response = nutritionService.skipPlanMeal(userId, planMealId);
+        return ApiResponse.success(response, "Meal marked as skipped");
+    }
+    @Operation(summary = "Complete a day meal", description = "Mark a day meal as completed")
+    @PutMapping("/day-meals/{dayMealId}/complete")
+    public ApiResponse<DayMealResponse> completeDayMeal(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long dayMealId) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        DayMealResponse response = nutritionService.completeDayMeal(userId, dayMealId);
+        return ApiResponse.success(response, "Day meal marked as completed");
     }
 
 }

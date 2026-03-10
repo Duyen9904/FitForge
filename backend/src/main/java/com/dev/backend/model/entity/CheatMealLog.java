@@ -15,7 +15,7 @@ import java.util.List;
 @Table(
     name = "cheat_meal_log",
     uniqueConstraints = {
-        @UniqueConstraint(name = "uk_cheat_meal_log_nutrition_log", columnNames = "nutrition_log_id")
+        @UniqueConstraint(name = "uk_cheat_meal_log_plan_meal", columnNames = "plan_meal_id")
     },
     indexes = {
         @Index(name = "idx_cheat_meal_log_user", columnList = "user_id"),
@@ -36,8 +36,8 @@ public class CheatMealLog extends BaseEntity {
     private Long cheatMealLogId;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "nutrition_log_id", nullable = false, unique = true)
-    private NutritionLog nutritionLog;
+    @JoinColumn(name = "plan_meal_id", nullable = false, unique = true)
+    private PlanMeal planMeal;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)

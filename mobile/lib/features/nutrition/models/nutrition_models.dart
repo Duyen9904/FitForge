@@ -51,23 +51,65 @@ class MealTemplate with _$MealTemplate {
 }
 
 @freezed
-class NutritionLog with _$NutritionLog {
-  const factory NutritionLog({
-    required int nutritionId,
-    required DateTime logDate,
+class NutritionDay with _$NutritionDay {
+  const factory NutritionDay({
+    required int nutritionDayId,
+    required int dayNumber,
+    String? dayName,
+    String? description,
+    int? targetCalories,
+    @Default(false) bool isRestDay,
+    @Default(<DayMeal>[]) List<DayMeal> meals,
+  }) = _NutritionDay;
+
+  factory NutritionDay.fromJson(Map<String, dynamic> json) =>
+      _$NutritionDayFromJson(json);
+}
+
+@freezed
+class DayMeal with _$DayMeal {
+  const factory DayMeal({
+    required int dayMealId,
     required MealType mealType,
+    int? orderIndex,
+    int? calories,
+    double? proteinG,
+    double? carbsG,
+    double? fatsG,
+    String? notes,
+    DateTime? completedAt,
+    MealTemplate? mealTemplate,
+    String? proofPhotoUrl,
+    String? proofPhotoSignedUrl,
+  }) = _DayMeal;
+
+  factory DayMeal.fromJson(Map<String, dynamic> json) =>
+      _$DayMealFromJson(json);
+}
+
+@freezed
+class PlanMeal with _$PlanMeal {
+  const factory PlanMeal({
+    required int planMealId,
+    int? nutritionPlanId,
+    int? mealTemplateId,
+    required DateTime scheduledDate,
+    required MealType mealType,
+    required PlanMealStatus status,
+    required PlanMealSource source,
     required String foodName,
-    required int calories,
+    int? calories,
     double? proteinG,
     double? carbsG,
     double? fatsG,
     DateTime? mealTime,
+    DateTime? completedAt,
     @Default(false) bool isCheatMeal,
     String? notes,
-  }) = _NutritionLog;
+  }) = _PlanMeal;
 
-  factory NutritionLog.fromJson(Map<String, dynamic> json) =>
-      _$NutritionLogFromJson(json);
+  factory PlanMeal.fromJson(Map<String, dynamic> json) =>
+      _$PlanMealFromJson(json);
 }
 
 @freezed
@@ -140,7 +182,7 @@ class NutritionTrendSummary with _$NutritionTrendSummary {
 class CheatMealLog with _$CheatMealLog {
   const factory CheatMealLog({
     required int cheatMealLogId,
-    required int nutritionLogId,
+    required int planMealId,
     required DateTime cheatDate,
     required String mealName,
     required int mealCalories,
@@ -182,7 +224,7 @@ class CompensationAction with _$CompensationAction {
 class NutritionDashboard with _$NutritionDashboard {
   const factory NutritionDashboard({
     required DailyNutritionSummary todaySummary,
-    @Default(<NutritionLog>[]) List<NutritionLog> recentMeals,
+    @Default(<PlanMeal>[]) List<PlanMeal> recentMeals,
     WeeklyCheatMealSummary? weeklyCheatMeals,
     @Default(<CompensationAction>[]) List<CompensationAction> activeCompensations,
     NutritionTrendSummary? trends,

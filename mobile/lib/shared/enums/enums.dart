@@ -13,4 +13,7 @@ export 'compensation_type.dart';
 export 'makeup_option.dart';
 export 'missed_workout_reason.dart';
 export 'reschedule_reason.dart';
+export 'plan_meal_status.dart';
+export 'plan_meal_source.dart';
+export 'media_category.dart';
 

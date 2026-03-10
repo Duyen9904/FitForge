@@ -124,6 +124,7 @@ public class MealTemplateGeneratorImpl implements MealTemplateGenerator {
                                            int targetCalories, float proteinPercent, 
                                            float carbsPercent, float fatsPercent) {
         MealTemplate template = new MealTemplate();
+        template.setNutritionPlan(plan);
         template.setMealType(mealType);
 
         if (recipe != null) {

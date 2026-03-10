@@ -107,4 +107,24 @@ class NutritionTabViewModel extends StateNotifier<NutritionTabState> {
       );
     }
   }
+
+  /// Complete a day meal (one-tap from planned meal card)
+  Future<bool> completeDayMeal(int dayMealId, {String? proofPhotoUrl}) async {
+    try {
+      await _repository.completeDayMeal(
+        dayMealId,
+        proofPhotoUrl: proofPhotoUrl,
+      );
+      await loadAll();
+      return true;
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to complete day meal',
+        name: 'NutritionTabViewModel',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
+  }
 }

@@ -17,7 +17,7 @@ import java.time.LocalDate;
 public class CheatMealLogResponse {
 
     private Long cheatMealLogId;
-    private Long nutritionLogId;
+    private Long planMealId;
     private LocalDate cheatDate;
     private String mealName;
     private Integer mealCalories;

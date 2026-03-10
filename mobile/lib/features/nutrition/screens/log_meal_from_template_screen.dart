@@ -96,16 +96,64 @@ class _LogMealFromTemplateScreenState
 
     setState(() => _isSubmitting = true);
 
-    final dto = LogMealFromTemplateRequestDto(
-      templateId: _selectedTemplate!.mealTemplateId,
-      quantityMultiplier:
-          double.tryParse(_quantityController.text) ?? 1.0,
-      logDate: DateTime.now(),
-    );
-
     try {
       final repo = ref.read(nutritionRepositoryProvider);
-      await repo.logMealFromTemplate(dto);
+      final logDate = DateTime.now().toUtc();
+      final localDate = DateTime(
+        DateTime.now().year,
+        DateTime.now().month,
+        DateTime.now().day,
+      );
+
+      // Check for existing meals of the same type on today
+      final existingMeals = await repo.getDailyMeals(localDate);
+      final templateType = _selectedTemplate!.mealType;
+      final hasConflict =
+          existingMeals.any((m) => m.mealType == templateType);
+
+      bool replaceExisting = false;
+
+      if (hasConflict && mounted) {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Meal Already Exists'),
+            content: Text(
+              '${templateType.displayName} already exists for today. '
+              'Do you want to replace the existing meal?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                ),
+                child: const Text('Replace'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmed != true) {
+          setState(() => _isSubmitting = false);
+          return;
+        }
+        replaceExisting = true;
+      }
+
+      final dto = LogMealRequestDto(
+        templateId: _selectedTemplate!.mealTemplateId,
+        quantityMultiplier:
+            double.tryParse(_quantityController.text) ?? 1.0,
+        logDate: logDate,
+        replaceExisting: replaceExisting,
+      );
+
+      await repo.logMeal(dto);
 
       // Refresh nutrition tab data after logging
       ref.read(nutritionTabViewModelProvider.notifier).loadAll();

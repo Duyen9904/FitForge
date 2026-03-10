@@ -6,7 +6,7 @@ import '../models/nutrition_models.dart';
 
 /// Individual meal log card with food icon, name, calories, and macro pills.
 class RecentMealCard extends StatelessWidget {
-  final NutritionLog meal;
+  final PlanMeal meal;
   final VoidCallback? onTap;
 
   const RecentMealCard({

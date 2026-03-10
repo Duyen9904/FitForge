@@ -51,6 +51,11 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
         scrolledUnderElevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.tune_rounded),
+            tooltip: 'Nutrition Plan',
+            onPressed: () => context.push(Routes.nutritionPlanDetail),
+          ),
+          IconButton(
             icon: const Icon(Icons.restaurant_menu),
             tooltip: 'Meal Templates',
             onPressed: () => context.push(Routes.mealTemplates),
@@ -108,14 +113,6 @@ class _NutritionScreenState extends ConsumerState<NutritionScreen>
             ),
           ),
         ],
-      ),
-      // FAB for quick-adding meals
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          context.push(Routes.logMeal);
-        },
-        backgroundColor: AppColors.primary,
-        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }

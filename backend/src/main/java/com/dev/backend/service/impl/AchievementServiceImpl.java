@@ -38,7 +38,7 @@ public class AchievementServiceImpl implements AchievementService {
     private final UserAchievementRepository userAchievementRepository;
     private final UserRepository userRepository;
     private final WorkoutProgressRepository workoutProgressRepository;
-    private final NutritionLogRepository nutritionLogRepository;
+    private final PlanMealRepository planMealRepository;
     private final UserMeasurementRepository userMeasurementRepository;
     private final AchievementMapper achievementMapper;
 
@@ -349,7 +349,7 @@ public class AchievementServiceImpl implements AchievementService {
         LocalDate today = LocalDate.now();
         for (int i = 0; i < requiredDays; i++) {
             LocalDate date = today.minusDays(i);
-            List<?> logs = nutritionLogRepository.findByUserUserIdAndLogDate(userId, date);
+            List<?> logs = planMealRepository.findByUserUserIdAndScheduledDate(userId, date);
             if (logs.isEmpty()) {
                 return false;
             }
@@ -474,7 +474,7 @@ public class AchievementServiceImpl implements AchievementService {
         
         for (int i = 0; i < 365; i++) {
             LocalDate date = today.minusDays(i);
-            List<?> logs = nutritionLogRepository.findByUserUserIdAndLogDate(userId, date);
+            List<?> logs = planMealRepository.findByUserUserIdAndScheduledDate(userId, date);
             if (!logs.isEmpty()) {
                 streak++;
             } else if (i > 0) {

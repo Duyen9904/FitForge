@@ -10,4 +10,6 @@ import java.util.List;
 public interface MealTemplateRepository extends JpaRepository<MealTemplate, Long> {
 
     List<MealTemplate> findByMealType(String mealType);
+
+    List<MealTemplate> findByNutritionPlanNutritionPlanId(Long planId);
 }

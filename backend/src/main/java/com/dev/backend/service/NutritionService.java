@@ -28,22 +28,28 @@ public interface NutritionService {
      */
     NutritionPlanResponse getActivePlan(Long userId);
 
+    /**
+     * Delete a nutrition plan and all associated data (days, meals, templates)
+     */
+    void deletePlan(Long userId, Long planId);
+
+    /**
+     * Deactivate a nutrition plan (set isActive to false)
+     */
+    NutritionPlanResponse deactivatePlan(Long userId, Long planId);
+
     // ========== Meal Logging (UC-7.2, UC-7.3) ==========
 
     /**
-     * Log a meal (UC-7.2)
+     * Log a meal (free-form manual entry or from a template).
+     * Creates a PlanMeal with status=COMPLETED.
      */
-    NutritionLogResponse logMeal(Long userId, LogMealRequest request);
+    PlanMealResponse logMeal(Long userId, LogMealRequest request);
 
     /**
-     * Log meal from template (UC-7.7)
+     * Get daily meals (all statuses)
      */
-    NutritionLogResponse logMealFromTemplate(Long userId, LogMealFromTemplateRequest request);
-
-    /**
-     * Get daily meal logs
-     */
-    List<NutritionLogResponse> getDailyLogs(Long userId, LocalDate date);
+    List<PlanMealResponse> getDailyMeals(Long userId, LocalDate date);
 
     /**
      * Get daily nutrition summary
@@ -67,12 +73,17 @@ public interface NutritionService {
      */
     CompensationActionResponse selectCompensation(Long userId, Long cheatMealLogId, SelectCompensationRequest request);
 
-    // ========== Dashboard (UC-7.5) ==========
+    // ========== Nutrition Days ==========
 
     /**
-     * Get nutrition dashboard with all relevant data
+     * Get all days in a nutrition plan with their meals
      */
-    NutritionDashboardResponse getDashboard(Long userId);
+    List<NutritionDayResponse> getPlanDays(Long userId, Long planId);
+
+    /**
+     * Get a specific day in a nutrition plan with its meals
+     */
+    NutritionDayResponse getPlanDay(Long userId, Long planId, int dayNumber);
 
     // ========== Meal Templates (UC-7.6) ==========
 
@@ -81,11 +92,38 @@ public interface NutritionService {
      */
     List<MealTemplateResponse> getMealTemplates();
 
+    /**
+     * Get a single meal template by ID
+     */
+    MealTemplateResponse getMealTemplateById(Long templateId);
+
     // ========== Weekly View ==========
 
     /**
      * Get daily nutrition totals for a date range (weekly calendar view).
      */
     List<DailyNutritionSummaryResponse> getWeeklyTotals(Long userId, LocalDate weekStart, LocalDate weekEnd);
+
+    // ========== Plan Meals ==========
+
+    /**
+     * Schedule a meal template on a specific date
+     */
+    PlanMealResponse scheduleMeal(Long userId, ScheduleMealRequest request);
+
+    /**
+     * Mark a planned meal as completed
+     */
+    PlanMealResponse completePlanMeal(Long userId, Long planMealId);
+
+    /**
+     * Mark a day meal as completed
+     */
+    DayMealResponse completeDayMeal(Long userId, Long dayMealId);
+
+    /**
+     * Mark a planned meal as skipped
+     */
+    PlanMealResponse skipPlanMeal(Long userId, Long planMealId);
 
 }

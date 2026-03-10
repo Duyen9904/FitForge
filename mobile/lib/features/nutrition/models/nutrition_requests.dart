@@ -42,15 +42,18 @@ class UpdateNutritionPlanRequestDto with _$UpdateNutritionPlanRequestDto {
 @freezed
 class LogMealRequestDto with _$LogMealRequestDto {
   const factory LogMealRequestDto({
-    required MealType mealType,
-    required String foodName,
-    required int calories,
+    int? templateId,
+    double? quantityMultiplier,
+    MealType? mealType,
+    String? foodName,
+    int? calories,
     double? proteinG,
     double? carbsG,
     double? fatsG,
     DateTime? mealTime,
     DateTime? logDate,
     bool? isCheatMeal,
+    bool? replaceExisting,
     String? notes,
   }) = _LogMealRequestDto;
 
@@ -58,19 +61,6 @@ class LogMealRequestDto with _$LogMealRequestDto {
       _$LogMealRequestDtoFromJson(json);
 }
 
-@freezed
-class LogMealFromTemplateRequestDto with _$LogMealFromTemplateRequestDto {
-  const factory LogMealFromTemplateRequestDto({
-    required int templateId,
-    required double quantityMultiplier,
-    DateTime? mealTime,
-    DateTime? logDate,
-    bool? isCheatMeal,
-  }) = _LogMealFromTemplateRequestDto;
-
-  factory LogMealFromTemplateRequestDto.fromJson(Map<String, dynamic> json) =>
-      _$LogMealFromTemplateRequestDtoFromJson(json);
-}
 
 @freezed
 class CreateMealTemplateRequestDto with _$CreateMealTemplateRequestDto {
@@ -101,3 +91,15 @@ class SelectCompensationRequestDto with _$SelectCompensationRequestDto {
       _$SelectCompensationRequestDtoFromJson(json);
 }
 
+@freezed
+class ScheduleMealRequestDto with _$ScheduleMealRequestDto {
+  const factory ScheduleMealRequestDto({
+    int? planId,
+    required int templateId,
+    required DateTime scheduledDate,
+    required MealType mealType,
+  }) = _ScheduleMealRequestDto;
+
+  factory ScheduleMealRequestDto.fromJson(Map<String, dynamic> json) =>
+      _$ScheduleMealRequestDtoFromJson(json);
+}

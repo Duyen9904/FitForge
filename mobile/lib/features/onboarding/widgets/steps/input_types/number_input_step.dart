@@ -34,6 +34,12 @@ class _NumberInputStepState extends State<NumberInputStep> {
     _loadExistingData();
   }
 
+  /// Key used when the step has no options – derived from stepKey or title.
+  String get _fallbackKey =>
+      widget.step.stepKey?.toLowerCase() ??
+      widget.step.title?.toLowerCase() ??
+      'value';
+
   void _initFields() {
     final options = widget.step.options;
     if (options.isNotEmpty) {
@@ -42,8 +48,8 @@ class _NumberInputStepState extends State<NumberInputStep> {
         _controllers[key] = TextEditingController();
       }
     } else {
-      _controllers['weight'] = TextEditingController();
-      _controllers['height'] = TextEditingController();
+      // Single number field keyed by the step's own key (e.g. "age", "weight")
+      _controllers[_fallbackKey] = TextEditingController();
     }
   }
 
@@ -144,28 +150,13 @@ class _NumberInputStepState extends State<NumberInputStep> {
             else ...[
               _buildNumberField(
                 theme: theme,
-                key: 'weight',
-                label: 'Weight',
-                hint: '70',
-                suffix: 'kg',
+                key: _fallbackKey,
+                label: widget.step.title ?? 'Value',
+                hint: '',
+                suffix: '',
                 validator: (v) {
                   if (v == null || v.isEmpty) return 'Required';
-                  final n = double.tryParse(v);
-                  if (n == null || n < 20 || n > 300) return 'Enter 20-300 kg';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              _buildNumberField(
-                theme: theme,
-                key: 'height',
-                label: 'Height',
-                hint: '175',
-                suffix: 'cm',
-                validator: (v) {
-                  if (v == null || v.isEmpty) return 'Required';
-                  final n = double.tryParse(v);
-                  if (n == null || n < 100 || n > 250) return 'Enter 100-250 cm';
+                  if (num.tryParse(v) == null) return 'Enter a valid number';
                   return null;
                 },
               ),

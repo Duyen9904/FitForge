@@ -12,6 +12,7 @@ class NutritionPlanState with _$NutritionPlanState {
 
   const factory NutritionPlanState.loaded({
     required NutritionPlan plan,
+    @Default(<NutritionDay>[]) List<NutritionDay> days,
   }) = NutritionPlanLoaded;
 
   const factory NutritionPlanState.generating() = NutritionPlanGenerating;

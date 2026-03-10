@@ -409,4 +409,263 @@ public class OpenRouterAiServiceImpl implements AiService {
         sb.append("\nGenerate the adjusted plan JSON.");
         return sb.toString();
     }
+
+    // ==================== NUTRITION PLAN GENERATION ====================
+
+    @Override
+    public AiNutritionPlanResult generateNutritionPlan(AiNutritionPlanContext context) {
+        if (client == null) {
+            throw new IllegalStateException("OpenRouter API key not configured. Set OPENROUTER_API_KEY environment variable.");
+        }
+
+        log.info("[AI-NUTRITION] Starting nutrition plan generation for user {} | Goal: {}",
+                context.getProfile().getUserId(),
+                context.getGoalName());
+
+        String systemPrompt = buildNutritionSystemPrompt();
+        String userPrompt = buildNutritionUserPrompt(context);
+
+        long totalStart = System.currentTimeMillis();
+        String jsonResponse = callAiSingleShot(systemPrompt, userPrompt, "NUTRITION_PLAN_GENERATION");
+        AiNutritionPlanResult result = parseNutritionPlanResponse(jsonResponse);
+        long totalMs = System.currentTimeMillis() - totalStart;
+
+        int mealCount = result.getMeals() != null ? result.getMeals().size() : 0;
+        log.info("[AI-NUTRITION] Completed in {} ms | Plan: '{}' | Calories: {} | Meals: {}",
+                totalMs, result.getPlanName(), result.getDailyCalorieTarget(), mealCount);
+
+        return result;
+    }
+
+    @Override
+    public AiNutritionPlanResult adjustNutritionPlan(AiNutritionPlanContext context) {
+        if (client == null) {
+            throw new IllegalStateException("OpenRouter API key not configured. Set OPENROUTER_API_KEY environment variable.");
+        }
+
+        log.info("[AI-NUTRITION-ADJUST] Starting nutrition plan adjustment for user {} | Current plan: '{}' | Adherence: {}",
+                context.getProfile().getUserId(),
+                context.getCurrentPlanName(),
+                context.getNutritionAdherence() != null ? String.format("%.0f%%", context.getNutritionAdherence() * 100) : "N/A");
+
+        String systemPrompt = buildNutritionAdjustmentSystemPrompt();
+        String userPrompt = buildNutritionAdjustmentUserPrompt(context);
+
+        long totalStart = System.currentTimeMillis();
+        String jsonResponse = callAiSingleShot(systemPrompt, userPrompt, "NUTRITION_PLAN_ADJUSTMENT");
+        AiNutritionPlanResult result = parseNutritionPlanResponse(jsonResponse);
+        long totalMs = System.currentTimeMillis() - totalStart;
+
+        log.info("[AI-NUTRITION-ADJUST] Completed in {} ms | Plan: '{}' | New calories: {}",
+                totalMs, result.getPlanName(), result.getDailyCalorieTarget());
+
+        return result;
+    }
+
+    private AiNutritionPlanResult parseNutritionPlanResponse(String jsonContent) {
+        try {
+            String cleaned = stripMarkdownFences(jsonContent);
+            return objectMapper.readValue(cleaned, AiNutritionPlanResult.class);
+        } catch (Exception e) {
+            log.error("Failed to parse AI nutrition plan response as JSON: {}", jsonContent, e);
+            throw new RuntimeException("Failed to parse AI-generated nutrition plan. The AI returned invalid JSON.", e);
+        }
+    }
+
+    // ==================== NUTRITION PROMPTS ====================
+
+    private String buildNutritionSystemPrompt() {
+        return """
+                You are a certified nutritionist and dietitian. Design personalized nutrition plans.
+
+                OUTPUT RULES:
+                - Respond with valid JSON ONLY. No markdown, no explanation.
+                - Use the exact JSON schema below.
+
+                MEAL PLANNING RULES:
+                - Generate exactly 4 meals: BREAKFAST, LUNCH, DINNER, SNACK
+                - Total meal calories must sum to dailyCalorieTarget (±5% tolerance)
+                - Each meal must have realistic macro breakdowns (protein, carbs, fats in grams)
+                - Provide practical, common food-based meals (not supplements)
+                - Include brief recipe instructions for each meal
+
+                CALORIE DISTRIBUTION:
+                - BREAKFAST: ~25% of daily calories
+                - LUNCH: ~35% of daily calories
+                - DINNER: ~30% of daily calories
+                - SNACK: ~10% of daily calories
+
+                MACRO GUIDELINES BY GOAL:
+                - Fat loss: protein 30-35%, carbs 25-35%, fats 30-35%
+                - Muscle gain: protein 30-35%, carbs 40-45%, fats 20-25%
+                - Maintenance/General fitness: protein 25-30%, carbs 40-45%, fats 25-30%
+                - Endurance: protein 20-25%, carbs 50-55%, fats 20-25%
+
+                SAFETY:
+                - Respect dietary restrictions and allergies
+                - Do not suggest raw meats, unpasteurized items, or known allergens
+                - Minimum 1200 calories for any plan
+
+                JSON SCHEMA:
+                {
+                  "planName": "<descriptive plan name>",
+                  "description": "<1-2 sentence plan overview>",
+                  "recommendationReason": "<why this plan suits the user>",
+                  "dailyCalorieTarget": <integer>,
+                  "proteinPercentage": <float>,
+                  "carbsPercentage": <float>,
+                  "fatsPercentage": <float>,
+                  "cheatMealsPerWeek": <integer 1-3>,
+                  "meals": [{
+                    "mealName": "<string>",
+                    "mealType": "<BREAKFAST|LUNCH|DINNER|SNACK>",
+                    "description": "<brief description>",
+                    "calories": <integer>,
+                    "proteinG": <float>,
+                    "carbsG": <float>,
+                    "fatsG": <float>,
+                    "recipeInstructions": "<step-by-step cooking instructions>"
+                  }]
+                }
+                """;
+    }
+
+    private String buildNutritionUserPrompt(AiNutritionPlanContext context) {
+        StringBuilder sb = new StringBuilder();
+        var profile = context.getProfile();
+
+        sb.append("PROFILE: ");
+        List<String> profileParts = new ArrayList<>();
+        if (profile.getGender() != null) profileParts.add(profile.getGender());
+        if (profile.getAgeYears() != null) profileParts.add("age " + profile.getAgeYears());
+        if (profile.getFitnessLevel() != null) profileParts.add(profile.getFitnessLevel());
+        if (profile.getCurrentWeightKg() != null) profileParts.add(profile.getCurrentWeightKg() + "kg");
+        if (profile.getHeightCm() != null) profileParts.add(profile.getHeightCm() + "cm");
+        sb.append(String.join(", ", profileParts)).append("\n");
+
+        if (profile.getTargetWeightKg() != null) {
+            sb.append("TARGET WEIGHT: ").append(profile.getTargetWeightKg()).append("kg\n");
+        }
+
+        if (context.getGoalName() != null) {
+            sb.append("GOAL: ").append(context.getGoalName()).append("\n");
+        }
+
+        if (context.getDietaryPreferences() != null && !context.getDietaryPreferences().isBlank()) {
+            sb.append("DIETARY PREFERENCES: ").append(context.getDietaryPreferences()).append("\n");
+        }
+
+        if (context.getDietaryRestrictions() != null && !context.getDietaryRestrictions().isBlank()) {
+            sb.append("DIETARY RESTRICTIONS: ").append(context.getDietaryRestrictions()).append("\n");
+        }
+
+        if (profile.getHealthLimitations() != null && !profile.getHealthLimitations().isEmpty()) {
+            sb.append("HEALTH CONDITIONS: ").append(String.join(", ", profile.getHealthLimitations())).append("\n");
+        }
+
+        // Include activity level from schedule if available
+        if (profile.getScheduleDays() != null && !profile.getScheduleDays().isEmpty()) {
+            sb.append("ACTIVITY: ").append(profile.getScheduleDays().size()).append(" workout days/week\n");
+        }
+
+        if (context.getAdditionalNotes() != null && !context.getAdditionalNotes().isBlank()) {
+            sb.append("NOTES: ").append(context.getAdditionalNotes()).append("\n");
+        }
+
+        sb.append("\nGenerate the nutrition plan JSON.");
+        return sb.toString();
+    }
+
+    private String buildNutritionAdjustmentSystemPrompt() {
+        return """
+                You are a certified nutritionist specializing in adaptive nutrition planning. \
+                Analyze nutrition behavior data and adjust plans to optimize progress toward the user's goal.
+
+                ADJUSTMENT FRAMEWORK:
+                - Adherence < 50% → Simplify meals, reduce calorie gap from maintenance
+                - Adherence 50-80% → Maintain targets, suggest easier meal preps
+                - Adherence > 80% + weight trending wrong → Adjust calories by ±100-200
+                - Adherence > 80% + weight on track → Maintain current plan with variety
+                - Avg intake consistently below target → Reduce target slightly, add calorie-dense snacks
+                - Avg intake consistently above target → Increase protein %, suggest volume foods
+
+                RULES:
+                - Respond with valid JSON ONLY. No markdown.
+                - Exactly 4 meals (BREAKFAST, LUNCH, DINNER, SNACK)
+                - Respect dietary restrictions and health conditions
+                - Explain reasoning in "recommendationReason"
+                - Minimum 1200 calories for any plan
+
+                JSON SCHEMA:
+                {
+                  "planName": "<string>",
+                  "description": "<string>",
+                  "recommendationReason": "<string explaining what changed and why>",
+                  "dailyCalorieTarget": <integer>,
+                  "proteinPercentage": <float>,
+                  "carbsPercentage": <float>,
+                  "fatsPercentage": <float>,
+                  "cheatMealsPerWeek": <integer 1-3>,
+                  "meals": [{
+                    "mealName": "<string>",
+                    "mealType": "<BREAKFAST|LUNCH|DINNER|SNACK>",
+                    "description": "<string>",
+                    "calories": <integer>,
+                    "proteinG": <float>,
+                    "carbsG": <float>,
+                    "fatsG": <float>,
+                    "recipeInstructions": "<string>"
+                  }]
+                }
+                """;
+    }
+
+    private String buildNutritionAdjustmentUserPrompt(AiNutritionPlanContext context) {
+        StringBuilder sb = new StringBuilder();
+        var profile = context.getProfile();
+
+        sb.append("PROFILE: ");
+        List<String> parts = new ArrayList<>();
+        if (profile.getGender() != null) parts.add(profile.getGender());
+        if (profile.getAgeYears() != null) parts.add("age " + profile.getAgeYears());
+        if (profile.getFitnessLevel() != null) parts.add(profile.getFitnessLevel());
+        if (profile.getCurrentWeightKg() != null) parts.add(profile.getCurrentWeightKg() + "kg");
+        sb.append(String.join(", ", parts)).append("\n");
+
+        if (context.getGoalName() != null) {
+            sb.append("GOAL: ").append(context.getGoalName()).append("\n");
+        }
+
+        sb.append("CURRENT PLAN: ").append(context.getCurrentPlanName()).append("\n");
+        if (context.getCurrentDailyCalorieTarget() != null) {
+            sb.append("CURRENT CALORIES: ").append(context.getCurrentDailyCalorieTarget()).append("\n");
+        }
+        if (context.getCurrentProteinPercentage() != null) {
+            sb.append("CURRENT MACROS: P").append(context.getCurrentProteinPercentage())
+                    .append("% / C").append(context.getCurrentCarbsPercentage())
+                    .append("% / F").append(context.getCurrentFatsPercentage()).append("%\n");
+        }
+
+        sb.append("\nMETRICS (last 7 days):\n");
+        if (context.getNutritionAdherence() != null) {
+            sb.append("- Logging adherence: ").append(String.format("%.0f%%", context.getNutritionAdherence() * 100)).append("\n");
+        }
+        if (context.getAvgCalorieIntake() != null) {
+            sb.append("- Avg daily calorie intake: ").append(String.format("%.0f", context.getAvgCalorieIntake())).append("\n");
+        }
+        if (context.getWeightTrend() != null) {
+            sb.append("- Weight trend: ").append(context.getWeightTrend()).append("\n");
+        }
+
+        if (context.getDietaryPreferences() != null && !context.getDietaryPreferences().isBlank()) {
+            sb.append("DIETARY PREFERENCES: ").append(context.getDietaryPreferences()).append("\n");
+        }
+        if (context.getDietaryRestrictions() != null && !context.getDietaryRestrictions().isBlank()) {
+            sb.append("DIETARY RESTRICTIONS: ").append(context.getDietaryRestrictions()).append("\n");
+        }
+
+        sb.append("\nGenerate the adjusted nutrition plan JSON.");
+        return sb.toString();
+    }
 }
+

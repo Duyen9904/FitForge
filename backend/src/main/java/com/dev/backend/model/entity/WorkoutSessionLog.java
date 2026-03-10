@@ -75,6 +75,10 @@ public class WorkoutSessionLog {
     @Column(length = 1000)
     private String notes;
 
+    /** Optional GCS object path for proof photo uploaded on session completion */
+    @Column(length = 500)
+    private String proofPhotoUrl;
+
     @OneToMany(mappedBy = "sessionLog", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ExercisePerformanceLog> exercisePerformanceLogs = new ArrayList<>();
 }

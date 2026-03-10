@@ -37,6 +37,21 @@ class NutritionTabRepository {
     final mealsResponse = await _service.getDailyMeals(date);
     final meals = _unwrap(mealsResponse);
 
+    // Fetch active plan's specific day (based on weekday: Mon=1, Sun=7)
+    NutritionDay? plannedDay;
+    try {
+      final planResponse = await _service.getActivePlan();
+      final plan = _unwrap(planResponse);
+      final dayNumber = date.weekday; // 1=Mon, 7=Sun
+      final dayResponse = await _service.getPlanDay(
+        plan.nutritionPlanId,
+        dayNumber,
+      );
+      plannedDay = _unwrap(dayResponse);
+    } catch (_) {
+      // No active plan or no day data — leave null
+    }
+
     return NutritionTodayData(
       caloriesConsumed: summary.totalCalories,
       caloriesTarget: summary.targetCalories,
@@ -48,6 +63,7 @@ class NutritionTabRepository {
       fatTarget: summary.targetFatsG,
       selectedDate: date,
       recentMeals: meals,
+      plannedDay: plannedDay,
     );
   }
 
@@ -96,5 +112,14 @@ class NutritionTabRepository {
       selectedDate: selectedDate,
       selectedDayMeals: selectedDayMeals,
     );
+  }
+
+  /// Complete a day meal (one-tap from planned meal card)
+  Future<DayMeal> completeDayMeal(int dayMealId, {String? proofPhotoUrl}) async {
+    final response = await _service.completeDayMeal(
+      dayMealId,
+      proofPhotoUrl: proofPhotoUrl,
+    );
+    return _unwrap(response);
   }
 }

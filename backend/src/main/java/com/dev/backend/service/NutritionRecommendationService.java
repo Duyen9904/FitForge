@@ -14,9 +14,10 @@ public interface NutritionRecommendationService {
     /**
      * Generate an initial nutrition plan for a user based on their onboarding profile.
      * @param userId the user ID
-     * @return the newly generated NutritionPlan with Day 1 meals
+     * @param totalDays number of days in the plan cycle (1-7)
+     * @return the newly generated NutritionPlan with NutritionDays and DayMeals
      */
-    NutritionPlan generateInitialPlan(Long userId);
+    NutritionPlan generateInitialPlan(Long userId, int totalDays);
 
     /**
      * Adjust a nutrition plan based on adherence and weight trend.
@@ -34,4 +35,20 @@ public interface NutritionRecommendationService {
      * @return list of meal templates for that day
      */
     List<MealTemplate> getOrGenerateMealsForDay(Long userId, Long planId, int dayNumber);
+
+    /**
+     * Generate a nutrition plan using AI (OpenRouter).
+     * @param userId the user ID
+     * @param totalDays number of days in the plan cycle (1-7)
+     * @return the AI-generated NutritionPlan with NutritionDays and DayMeals
+     */
+    NutritionPlan generateAiPlan(Long userId, int totalDays);
+
+    /**
+     * Adjust a nutrition plan using AI based on adherence and weight trends.
+     * @param userId the user ID
+     * @param planId the plan to adjust
+     * @return the AI-adjusted NutritionPlan
+     */
+    NutritionPlan adjustPlanWithAi(Long userId, Long planId);
 }

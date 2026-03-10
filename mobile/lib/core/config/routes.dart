@@ -17,6 +17,7 @@ class Routes {
   static const String addMealPlan = '/nutrition/add-meal-plan';
   static const String templateMealDetail = '/nutrition/template-detail';
   static const String logMeal = '/nutrition/log-meal';
+  static const String nutritionPlanDetail = '/nutrition/plan-detail';
   static const String profile = '/profile';
   
   // Exercise child routes (full paths)
@@ -91,6 +92,7 @@ class RouteNames {
   static const String addMealPlan = 'addMealPlan';
   static const String templateMealDetail = 'templateMealDetail';
   static const String logMeal = 'logMeal';
+  static const String nutritionPlanDetail = 'nutritionPlanDetail';
   static const String profile = 'profile';
   
   // Exercise child routes

@@ -11,12 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(
-    name = "nutrition_plan",
-    uniqueConstraints = {
-        @UniqueConstraint(name = "uk_nutrition_plan_user", columnNames = "user_id")
-    }
-)
+@Table(name = "nutrition_plan")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -29,8 +24,8 @@ public class NutritionPlan extends BaseEntity {
     @EqualsAndHashCode.Include
     private Long nutritionPlanId;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -77,6 +72,14 @@ public class NutritionPlan extends BaseEntity {
     @Column(nullable = false)
     private Boolean isActive = true;
 
+    /**
+     * Number of days in the nutrition plan cycle.
+     */
+    private Integer totalDays;
+
+    @OneToMany(mappedBy = "nutritionPlan", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("dayNumber ASC")
+    private List<NutritionDay> nutritionDays = new ArrayList<>();
 
     @OneToMany(mappedBy = "nutritionPlan", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<NutritionAdjustment> nutritionAdjustments = new ArrayList<>();
