@@ -2,7 +2,7 @@
 class ApiConstants {
   ApiConstants._();
 
-  static const String baseUrl = 'http://192.168.1.17:8080/api/v1';
+  static const String baseUrl = 'http://192.168.1.14:8080/api/v1';
 
   // Auth endpoints
   static const String login = '/auth/login';
@@ -132,6 +132,13 @@ class ApiConstants {
 
   // Notification endpoints
   static const String notifications = '/notifications';
+  static const String notificationsUnread = '/notifications/unread';
+  static const String notificationsUnreadCount = '/notifications/unread/count';
+  static const String notificationsReadAll = '/notifications/read-all';
+  static const String notificationDevices = '/notifications/devices';
+  static String notificationMarkRead(int id) => '/notifications/$id/read';
+  static String notificationMarkActed(int id) => '/notifications/$id/acted';
+  static String notificationsByType(String type) => '/notifications/type/$type';
 
   // Report endpoints
   static const String reports = '/reports';

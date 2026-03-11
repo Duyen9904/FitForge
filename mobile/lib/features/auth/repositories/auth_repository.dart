@@ -1,7 +1,9 @@
+import 'dart:developer' as developer;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_response.dart';
 import '../../../core/storage/local_storage.dart';
 import '../../../core/storage/secure_storage.dart';
+import '../../notifications/repositories/notification_repository.dart';
 import '../models/auth_response.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
@@ -11,10 +13,12 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   final authService = ref.watch(authServiceProvider);
   final secureStorage = ref.watch(secureStorageProvider);
   final localStorage = ref.watch(localStorageProvider);
+  final notificationRepository = ref.watch(notificationRepositoryProvider);
   return AuthRepository(
     authService: authService,
     secureStorage: secureStorage,
     localStorage: localStorage,
+    notificationRepository: notificationRepository,
   );
 });
 
@@ -24,14 +28,17 @@ class AuthRepository {
   final AuthService _authService;
   final SecureStorage _secureStorage;
   final LocalStorage _localStorage;
+  final NotificationRepository _notificationRepository;
 
   AuthRepository({
     required AuthService authService,
     required SecureStorage secureStorage,
     required LocalStorage localStorage,
+    required NotificationRepository notificationRepository,
   })  : _authService = authService,
         _secureStorage = secureStorage,
-        _localStorage = localStorage;
+        _localStorage = localStorage,
+        _notificationRepository = notificationRepository;
 
   /// Unwrap ApiResponse and throw if not successful
   T _unwrapResponse<T>(ApiResponse<T> response) {
@@ -69,6 +76,10 @@ class AuthRepository {
     final response = await _authService.login(email, password);
     final authResponse = _unwrapResponse(response);
     await _saveTokens(authResponse);
+
+    // Register device for push notifications after successful login
+    _initPushNotifications();
+
     return authResponse.user!;
   }
 
@@ -77,6 +88,10 @@ class AuthRepository {
     final response = await _authService.loginWithGoogle(googleToken);
     final authResponse = _unwrapResponse(response);
     await _saveTokens(authResponse);
+
+    // Register device for push notifications after successful login
+    _initPushNotifications();
+
     return authResponse.user!;
   }
 
@@ -129,6 +144,13 @@ class AuthRepository {
   /// Logout
   Future<void> logout(String email) async {
     try {
+      // Unregister device from push notifications before logout
+      await _notificationRepository.unregisterDevice();
+    } catch (e) {
+      developer.log('Failed to unregister device on logout: $e', name: 'AUTH');
+    }
+
+    try {
       await _authService.logout(email);
     } finally {
       await _secureStorage.clearTokens();
@@ -157,6 +179,13 @@ class AuthRepository {
     if (authResponse.expiresAt != null) {
       await _secureStorage.saveTokenExpiry(authResponse.expiresAt!);
     }
+  }
+
+  /// Fire-and-forget push notification init
+  void _initPushNotifications() {
+    _notificationRepository.initializePushNotifications().catchError((e) {
+      developer.log('Push notification init failed: $e', name: 'AUTH');
+    });
   }
 }
 

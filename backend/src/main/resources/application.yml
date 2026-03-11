@@ -86,3 +86,14 @@ logging:
     # Redis connection
     io.lettuce.core: INFO
     org.springframework.data.redis: DEBUG
+
+# ============= Firebase Configuration =============
+firebase:
+  enabled: true
+  credentials:
+    path: firebase-service-account.json
+
+# ============= Notification Scheduler =============
+notification:
+  scheduler:
+    enabled: true

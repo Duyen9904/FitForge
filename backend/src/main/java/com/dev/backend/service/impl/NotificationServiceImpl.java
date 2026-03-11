@@ -230,6 +230,29 @@ public class NotificationServiceImpl implements NotificationService {
         sendPushNotification(userId, title, message, data);
     }
 
+    @Override
+    public void createMissedWorkoutNotification(Long userId, String sessionName, Long sessionId, String missedDate) {
+        // Check for duplicate within last hour
+        if (isDuplicateNotification(userId, NotificationType.MISSED_WORKOUT, sessionId)) {
+            return;
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
+
+        String title = "⚠️ Missed Workout";
+        String message = String.format("You missed your %s workout on %s. Don't worry — get back on track today!", sessionName, missedDate);
+        String data = String.format("{\"sessionId\":%d,\"sessionName\":\"%s\",\"missedDate\":\"%s\"}", sessionId, sessionName, missedDate);
+
+        Notification notification = createNotification(user, NotificationType.MISSED_WORKOUT,
+                title, message, data, sessionId, "WORKOUT_SESSION");
+
+        notificationRepository.save(notification);
+
+        // Send push notification
+        sendPushNotification(userId, title, message, data);
+    }
+
     // ============= Push Notification Sending =============
 
     @Override

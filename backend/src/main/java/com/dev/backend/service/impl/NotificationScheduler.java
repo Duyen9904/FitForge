@@ -1,9 +1,11 @@
 package com.dev.backend.service.impl;
 
 import com.dev.backend.model.entity.User;
+import com.dev.backend.model.entity.WorkoutSession;
 import com.dev.backend.repository.UserRepository;
 import com.dev.backend.repository.WorkoutPlanRepository;
 import com.dev.backend.repository.WorkoutProgressRepository;
+import com.dev.backend.repository.WorkoutSessionRepository;
 import com.dev.backend.service.NotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +31,7 @@ public class NotificationScheduler {
     private final UserRepository userRepository;
     private final WorkoutProgressRepository workoutProgressRepository;
     private final WorkoutPlanRepository workoutPlanRepository;
+    private final WorkoutSessionRepository workoutSessionRepository;
 
     @Value("${notification.scheduler.enabled:true}")
     private boolean schedulerEnabled;
@@ -37,11 +40,13 @@ public class NotificationScheduler {
             NotificationService notificationService,
             UserRepository userRepository,
             WorkoutProgressRepository workoutProgressRepository,
-            WorkoutPlanRepository workoutPlanRepository) {
+            WorkoutPlanRepository workoutPlanRepository,
+            WorkoutSessionRepository workoutSessionRepository) {
         this.notificationService = notificationService;
         this.userRepository = userRepository;
         this.workoutProgressRepository = workoutProgressRepository;
         this.workoutPlanRepository = workoutPlanRepository;
+        this.workoutSessionRepository = workoutSessionRepository;
     }
 
     /**
@@ -116,6 +121,46 @@ public class NotificationScheduler {
             }
         } catch (Exception e) {
             logger.error("Error in goal progress check job: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * UC-15.1: Send daily workout reminders at 7 AM for today's scheduled sessions
+     */
+    @Scheduled(cron = "0 0 7 * * *")
+    @Transactional(readOnly = true)
+    public void sendDailyWorkoutReminders() {
+        if (!schedulerEnabled) {
+            return;
+        }
+
+        logger.info("Running daily workout reminder check...");
+
+        try {
+            LocalDate today = LocalDate.now();
+            List<WorkoutSession> todaySessions = workoutSessionRepository.findScheduledSessionsByDate(today);
+
+            for (WorkoutSession session : todaySessions) {
+                try {
+                    if (session.getIsRestDay() || session.getWorkoutPlan() == null || 
+                            session.getWorkoutPlan().getUser() == null) {
+                        continue;
+                    }
+
+                    Long userId = session.getWorkoutPlan().getUser().getUserId();
+                    notificationService.createWorkoutReminder(
+                            userId, session.getSessionName(), session.getSessionId());
+                    logger.debug("Sent workout reminder to user {} for session {}",
+                            userId, session.getSessionName());
+                } catch (Exception e) {
+                    logger.error("Error sending workout reminder for session {}: {}",
+                            session.getSessionId(), e.getMessage());
+                }
+            }
+
+            logger.info("Daily workout reminders completed. Sent for {} sessions.", todaySessions.size());
+        } catch (Exception e) {
+            logger.error("Error in daily workout reminder job: {}", e.getMessage());
         }
     }
 

@@ -1,5 +1,7 @@
 package com.dev.backend.service.impl;
 
+import com.dev.backend.model.entity.WorkoutSession;
+import com.dev.backend.repository.WorkoutSessionRepository;
 import com.dev.backend.service.MissedWorkoutService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +19,7 @@ public class MissedWorkoutScheduler {
     private static final Logger logger = LoggerFactory.getLogger(MissedWorkoutScheduler.class);
 
     private final MissedWorkoutService missedWorkoutService;
+    private final WorkoutSessionRepository workoutSessionRepository;
 
     @Value("${missed-workout.scheduler.enabled:true}")
     private boolean schedulerEnabled;
@@ -27,8 +30,10 @@ public class MissedWorkoutScheduler {
     @Value("${missed-workout.scheduler.catchup-days:7}")
     private int catchupDays;
 
-    public MissedWorkoutScheduler(MissedWorkoutService missedWorkoutService) {
+    public MissedWorkoutScheduler(MissedWorkoutService missedWorkoutService,
+                                  WorkoutSessionRepository workoutSessionRepository) {
         this.missedWorkoutService = missedWorkoutService;
+        this.workoutSessionRepository = workoutSessionRepository;
     }
 
     /**

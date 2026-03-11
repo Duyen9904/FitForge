@@ -81,6 +81,11 @@ public interface NotificationService {
      */
     void createGoalProgressNotification(Long userId, String goalName, int progressPercent, Long goalId);
 
+    /**
+     * UC-15.4: Create missed workout notification
+     */
+    void createMissedWorkoutNotification(Long userId, String sessionName, Long sessionId, String missedDate);
+
     // ============= Push Notification Sending =============
 
     /**

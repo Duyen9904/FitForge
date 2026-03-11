@@ -15,6 +15,7 @@ import com.dev.backend.model.enums.MakeupOption;
 import com.dev.backend.model.enums.RescheduleReason;
 import com.dev.backend.repository.*;
 import com.dev.backend.service.MissedWorkoutService;
+import com.dev.backend.service.NotificationService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,7 @@ public class MissedWorkoutServiceImpl implements MissedWorkoutService {
     private final UserRepository userRepository;
     private final MissedWorkoutMapper mapper;
     private final CompensationMapper compensationMapper;
+    private final NotificationService notificationService;
 
     public MissedWorkoutServiceImpl(
             MissedWorkoutRepository missedWorkoutRepository,
@@ -50,7 +52,8 @@ public class MissedWorkoutServiceImpl implements MissedWorkoutService {
             MakeupWorkoutRepository makeupRepository,
             UserRepository userRepository,
             MissedWorkoutMapper mapper,
-            CompensationMapper compensationMapper) {
+            CompensationMapper compensationMapper,
+            NotificationService notificationService) {
         this.missedWorkoutRepository = missedWorkoutRepository;
         this.sessionRepository = sessionRepository;
         this.planRepository = planRepository;
@@ -60,6 +63,7 @@ public class MissedWorkoutServiceImpl implements MissedWorkoutService {
         this.userRepository = userRepository;
         this.mapper = mapper;
         this.compensationMapper = compensationMapper;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -343,6 +347,16 @@ public class MissedWorkoutServiceImpl implements MissedWorkoutService {
             missedWorkout.setReason("AUTO_DETECTED");
 
             missedWorkoutRepository.save(missedWorkout);
+
+            // Send push notification for missed workout
+            try {
+                notificationService.createMissedWorkoutNotification(
+                        userId, session.getSessionName(), sessionId, targetDate.toString());
+            } catch (Exception e) {
+                // Don't let notification failure break missed workout detection
+                org.slf4j.LoggerFactory.getLogger(MissedWorkoutServiceImpl.class)
+                        .error("Failed to send missed workout notification for user {}: {}", userId, e.getMessage());
+            }
         }
     }
 
