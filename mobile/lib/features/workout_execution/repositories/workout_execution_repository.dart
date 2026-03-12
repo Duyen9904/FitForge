@@ -98,7 +98,7 @@ class WorkoutExecutionRepository {
   Future<ProgressChartResponse> getProgressCharts({
     DateTime? startDate,
     DateTime? endDate,
-    int? exerciseId,
+    String? exerciseId,
   }) async {
     final response = await _service.getProgressCharts(
       startDate: startDate,

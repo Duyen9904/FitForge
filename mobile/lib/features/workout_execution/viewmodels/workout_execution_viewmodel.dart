@@ -92,7 +92,7 @@ class WorkoutExecutionViewModel
 
     try {
       final request = LogExerciseRequest(
-        exerciseId: exercise.exercise?.exerciseId ?? 0,
+        exerciseId: exercise.exercise?.exerciseId ?? '',
         setNumber: currentState.currentSetNumber,
         repetitionsCompleted: exercise.repetitions,
         weightUsedKg: exercise.weightKg,
@@ -134,7 +134,7 @@ class WorkoutExecutionViewModel
 
     try {
       final request = SkipExerciseRequest(
-        exerciseId: exercise.exercise?.exerciseId ?? 0,
+        exerciseId: exercise.exercise?.exerciseId ?? '',
         reason: reason,
       );
 

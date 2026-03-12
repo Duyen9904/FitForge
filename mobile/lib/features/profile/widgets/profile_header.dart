@@ -15,6 +15,7 @@ class ProfileHeader extends StatelessWidget {
   final String? fitnessLevel;
   final String? primaryGoal;
   final VoidCallback? onSettings;
+  final VoidCallback? onNotifications;
 
   const ProfileHeader({
     super.key,
@@ -26,6 +27,7 @@ class ProfileHeader extends StatelessWidget {
     this.fitnessLevel,
     this.primaryGoal,
     this.onSettings,
+    this.onNotifications,
   });
 
   int get _memberDays {
@@ -54,7 +56,7 @@ class ProfileHeader extends StatelessWidget {
               children: [
                 IconButton(
                   icon: const Icon(Icons.notifications_none_rounded),
-                  onPressed: () {},
+                  onPressed: onNotifications,
                   iconSize: 22,
                   style: IconButton.styleFrom(
                     backgroundColor:

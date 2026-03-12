@@ -7,7 +7,7 @@ part 'exercise_models.g.dart';
 @freezed
 class ExerciseSummary with _$ExerciseSummary {
   const factory ExerciseSummary({
-    required int exerciseId,
+    required String exerciseId,
     required String exerciseName,
     required String description,
     required String difficultyLevel,
@@ -24,7 +24,7 @@ class ExerciseSummary with _$ExerciseSummary {
 @freezed
 class Exercise with _$Exercise {
   const factory Exercise({
-    required int exerciseId,
+    required String exerciseId,
     required String exerciseName,
     required String description,
     required String difficultyLevel,
@@ -39,6 +39,7 @@ class Exercise with _$Exercise {
     @Default([]) List<MuscleGroup> secondaryMuscleGroups,
     @Default([]) List<Equipment> equipment,
     @Default([]) List<ExerciseAlternative> alternatives,
+    String? tips,
   }) = _Exercise;
 
   factory Exercise.fromJson(Map<String, dynamic> json) =>
@@ -92,7 +93,7 @@ class ExerciseAlternative with _$ExerciseAlternative {
 @freezed
 class ExerciseRecommendation with _$ExerciseRecommendation {
   const factory ExerciseRecommendation({
-    required int exerciseId,
+    required String exerciseId,
     required String exerciseName,
     required String description,
     required String difficultyLevel,

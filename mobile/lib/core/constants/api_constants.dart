@@ -47,11 +47,11 @@ class ApiConstants {
   static const String equipment = '/equipment';
   static const String exerciseFavorites = '/exercises/favorites';
   static const String exerciseRecommendations = '/exercises/recommendations';
-  static String exerciseDetail(int id) => '/exercises/$id';
-  static String exerciseAddFavorite(int id) => '/exercises/$id/favorites';
-  static String exerciseRemoveFavorite(int id) => '/exercises/$id/favorites';
-  static String exerciseIsFavorite(int id) => '/exercises/$id/favorites/status';
-  static String exerciseAlternatives(int id) => '/exercises/$id/alternatives';
+  static String exerciseDetail(String id) => '/exercises/$id';
+  static String exerciseAddFavorite(String id) => '/exercises/$id/favorites';
+  static String exerciseRemoveFavorite(String id) => '/exercises/$id/favorites';
+  static String exerciseIsFavorite(String id) => '/exercises/$id/favorites/status';
+  static String exerciseAlternatives(String id) => '/exercises/$id/alternatives';
 
   // Workout Execution endpoints (WorkoutExecutionController: /workouts)
   static const String workoutStart = '/workouts/start';

@@ -36,7 +36,7 @@ class WorkoutProgressResponse with _$WorkoutProgressResponse {
 class ExerciseLogResponse with _$ExerciseLogResponse {
   const factory ExerciseLogResponse({
     int? logId,
-    int? exerciseId,
+    String? exerciseId,
     String? exerciseName,
     int? setNumber,
     int? repetitionsCompleted,
@@ -142,7 +142,7 @@ class ProgressChartResponse with _$ProgressChartResponse {
 @freezed
 class ExerciseProgressData with _$ExerciseProgressData {
   const factory ExerciseProgressData({
-    int? exerciseId,
+    String? exerciseId,
     String? exerciseName,
     @Default([]) List<WeightDataPoint> dataPoints,
   }) = _ExerciseProgressData;
@@ -202,7 +202,7 @@ class CaloriesDataPoint with _$CaloriesDataPoint {
 @freezed
 class StrengthEstimate with _$StrengthEstimate {
   const factory StrengthEstimate({
-    int? exerciseId,
+    String? exerciseId,
     String? exerciseName,
     @Default(0.0) double estimated1RM,
     @Default(0.0) double previousEstimated1RM,
@@ -230,7 +230,7 @@ class StartWorkoutRequest with _$StartWorkoutRequest {
 @freezed
 class LogExerciseRequest with _$LogExerciseRequest {
   const factory LogExerciseRequest({
-    required int exerciseId,
+    required String exerciseId,
     required int setNumber,
     int? repetitionsCompleted,
     double? weightUsedKg,
@@ -260,7 +260,7 @@ class CompleteWorkoutRequest with _$CompleteWorkoutRequest {
 @freezed
 class SkipExerciseRequest with _$SkipExerciseRequest {
   const factory SkipExerciseRequest({
-    required int exerciseId,
+    required String exerciseId,
     required String reason,
     String? notes,
   }) = _SkipExerciseRequest;

@@ -27,7 +27,7 @@ class SessionDraft {
 
 /// Holds draft data for an exercise within a session
 class ExerciseDraft {
-  int exerciseId;
+  String exerciseId;
   String exerciseName;
   String? imageUrl;
   int sets;

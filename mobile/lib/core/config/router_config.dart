@@ -43,6 +43,7 @@ import '../../features/workouts/screens/workout_plans_screen.dart';
 import '../../features/workouts/screens/workout_plan_detail_screen.dart';
 import '../../features/workouts/screens/create_workout_plan_screen.dart';
 import '../../features/workouts/screens/generate_ai_plan_screen.dart';
+import '../../features/notifications/screens/notification_screen.dart';
 import '../../ui/core/main_navigation_shell.dart';
 import '../state/app_flow_state.dart';
 import 'routes.dart';
@@ -228,7 +229,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: Routes.exerciseDetailSegment,
                 name: RouteNames.exerciseDetail,
                 pageBuilder: (context, state) {
-                  final id = int.parse(state.pathParameters['id']!);
+                  final id = state.pathParameters['id']!;
                   return MaterialPage(
                     key: ValueKey('exercise-detail-$id'),
                     child: ExerciseDetailScreen(exerciseId: id),
@@ -419,6 +420,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: Routes.generateAIPlan,
         name: RouteNames.generateAIPlan,
         builder: (context, state) => const GenerateAIPlanScreen(),
+      ),
+
+      // Notifications route
+      GoRoute(
+        path: Routes.notifications,
+        name: RouteNames.notifications,
+        builder: (context, state) => const NotificationScreen(),
       ),
     ],
   );

@@ -8,7 +8,7 @@ import '../../workouts/repositories/workout_plan_repository.dart';
 /// Bottom sheet that lets the user add an exercise to an existing
 /// workout-plan session in two steps: pick plan → pick session.
 class AddExerciseToSessionSheet extends ConsumerStatefulWidget {
-  final int exerciseId;
+  final String exerciseId;
   final String exerciseName;
 
   const AddExerciseToSessionSheet({

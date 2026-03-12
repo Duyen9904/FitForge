@@ -81,7 +81,7 @@ class ExerciseService {
   }
 
   /// UC-4.2: Get exercise details by ID
-  Future<ApiResponse<Exercise>> getExerciseById(int exerciseId) async {
+  Future<ApiResponse<Exercise>> getExerciseById(String exerciseId) async {
     final response = await apiClient.get(
       ApiConstants.exerciseDetail(exerciseId),
     );
@@ -93,7 +93,7 @@ class ExerciseService {
   }
 
   /// UC-4.3: Add exercise to favorites
-  Future<ApiResponse<void>> addToFavorites(int exerciseId) async {
+  Future<ApiResponse<void>> addToFavorites(String exerciseId) async {
     final response = await apiClient.post(
       ApiConstants.exerciseAddFavorite(exerciseId),
     );
@@ -105,7 +105,7 @@ class ExerciseService {
   }
 
   /// UC-4.3: Remove exercise from favorites
-  Future<ApiResponse<void>> removeFromFavorites(int exerciseId) async {
+  Future<ApiResponse<void>> removeFromFavorites(String exerciseId) async {
     final response = await apiClient.delete(
       ApiConstants.exerciseRemoveFavorite(exerciseId),
     );
@@ -117,7 +117,7 @@ class ExerciseService {
   }
 
   /// UC-4.3: Check if exercise is in favorites
-  Future<ApiResponse<bool>> isFavorite(int exerciseId) async {
+  Future<ApiResponse<bool>> isFavorite(String exerciseId) async {
     final response = await apiClient.get(
       ApiConstants.exerciseIsFavorite(exerciseId),
     );
@@ -154,7 +154,7 @@ class ExerciseService {
 
   /// UC-4.4: Get alternative exercises
   Future<ApiResponse<List<ExerciseAlternative>>> getAlternatives(
-      int exerciseId) async {
+      String exerciseId) async {
     final response = await apiClient.get(
       ApiConstants.exerciseAlternatives(exerciseId),
     );

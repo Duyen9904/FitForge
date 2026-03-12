@@ -16,14 +16,21 @@ class NotificationService {
 
   NotificationService({required this.apiClient});
 
-  /// Get paginated notifications
+  /// Get paginated notifications, optionally filtered by read status.
+  /// [isRead] null = all, true = read only, false = unread only
   Future<ApiResponse<List<NotificationModel>>> getNotifications({
     int page = 0,
     int size = 20,
+    bool? isRead,
   }) async {
+    final queryParams = <String, dynamic>{'page': page, 'size': size};
+    if (isRead != null) {
+      queryParams['isRead'] = isRead;
+    }
+
     final response = await apiClient.get(
       ApiConstants.notifications,
-      queryParameters: {'page': page, 'size': size},
+      queryParameters: queryParams,
     );
 
     return ApiResponse.fromJson(
@@ -36,18 +43,6 @@ class NotificationService {
             [];
         return list;
       },
-    );
-  }
-
-  /// Get unread notifications
-  Future<ApiResponse<List<NotificationModel>>> getUnreadNotifications() async {
-    final response = await apiClient.get(ApiConstants.notificationsUnread);
-
-    return ApiResponse.fromJson(
-      response.data as Map<String, dynamic>,
-      (json) => (json as List)
-          .map((e) => NotificationModel.fromJson(e as Map<String, dynamic>))
-          .toList(),
     );
   }
 

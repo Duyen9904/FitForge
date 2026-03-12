@@ -7,7 +7,7 @@ import 'exercise_detail_state.dart';
 /// Provider factory for ExerciseDetailViewModel
 /// Each exercise detail screen gets its own instance
 final exerciseDetailViewModelProvider = StateNotifierProvider.family<
-    ExerciseDetailViewModel, ExerciseDetailState, int>((ref, exerciseId) {
+    ExerciseDetailViewModel, ExerciseDetailState, String>((ref, exerciseId) {
   final repository = ref.watch(exerciseRepositoryProvider);
   return ExerciseDetailViewModel(
     repository: repository,
@@ -18,7 +18,7 @@ final exerciseDetailViewModelProvider = StateNotifierProvider.family<
 /// ViewModel for managing exercise detail state
 class ExerciseDetailViewModel extends StateNotifier<ExerciseDetailState> {
   final ExerciseRepository _repository;
-  final int exerciseId;
+  final String exerciseId;
 
   ExerciseDetailViewModel({
     required ExerciseRepository repository,

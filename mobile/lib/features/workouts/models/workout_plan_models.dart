@@ -146,7 +146,7 @@ class SessionExerciseResponse with _$SessionExerciseResponse {
 @freezed
 class WorkoutExerciseSummary with _$WorkoutExerciseSummary {
   const factory WorkoutExerciseSummary({
-    required int exerciseId,
+    required String exerciseId,
     required String exerciseName,
     String? description,
     String? difficultyLevel,
@@ -203,7 +203,7 @@ class CreateWorkoutSessionRequest with _$CreateWorkoutSessionRequest {
 @freezed
 class CreateSessionExerciseRequest with _$CreateSessionExerciseRequest {
   const factory CreateSessionExerciseRequest({
-    required int exerciseId,
+    required String exerciseId,
     required int sets,
     required int repetitions,
     double? weightKg,
@@ -287,7 +287,7 @@ class WorkoutPlanFilterRequest with _$WorkoutPlanFilterRequest {
 @freezed
 class UpdateSessionExerciseRequest with _$UpdateSessionExerciseRequest {
   const factory UpdateSessionExerciseRequest({
-    int? exerciseId,
+    String? exerciseId,
     int? sets,
     int? repetitions,
     double? weightKg,

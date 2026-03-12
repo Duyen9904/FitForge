@@ -136,7 +136,7 @@ class ExerciseListViewModel extends StateNotifier<ExerciseListState> {
   }
 
   /// Toggle favorite (optimistic update)
-  Future<void> toggleFavorite(int exerciseId, bool currentlyFavorite) async {
+  Future<void> toggleFavorite(String exerciseId, bool currentlyFavorite) async {
     final currentState = state;
     if (currentState is! ExerciseListLoaded) return;
 

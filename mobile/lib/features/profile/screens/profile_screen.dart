@@ -56,6 +56,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       fitnessLevel: user.fitnessLevel,
                       primaryGoal: user.primaryGoalName,
                       onSettings: () => context.push(Routes.settings),
+                      onNotifications: () => context.push(Routes.notifications),
                     ),
 
                     const SizedBox(height: AppDimensions.spacing16),

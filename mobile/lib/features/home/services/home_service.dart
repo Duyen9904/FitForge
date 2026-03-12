@@ -58,7 +58,7 @@ class HomeService {
   Future<ApiResponse<ProgressChartResponse>> getProgressCharts({
     String? startDate,
     String? endDate,
-    int? exerciseId,
+    String? exerciseId,
   }) async {
     final queryParams = <String, dynamic>{};
     if (startDate != null) queryParams['startDate'] = startDate;

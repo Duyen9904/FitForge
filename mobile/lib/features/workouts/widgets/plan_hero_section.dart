@@ -105,60 +105,63 @@ class PlanHeroSection extends StatelessWidget {
   }
 
   Widget _buildBadgesRow(BuildContext context, WorkoutSessionResponse? session) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppDimensions.spacing8,
-            vertical: AppDimensions.spacing4,
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDimensions.spacing8,
+              vertical: AppDimensions.spacing4,
+            ),
+            decoration: BoxDecoration(
+              color: plan.isActive ? AppColors.success : AppColors.grey400,
+              borderRadius: BorderRadius.circular(AppDimensions.radiusRound),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  plan.isActive ? Icons.check_circle : Icons.cancel,
+                  size: 14,
+                  color: AppColors.white,
+                ),
+                const SizedBox(width: AppDimensions.spacing4),
+                Text(
+                  plan.isActive ? 'Active' : 'Inactive',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+              ],
+            ),
           ),
-          decoration: BoxDecoration(
-            color: plan.isActive ? AppColors.success : AppColors.grey400,
-            borderRadius: BorderRadius.circular(AppDimensions.radiusRound),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                plan.isActive ? Icons.check_circle : Icons.cancel,
-                size: 14,
-                color: AppColors.white,
-              ),
-              const SizedBox(width: AppDimensions.spacing4),
-              Text(
-                plan.isActive ? 'Active' : 'Inactive',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppColors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: AppDimensions.spacing8),
-        if (session?.estimatedDuration != null)
-          _buildInfoBadge(
-            context,
-            icon: Icons.timer_outlined,
-            label: '${session!.estimatedDuration} Min',
-          ),
-        if (session?.exercises.isNotEmpty ?? false) ...[
-          const SizedBox(width: AppDimensions.spacing12),
-          _buildInfoBadge(
-            context,
-            icon: Icons.local_fire_department_outlined,
-            label: '${_estimateCalories(session!)} Cal',
-          ),
+          const SizedBox(width: AppDimensions.spacing8),
+          if (session?.estimatedDuration != null)
+            _buildInfoBadge(
+              context,
+              icon: Icons.timer_outlined,
+              label: '${session!.estimatedDuration} Min',
+            ),
+          if (session?.exercises.isNotEmpty ?? false) ...[
+            const SizedBox(width: AppDimensions.spacing12),
+            _buildInfoBadge(
+              context,
+              icon: Icons.local_fire_department_outlined,
+              label: '${_estimateCalories(session!)} Cal',
+            ),
+          ],
+          if (plan.difficultyLevel != null) ...[
+            const SizedBox(width: AppDimensions.spacing12),
+            _buildInfoBadge(
+              context,
+              icon: Icons.signal_cellular_alt,
+              label: _formatText(plan.difficultyLevel!),
+            ),
+          ],
         ],
-        if (plan.difficultyLevel != null) ...[
-          const SizedBox(width: AppDimensions.spacing12),
-          _buildInfoBadge(
-            context,
-            icon: Icons.signal_cellular_alt,
-            label: _formatText(plan.difficultyLevel!),
-          ),
-        ],
-      ],
+      ),
     );
   }
 

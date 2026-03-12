@@ -37,7 +37,7 @@ class _EditSessionExerciseSheetState
   late bool _isSuperset;
 
   // Exercise picker state
-  int? _selectedExerciseId;
+  String? _selectedExerciseId;
   String? _selectedExerciseName;
   String? _selectedExerciseImage;
 
@@ -470,7 +470,7 @@ class _EditSessionExerciseSheetState
 class _ExercisePickerSheet extends StatefulWidget {
   final List<ExerciseSummary> exercises;
   final bool loading;
-  final int? selectedExerciseId;
+  final String? selectedExerciseId;
   final String searchQuery;
   final ValueChanged<String> onSearch;
 

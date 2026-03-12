@@ -72,7 +72,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 1. Greeting Header
-                WelcomeHeader(userName: userName),
+                WelcomeHeader(
+                  userName: userName,
+                  onAvatarTap: () => context.go(Routes.profile),
+                ),
                 const SizedBox(height: AppDimensions.spacing24),
 
                 // 2. Today's Workout Hero Card

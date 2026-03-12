@@ -315,7 +315,7 @@ class WorkoutSessionDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _navigateToExercise(BuildContext context, int? exerciseId) {
+  void _navigateToExercise(BuildContext context, String? exerciseId) {
     if (exerciseId == null) return;
     Navigator.pushNamed(
       context,

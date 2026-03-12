@@ -87,7 +87,7 @@ class ExerciseRepository {
   }
 
   /// UC-4.2: Get exercise details by ID
-  Future<Exercise> getExerciseById(int exerciseId) async {
+  Future<Exercise> getExerciseById(String exerciseId) async {
     final response = await _service.getExerciseById(exerciseId);
     final exercise = _unwrapResponse(response);
     
@@ -98,7 +98,7 @@ class ExerciseRepository {
   }
 
   /// UC-4.3: Add exercise to favorites
-  Future<void> addToFavorites(int exerciseId) async {
+  Future<void> addToFavorites(String exerciseId) async {
     final response = await _service.addToFavorites(exerciseId);
     _unwrapVoidResponse(response);
     
@@ -107,7 +107,7 @@ class ExerciseRepository {
   }
 
   /// UC-4.3: Remove exercise from favorites
-  Future<void> removeFromFavorites(int exerciseId) async {
+  Future<void> removeFromFavorites(String exerciseId) async {
     final response = await _service.removeFromFavorites(exerciseId);
     _unwrapVoidResponse(response);
     
@@ -116,7 +116,7 @@ class ExerciseRepository {
   }
 
   /// UC-4.3: Check if exercise is in favorites
-  Future<bool> isFavorite(int exerciseId) async {
+  Future<bool> isFavorite(String exerciseId) async {
     try {
       final response = await _service.isFavorite(exerciseId);
       return _unwrapResponse(response);
@@ -139,7 +139,7 @@ class ExerciseRepository {
   }
 
   /// UC-4.4: Get alternative exercises
-  Future<List<ExerciseAlternative>> getAlternatives(int exerciseId) async {
+  Future<List<ExerciseAlternative>> getAlternatives(String exerciseId) async {
     final response = await _service.getAlternatives(exerciseId);
     return _unwrapResponse(response);
   }
@@ -159,44 +159,44 @@ class ExerciseRepository {
   // ===== Local Storage Helpers =====
 
   /// Add exercise to favorites cache
-  Future<void> _addToFavoritesCache(int exerciseId) async {
+  Future<void> _addToFavoritesCache(String exerciseId) async {
     final favorites = await _getFavoritesCache();
     if (!favorites.contains(exerciseId)) {
       favorites.add(exerciseId);
       await _localStorage.setStringList(
         StorageKeys.favoriteExercises,
-        favorites.map((id) => id.toString()).toList(),
+        favorites.toList(),
       );
     }
   }
 
   /// Remove exercise from favorites cache
-  Future<void> _removeFromFavoritesCache(int exerciseId) async {
+  Future<void> _removeFromFavoritesCache(String exerciseId) async {
     final favorites = await _getFavoritesCache();
     favorites.remove(exerciseId);
     await _localStorage.setStringList(
       StorageKeys.favoriteExercises,
-      favorites.map((id) => id.toString()).toList(),
+      favorites.toList(),
     );
   }
 
   /// Check if exercise is in favorites cache
-  Future<bool> _isInFavoritesCache(int exerciseId) async {
+  Future<bool> _isInFavoritesCache(String exerciseId) async {
     final favorites = await _getFavoritesCache();
     return favorites.contains(exerciseId);
   }
 
   /// Get favorites from cache
-  Future<Set<int>> _getFavoritesCache() async {
+  Future<Set<String>> _getFavoritesCache() async {
     final favorites = await _localStorage.getStringList(
       StorageKeys.favoriteExercises,
     );
     if (favorites == null) return {};
-    return favorites.map((id) => int.parse(id)).toSet();
+    return favorites.toSet();
   }
 
   /// Add exercise to recent exercises
-  Future<void> _addToRecentExercises(int exerciseId) async {
+  Future<void> _addToRecentExercises(String exerciseId) async {
     final recent = await _getRecentExercises();
     
     // Remove if already exists to reorder
@@ -212,17 +212,17 @@ class ExerciseRepository {
     
     await _localStorage.setStringList(
       StorageKeys.recentExercises,
-      recent.map((id) => id.toString()).toList(),
+      recent,
     );
   }
 
   /// Get recent exercises
-  Future<List<int>> _getRecentExercises() async {
+  Future<List<String>> _getRecentExercises() async {
     final recent = await _localStorage.getStringList(
       StorageKeys.recentExercises,
     );
     if (recent == null) return [];
-    return recent.map((id) => int.parse(id)).toList();
+    return recent.toList();
   }
 
   /// Clear favorites cache (e.g., on logout)

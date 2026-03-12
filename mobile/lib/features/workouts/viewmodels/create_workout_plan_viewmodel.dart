@@ -129,20 +129,20 @@ class CreateWorkoutPlanViewModel
   // Sample exercises for each focus area (exerciseId, name)
   static const _sampleExercises = {
     'Chest': [
-      {'id': 1, 'name': 'Bench Press'},
-      {'id': 2, 'name': 'Incline Dumbbell Press'},
+      {'id': '1', 'name': 'Bench Press'},
+      {'id': '2', 'name': 'Incline Dumbbell Press'},
     ],
     'Back': [
-      {'id': 3, 'name': 'Barbell Row'},
-      {'id': 4, 'name': 'Lat Pulldown'},
+      {'id': '3', 'name': 'Barbell Row'},
+      {'id': '4', 'name': 'Lat Pulldown'},
     ],
     'Legs': [
-      {'id': 5, 'name': 'Barbell Squat'},
-      {'id': 6, 'name': 'Romanian Deadlift'},
+      {'id': '5', 'name': 'Barbell Squat'},
+      {'id': '6', 'name': 'Romanian Deadlift'},
     ],
     'Core': [
-      {'id': 7, 'name': 'Plank'},
-      {'id': 8, 'name': 'Russian Twist'},
+      {'id': '7', 'name': 'Plank'},
+      {'id': '8', 'name': 'Russian Twist'},
     ],
   };
 
@@ -172,7 +172,7 @@ class CreateWorkoutPlanViewModel
       final focusArea = template['focus'] as String;
       final exercises = (_sampleExercises[focusArea] ?? _sampleExercises['Chest']!)
           .map((e) => ExerciseDraft(
-                exerciseId: e['id'] as int,
+                exerciseId: e['id'] as String,
                 exerciseName: e['name'] as String,
                 sets: 3,
                 repetitions: 10,

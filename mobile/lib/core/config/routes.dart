@@ -21,7 +21,7 @@ class Routes {
   static const String profile = '/profile';
   
   // Exercise child routes (full paths)
-  static String exerciseDetail(int id) => '/exercises/$id';
+  static String exerciseDetail(String id) => '/exercises/$id';
   static const String exerciseFavorites = '/exercises/favorites';
   
   // Exercise child route segments (for GoRouter nested routes)
@@ -65,6 +65,9 @@ class Routes {
 
   // Settings route
   static const String settings = '/settings';
+
+  // Notifications route
+  static const String notifications = '/notifications';
 
   // Profile sub-routes
   static const String onboardingReview = '/profile/onboarding-review';
@@ -124,6 +127,9 @@ class RouteNames {
 
   // Settings route
   static const String settings = 'settings';
+
+  // Notifications
+  static const String notifications = 'notifications';
 
   // Profile sub-routes
   static const String onboardingReview = 'onboardingReview';

@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/push_notification_service.dart';
+import '../models/notification_model.dart';
 import '../services/notification_service.dart';
 
 /// Provider for NotificationRepository
@@ -13,7 +14,7 @@ final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
   );
 });
 
-/// Orchestrates FCM token management with backend API
+/// Orchestrates FCM token management and notification data with backend API
 class NotificationRepository {
   final NotificationService notificationService;
   final PushNotificationService pushService;
@@ -24,6 +25,8 @@ class NotificationRepository {
     required this.notificationService,
     required this.pushService,
   });
+
+  // ============= Push Notification Management =============
 
   /// Initialize push notifications: get FCM token and register with backend
   Future<void> initializePushNotifications() async {
@@ -63,6 +66,41 @@ class NotificationRepository {
       developer.log('Failed to unregister device: $e', name: 'NOTIFICATION');
     }
   }
+
+  // ============= Notification List Operations =============
+
+  /// Fetch paginated notifications (All tab)
+  Future<List<NotificationModel>> fetchNotifications({
+    int page = 0,
+    int size = 20,
+    bool? isRead,
+  }) async {
+    final response = await notificationService.getNotifications(
+      page: page,
+      size: size,
+      isRead: isRead,
+    );
+    return response.data ?? [];
+  }
+
+  /// Get unread count
+  Future<int> fetchUnreadCount() async {
+    final response = await notificationService.getUnreadCount();
+    return response.data ?? 0;
+  }
+
+  /// Mark a notification as read
+  Future<void> markAsRead(int notificationId) async {
+    await notificationService.markAsRead(notificationId);
+  }
+
+  /// Mark all notifications as read
+  Future<int> markAllAsRead() async {
+    final response = await notificationService.markAllAsRead();
+    return response.data ?? 0;
+  }
+
+  // ============= Private Helpers =============
 
   /// Register token with backend
   Future<void> _registerTokenWithBackend(String token) async {

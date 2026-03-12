@@ -5,10 +5,12 @@ import '../../../core/constants/app_dimensions.dart';
 
 class WelcomeHeader extends StatelessWidget {
   final String userName;
+  final VoidCallback? onAvatarTap;
 
   const WelcomeHeader({
     super.key,
     required this.userName,
+    this.onAvatarTap,
   });
 
   String _getGreeting() {
@@ -49,24 +51,27 @@ class WelcomeHeader extends StatelessWidget {
           ],
         ),
         // Profile Avatar
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.primaryLight.withOpacity(0.2),
-            border: Border.all(
-              color: AppColors.primary.withOpacity(0.3),
-              width: 2,
+        GestureDetector(
+          onTap: onAvatarTap,
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.primaryLight.withOpacity(0.2),
+              border: Border.all(
+                color: AppColors.primary.withOpacity(0.3),
+                width: 2,
+              ),
             ),
-          ),
-          child: Center(
-            child: Text(
-              userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
-              style: const TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
+            child: Center(
+              child: Text(
+                userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
               ),
             ),
           ),

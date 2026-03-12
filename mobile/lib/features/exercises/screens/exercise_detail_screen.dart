@@ -17,7 +17,7 @@ import '../widgets/muscle_group_chip.dart';
 /// UC-4.2: Exercise Detail Screen
 /// View comprehensive exercise information including alternatives
 class ExerciseDetailScreen extends ConsumerWidget {
-  final int exerciseId;
+  final String exerciseId;
 
   const ExerciseDetailScreen({
     super.key,

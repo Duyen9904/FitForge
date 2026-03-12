@@ -109,7 +109,7 @@ class WorkoutExecutionService {
   Future<ApiResponse<ProgressChartResponse>> getProgressCharts({
     DateTime? startDate,
     DateTime? endDate,
-    int? exerciseId,
+    String? exerciseId,
   }) async {
     final queryParams = <String, dynamic>{
       if (startDate != null) 'startDate': startDate.toUtc().toIso8601String(),
