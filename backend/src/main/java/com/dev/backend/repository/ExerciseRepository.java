@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface ExerciseRepository extends JpaRepository<Exercise, Long>, JpaSpecificationExecutor<Exercise> {
+public interface ExerciseRepository extends JpaRepository<Exercise, String>, JpaSpecificationExecutor<Exercise> {
 
     Optional<Exercise> findByExerciseName(String exerciseName);
 
@@ -23,13 +23,13 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long>, JpaSp
            "LEFT JOIN FETCH e.exerciseMuscleGroups emg " +
            "LEFT JOIN FETCH emg.muscleGroup " +
            "WHERE e.exerciseId = :exerciseId")
-    Optional<Exercise> findByIdWithMuscleGroups(@Param("exerciseId") Long exerciseId);
+    Optional<Exercise> findByIdWithMuscleGroups(@Param("exerciseId") String exerciseId);
 
     @Query("SELECT e FROM Exercise e " +
            "LEFT JOIN FETCH e.exerciseEquipments ee " +
            "LEFT JOIN FETCH ee.equipment " +
            "WHERE e.exerciseId = :exerciseId")
-    Optional<Exercise> findByIdWithEquipments(@Param("exerciseId") Long exerciseId);
+    Optional<Exercise> findByIdWithEquipments(@Param("exerciseId") String exerciseId);
 
     @Query("SELECT DISTINCT e FROM Exercise e " +
            "JOIN e.exerciseMuscleGroups emg " +
@@ -73,5 +73,5 @@ public interface ExerciseRepository extends JpaRepository<Exercise, Long>, JpaSp
      * Check if exercise is used in any workout session (UC-16.1)
      */
     @Query("SELECT CASE WHEN COUNT(se) > 0 THEN true ELSE false END FROM SessionExercise se WHERE se.exercise.exerciseId = :exerciseId")
-    boolean isExerciseInUse(@Param("exerciseId") Long exerciseId);
+    boolean isExerciseInUse(@Param("exerciseId") String exerciseId);
 }

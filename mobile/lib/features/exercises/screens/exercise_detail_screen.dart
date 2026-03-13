@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -44,14 +45,7 @@ class ExerciseDetailScreen extends ConsumerWidget {
                 expandedHeight: 300,
                 pinned: true,
                 flexibleSpace: FlexibleSpaceBar(
-                  background: exercise.imageUrl != null
-                      ? Image.network(
-                          exercise.imageUrl!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              _buildPlaceholder(),
-                        )
-                      : _buildPlaceholder(),
+                  background: _buildHeroMedia(exercise),
                 ),
                 actions: [
                   // Favorite button
@@ -213,18 +207,80 @@ class ExerciseDetailScreen extends ConsumerWidget {
                       // Instructions
                       _buildSectionTitle(context, 'Instructions'),
                       const SizedBox(height: AppDimensions.spacing12),
-                      Container(
-                        padding: const EdgeInsets.all(AppDimensions.spacing16),
-                        decoration: BoxDecoration(
-                          color: AppColors.grey100,
-                          borderRadius: BorderRadius.circular(
-                              AppDimensions.borderRadius12),
+
+                      // Exercise demo animation from videoUrl
+                      if (exercise.videoUrl != null &&
+                          exercise.videoUrl!.isNotEmpty) ...[
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.grey100,
+                            borderRadius: BorderRadius.circular(
+                                AppDimensions.borderRadius12),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Column(
+                            children: [
+                              CachedNetworkImage(
+                                imageUrl: exercise.videoUrl!,
+                                width: double.infinity,
+                                fit: BoxFit.contain,
+                                placeholder: (context, url) => Container(
+                                  height: 200,
+                                  color: AppColors.grey200,
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  ),
+                                ),
+                                errorWidget: (context, url, error) =>
+                                    const SizedBox.shrink(),
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.all(
+                                    AppDimensions.spacing8),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.play_circle_outline,
+                                      size: 16,
+                                      color: AppColors.grey600,
+                                    ),
+                                    const SizedBox(
+                                        width: AppDimensions.spacing4),
+                                    Text(
+                                      'How to perform',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: AppColors.grey600,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        child: Text(
-                          exercise.instructions,
-                          style: Theme.of(context).textTheme.bodyMedium,
+                        const SizedBox(height: AppDimensions.spacing12),
+                      ],
+
+                      // Text instructions
+                      if (exercise.instructions.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(AppDimensions.spacing16),
+                          decoration: BoxDecoration(
+                            color: AppColors.grey100,
+                            borderRadius: BorderRadius.circular(
+                                AppDimensions.borderRadius12),
+                          ),
+                          child: Text(
+                            exercise.instructions,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
                         ),
-                      ),
                       const SizedBox(height: AppDimensions.spacing24),
 
                       // Equipment
@@ -319,6 +375,42 @@ class ExerciseDetailScreen extends ConsumerWidget {
     );
   }
 
+  /// Build hero media: PageView if videoUrl differs from imageUrl, otherwise single image
+  Widget _buildHeroMedia(Exercise exercise) {
+    final hasVideo = exercise.videoUrl != null &&
+        exercise.videoUrl!.isNotEmpty &&
+        exercise.videoUrl != exercise.imageUrl;
+    final hasImage = exercise.imageUrl != null && exercise.imageUrl!.isNotEmpty;
+
+    if (!hasVideo && !hasImage) return _buildPlaceholder();
+    if (!hasVideo) {
+      return _buildCachedImage(exercise.imageUrl!, BoxFit.cover);
+    }
+
+    // Both image and video URL are different — show a swipeable PageView
+    final mediaUrls = <String>[
+      if (hasImage) exercise.imageUrl!,
+      exercise.videoUrl!,
+    ];
+
+    return _MediaPageView(mediaUrls: mediaUrls, placeholder: _buildPlaceholder());
+  }
+
+  Widget _buildCachedImage(String url, BoxFit fit) {
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: fit,
+      width: double.infinity,
+      placeholder: (context, url) => Container(
+        color: AppColors.grey200,
+        child: const Center(
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+      errorWidget: (context, url, error) => _buildPlaceholder(),
+    );
+  }
+
   Widget _buildPlaceholder() {
     return Container(
       color: AppColors.grey200,
@@ -409,6 +501,76 @@ class ExerciseDetailScreen extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => EquipmentDetailBottomSheet(equipment: equipment),
+    );
+  }
+}
+
+/// Swipeable PageView for multiple media URLs with dot indicators
+class _MediaPageView extends StatefulWidget {
+  final List<String> mediaUrls;
+  final Widget placeholder;
+
+  const _MediaPageView({
+    required this.mediaUrls,
+    required this.placeholder,
+  });
+
+  @override
+  State<_MediaPageView> createState() => _MediaPageViewState();
+}
+
+class _MediaPageViewState extends State<_MediaPageView> {
+  int _currentPage = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        PageView.builder(
+          itemCount: widget.mediaUrls.length,
+          onPageChanged: (index) => setState(() => _currentPage = index),
+          itemBuilder: (context, index) {
+            return CachedNetworkImage(
+              imageUrl: widget.mediaUrls[index],
+              fit: BoxFit.cover,
+              width: double.infinity,
+              placeholder: (context, url) => Container(
+                color: AppColors.grey200,
+                child: const Center(
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+              errorWidget: (context, url, error) => widget.placeholder,
+            );
+          },
+        ),
+        // Dot indicators
+        if (widget.mediaUrls.length > 1)
+          Positioned(
+            bottom: 16,
+            left: 0,
+            right: 0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(
+                widget.mediaUrls.length,
+                (index) => AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  width: _currentPage == index ? 24 : 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: _currentPage == index
+                        ? Colors.white
+                        : Colors.white.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

@@ -40,6 +40,9 @@ public class MuscleGroup {
 
     private Integer recoveryDaysNeeded;
 
+    @Column(length = 500)
+    private String imageUrl;
+
     @OneToMany(mappedBy = "muscleGroup", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ExerciseMuscleGroup> exerciseMuscleGroups = new ArrayList<>();
 }

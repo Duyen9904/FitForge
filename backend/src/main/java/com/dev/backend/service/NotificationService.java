@@ -16,14 +16,10 @@ public interface NotificationService {
     // ============= User Notification Retrieval =============
 
     /**
-     * Get all notifications for a user (paginated)
+     * Get notifications for a user (paginated), optionally filtered by read status.
+     * @param isRead null = all, true = read only, false = unread only
      */
-    Page<NotificationResponse> getUserNotifications(Long userId, Pageable pageable);
-
-    /**
-     * Get unread notifications for a user
-     */
-    List<NotificationResponse> getUnreadNotifications(Long userId);
+    Page<NotificationResponse> getUserNotifications(Long userId, Boolean isRead, Pageable pageable);
 
     /**
      * Get count of unread notifications

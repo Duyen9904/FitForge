@@ -73,6 +73,7 @@ public class ExerciseMapper {
                 .category(muscleGroup.getCategory())
                 .description(muscleGroup.getDescription())
                 .recoveryDaysNeeded(muscleGroup.getRecoveryDaysNeeded())
+                .imageUrl(muscleGroup.getImageUrl())
                 .build();
     }
 
@@ -83,6 +84,7 @@ public class ExerciseMapper {
                 .equipmentName(equipment.getEquipmentName())
                 .equipmentType(equipment.getEquipmentType())
                 .description(equipment.getDescription())
+                .imageUrl(equipment.getImageUrl())
                 .build();
     }
 

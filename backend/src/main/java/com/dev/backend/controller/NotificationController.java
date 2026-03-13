@@ -35,24 +35,15 @@ public class NotificationController {
         this.notificationService = notificationService;
     }
 
-    @Operation(summary = "Get all notifications", description = "UC-15: Get paginated list of user notifications")
+    @Operation(summary = "Get notifications", description = "UC-15: Get paginated notifications. Optional isRead filter: true=read only, false=unread only, omit=all")
     @PreAuthorize("isAuthenticated()")
     @GetMapping
     public ApiResponse<Page<NotificationResponse>> getNotifications(
             @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(required = false) Boolean isRead,
             @PageableDefault(size = 20) Pageable pageable) {
         Long userId = Long.parseLong(jwt.getSubject());
-        Page<NotificationResponse> notifications = notificationService.getUserNotifications(userId, pageable);
-        return ApiResponse.success(notifications);
-    }
-
-    @Operation(summary = "Get unread notifications", description = "Get all unread notifications for the user")
-    @PreAuthorize("isAuthenticated()")
-    @GetMapping("/unread")
-    public ApiResponse<List<NotificationResponse>> getUnreadNotifications(
-            @AuthenticationPrincipal Jwt jwt) {
-        Long userId = Long.parseLong(jwt.getSubject());
-        List<NotificationResponse> notifications = notificationService.getUnreadNotifications(userId);
+        Page<NotificationResponse> notifications = notificationService.getUserNotifications(userId, isRead, pageable);
         return ApiResponse.success(notifications);
     }
 

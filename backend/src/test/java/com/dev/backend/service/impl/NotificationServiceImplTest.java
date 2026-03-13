@@ -113,7 +113,7 @@ class NotificationServiceImplTest {
             when(notificationMapper.toResponse(mockNotification)).thenReturn(mockNotificationResponse);
 
             // When
-            Page<NotificationResponse> result = notificationService.getUserNotifications(1L, pageable);
+            Page<NotificationResponse> result = notificationService.getUserNotifications(1L, null, pageable);
 
             // Then
             assertThat(result).isNotNull();
@@ -133,34 +133,14 @@ class NotificationServiceImplTest {
                     .thenReturn(emptyPage);
 
             // When
-            Page<NotificationResponse> result = notificationService.getUserNotifications(1L, pageable);
+            Page<NotificationResponse> result = notificationService.getUserNotifications(1L, null, pageable);
 
             // Then
             assertThat(result).isEmpty();
         }
     }
 
-    @Nested
-    @DisplayName("getUnreadNotifications")
-    class GetUnreadNotificationsTests {
 
-        @Test
-        @DisplayName("Should return unread notifications only")
-        void getUnreadNotifications_Success() {
-            // Given
-            when(notificationRepository.findByUserUserIdAndIsReadFalseOrderByCreatedAtDesc(1L))
-                    .thenReturn(List.of(mockNotification));
-            when(notificationMapper.toResponseList(List.of(mockNotification)))
-                    .thenReturn(List.of(mockNotificationResponse));
-
-            // When
-            List<NotificationResponse> result = notificationService.getUnreadNotifications(1L);
-
-            // Then
-            assertThat(result).hasSize(1);
-            assertThat(result.get(0).getIsRead()).isFalse();
-        }
-    }
 
     @Nested
     @DisplayName("getUnreadCount")

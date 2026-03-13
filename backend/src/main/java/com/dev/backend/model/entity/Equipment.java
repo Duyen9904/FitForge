@@ -38,6 +38,9 @@ public class Equipment {
     @Column(length = 500)
     private String description;
 
+    @Column(length = 500)
+    private String imageUrl;
+
     @OneToMany(mappedBy = "equipment", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ExerciseEquipment> exerciseEquipments = new ArrayList<>();
 }

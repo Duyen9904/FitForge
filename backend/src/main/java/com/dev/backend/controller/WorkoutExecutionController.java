@@ -111,7 +111,7 @@ public class WorkoutExecutionController {
             @Parameter(description = "End date (ISO-8601)")
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate,
             @Parameter(description = "Specific exercise ID to filter by")
-            @RequestParam(required = false) Long exerciseId) {
+            @RequestParam(required = false) String exerciseId) {
         Long userId = Long.parseLong(jwt.getSubject());
         ProgressChartResponse response = workoutExecutionService.getProgressCharts(userId, startDate, endDate, exerciseId);
         return ApiResponse.success(response);

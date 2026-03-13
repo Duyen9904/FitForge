@@ -24,7 +24,7 @@ public class WeightRecommendationServiceImpl implements WeightRecommendationServ
     private final UserProfileService userProfileService;
 
     @Override
-    public Float recommendWeight(Long userId, Long exerciseId, Integer targetReps, String goalType) {
+    public Float recommendWeight(Long userId, String exerciseId, Integer targetReps, String goalType) {
         // Get user profile
         UserProfile profile = userProfileService.buildProfile(userId);
         

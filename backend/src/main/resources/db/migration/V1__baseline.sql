@@ -1,0 +1,9 @@
+-- =====================================================
+-- V1 BASELINE MIGRATION
+-- =====================================================
+-- This is a marker migration representing the existing database schema.
+-- The schema was originally managed by Hibernate ddl-auto: update.
+-- Flyway's baseline-on-migrate will mark this as already applied
+-- on existing databases, so no tables need to be created here.
+-- All future schema changes should go into V2, V3, etc.
+-- =====================================================

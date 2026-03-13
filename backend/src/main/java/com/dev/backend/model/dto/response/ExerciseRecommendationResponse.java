@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ExerciseRecommendationResponse {
 
-    private Long exerciseId;
+    private String exerciseId;
     private String exerciseName;
     private String description;
     private String difficultyLevel;

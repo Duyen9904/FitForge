@@ -40,7 +40,7 @@ public class ProgressChartResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ExerciseProgressData {
-        private Long exerciseId;
+        private String exerciseId;
         private String exerciseName;
         private List<WeightDataPoint> dataPoints;
     }
@@ -90,7 +90,7 @@ public class ProgressChartResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class StrengthEstimate {
-        private Long exerciseId;
+        private String exerciseId;
         private String exerciseName;
         private Float estimated1RM;
         private Float previousEstimated1RM;

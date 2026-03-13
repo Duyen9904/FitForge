@@ -19,7 +19,7 @@ public interface ExerciseLogRepository extends JpaRepository<ExerciseLog, Long> 
            "AND el.workoutProgress.user.userId = :userId " +
            "AND el.workoutProgress.workoutDate BETWEEN :startDate AND :endDate " +
            "ORDER BY el.workoutProgress.workoutDate")
-    List<ExerciseLog> findByExerciseAndUserAndDateRange(@Param("exerciseId") Long exerciseId,
+    List<ExerciseLog> findByExerciseAndUserAndDateRange(@Param("exerciseId") String exerciseId,
                                                          @Param("userId") Long userId,
                                                          @Param("startDate") Instant startDate,
                                                          @Param("endDate") Instant endDate);
@@ -30,14 +30,14 @@ public interface ExerciseLogRepository extends JpaRepository<ExerciseLog, Long> 
            "AND el.completed = true " +
            "ORDER BY el.weightUsedKg DESC")
     List<ExerciseLog> findTopWeightByUserAndExercise(@Param("userId") Long userId,
-                                                      @Param("exerciseId") Long exerciseId);
+                                                      @Param("exerciseId") String exerciseId);
 
     @Query("SELECT MAX(el.weightUsedKg) FROM ExerciseLog el " +
            "WHERE el.workoutProgress.user.userId = :userId " +
            "AND el.exercise.exerciseId = :exerciseId " +
            "AND el.completed = true")
     Float findMaxWeightByUserAndExercise(@Param("userId") Long userId,
-                                          @Param("exerciseId") Long exerciseId);
+                                          @Param("exerciseId") String exerciseId);
 
     void deleteByWorkoutProgressProgressId(Long progressId);
 }

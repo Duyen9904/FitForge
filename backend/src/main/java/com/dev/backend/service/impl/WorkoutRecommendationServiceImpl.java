@@ -447,7 +447,7 @@ public class WorkoutRecommendationServiceImpl implements WorkoutRecommendationSe
             AiStructureResult aiResult = aiService.generateWorkoutStructure(context);
 
             // Materialize all sessions from AI result for this week
-            Set<Long> usedExerciseIds = new HashSet<>();
+            Set<String> usedExerciseIds = new HashSet<>();
             if (aiResult.getSessions() != null) {
                 WorkoutSession targetSession = null;
                 for (AiSessionStructure sessionStructure : aiResult.getSessions()) {
@@ -491,7 +491,7 @@ public class WorkoutRecommendationServiceImpl implements WorkoutRecommendationSe
 
     private WorkoutSession materializeAiSession(WorkoutPlan plan, AiSessionStructure sessionStructure,
                                                 int absoluteDay, List<String> availableEquipment,
-                                                String difficultyLevel, Set<Long> usedExerciseIds) {
+                                                String difficultyLevel, Set<String> usedExerciseIds) {
         WorkoutSession session = new WorkoutSession();
         session.setWorkoutPlan(plan);
         session.setDayNumber(absoluteDay);

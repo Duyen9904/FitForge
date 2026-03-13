@@ -65,14 +65,14 @@ class NotificationControllerTest {
             Page<NotificationResponse> page = new PageImpl<>(
                     List.of(mockNotification), PageRequest.of(0, 20), 1);
             
-            when(notificationService.getUserNotifications(anyLong(), any()))
+            when(notificationService.getUserNotifications(anyLong(), any(), any()))
                     .thenReturn(page);
 
             mockMvc.perform(get("/api/v1/notifications")
                             .with(jwt().jwt(j -> j.subject("1"))))
                     .andExpect(status().isOk());
 
-            verify(notificationService, times(1)).getUserNotifications(eq(1L), any());
+            verify(notificationService, times(1)).getUserNotifications(eq(1L), isNull(), any());
         }
 
         @Test
@@ -83,23 +83,7 @@ class NotificationControllerTest {
         }
     }
 
-    @Nested
-    @DisplayName("GET /api/v1/notifications/unread")
-    class GetUnreadNotificationsTests {
 
-        @Test
-        @DisplayName("Should return unread notifications")
-        void getUnread_Success() throws Exception {
-            when(notificationService.getUnreadNotifications(1L))
-                    .thenReturn(List.of(mockNotification));
-
-            mockMvc.perform(get("/api/v1/notifications/unread")
-                            .with(jwt().jwt(j -> j.subject("1"))))
-                    .andExpect(status().isOk());
-
-            verify(notificationService, times(1)).getUnreadNotifications(1L);
-        }
-    }
 
     @Nested
     @DisplayName("GET /api/v1/notifications/unread/count")

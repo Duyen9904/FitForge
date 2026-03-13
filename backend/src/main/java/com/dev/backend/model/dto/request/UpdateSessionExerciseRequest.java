@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UpdateSessionExerciseRequest {
 
-    private Long exerciseId;
+    private String exerciseId;
 
     @Min(value = 1, message = "Sets must be at least 1")
     @Max(value = 20, message = "Sets cannot exceed 20")

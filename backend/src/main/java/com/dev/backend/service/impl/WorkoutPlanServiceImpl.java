@@ -436,7 +436,7 @@ public class WorkoutPlanServiceImpl implements WorkoutPlanService {
         plan = workoutPlanRepository.save(plan);
 
         // Track used exercises to avoid duplicates across the plan
-        java.util.Set<Long> usedExerciseIds = new java.util.HashSet<>();
+        java.util.Set<String> usedExerciseIds = new java.util.HashSet<>();
 
         // Materialize AI-generated sessions with backend exercise selection
         if (aiResult.getSessions() != null) {

@@ -45,7 +45,7 @@ public interface WorkoutExecutionService {
     /**
      * Get progress charts data (UC-5.6)
      */
-    ProgressChartResponse getProgressCharts(Long userId, Instant startDate, Instant endDate, Long exerciseId);
+    ProgressChartResponse getProgressCharts(Long userId, Instant startDate, Instant endDate, String exerciseId);
 
     /**
      * Get current in-progress workout

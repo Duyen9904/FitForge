@@ -18,4 +18,5 @@ public class MuscleGroupResponse {
     private String category;
     private String description;
     private Integer recoveryDaysNeeded;
+    private String imageUrl;
 }

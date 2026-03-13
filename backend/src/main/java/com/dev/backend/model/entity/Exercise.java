@@ -25,9 +25,9 @@ import java.util.List;
 public class Exercise {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
-    private Long exerciseId;
+    @Column(length = 50)
+    private String exerciseId;
 
     @Column(nullable = false, length = 100)
     private String exerciseName;
@@ -49,6 +49,9 @@ public class Exercise {
     private String imageUrl;
 
     private Integer caloriesBurnedPerMin;
+
+    @Column(length = 2000)
+    private String tips;
 
     @Column(nullable = false)
     private Boolean requiresSpotter = false;

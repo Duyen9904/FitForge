@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 public class CreateSessionExerciseRequest {
 
     @NotNull(message = "Exercise ID is required")
-    private Long exerciseId;
+    private String exerciseId;
 
     @NotNull(message = "Number of sets is required")
     @Min(value = 1, message = "Sets must be at least 1")

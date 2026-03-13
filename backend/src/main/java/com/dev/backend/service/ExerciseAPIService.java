@@ -1,5 +1,6 @@
 package com.dev.backend.service;
 
+import com.dev.backend.model.dto.external.ExerciseDBResponse;
 import com.dev.backend.model.entity.Exercise;
 import com.dev.backend.model.entity.WorkoutPlan;
 
@@ -43,4 +44,12 @@ public interface ExerciseAPIService {
      * @return Exercise entity (persisted or cached)
      */
     Exercise getOrCreateExercise(String exerciseId);
+
+    /**
+     * Persist an exercise from an already-fetched API response.
+     * Checks local DB first; saves if new. No additional API call.
+     * @param apiResponse the already-fetched API response
+     * @return Exercise entity (existing or newly saved)
+     */
+    Exercise getOrCreateFromResponse(ExerciseDBResponse apiResponse);
 }

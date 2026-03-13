@@ -59,7 +59,7 @@ public class ExerciseController {
 
     @Operation(summary = "Get exercise details", description = "UC-4.2: View comprehensive exercise information")
     @GetMapping("/{exerciseId}")
-    public ApiResponse<ExerciseResponse> getExerciseById(@PathVariable Long exerciseId) {
+    public ApiResponse<ExerciseResponse> getExerciseById(@PathVariable String exerciseId) {
         ExerciseResponse response = exerciseService.getExerciseById(exerciseId);
         return ApiResponse.success(response);
     }
@@ -71,7 +71,7 @@ public class ExerciseController {
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<Void> addToFavorites(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable Long exerciseId) {
+            @PathVariable String exerciseId) {
         Long userId = Long.parseLong(jwt.getSubject());
         exerciseService.addToFavorites(userId, exerciseId);
         return ApiResponse.success(null, "Exercise added to favorites");
@@ -84,7 +84,7 @@ public class ExerciseController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public ApiResponse<Void> removeFromFavorites(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable Long exerciseId) {
+            @PathVariable String exerciseId) {
         Long userId = Long.parseLong(jwt.getSubject());
         exerciseService.removeFromFavorites(userId, exerciseId);
         return ApiResponse.success(null, "Exercise removed from favorites");
@@ -96,7 +96,7 @@ public class ExerciseController {
     @GetMapping("/{exerciseId}/favorites/status")
     public ApiResponse<Boolean> isFavorite(
             @AuthenticationPrincipal Jwt jwt,
-            @PathVariable Long exerciseId) {
+            @PathVariable String exerciseId) {
         Long userId = Long.parseLong(jwt.getSubject());
         boolean isFavorite = exerciseService.isFavorite(userId, exerciseId);
         return ApiResponse.success(isFavorite);
@@ -116,7 +116,7 @@ public class ExerciseController {
 
     @Operation(summary = "Get alternative exercises", description = "UC-4.4: Find substitute exercises")
     @GetMapping("/{exerciseId}/alternatives")
-    public ApiResponse<List<ExerciseAlternativeResponse>> getAlternatives(@PathVariable Long exerciseId) {
+    public ApiResponse<List<ExerciseAlternativeResponse>> getAlternatives(@PathVariable String exerciseId) {
         List<ExerciseAlternativeResponse> response = exerciseService.getAlternatives(exerciseId);
         return ApiResponse.success(response);
     }
@@ -152,7 +152,7 @@ public class ExerciseController {
     @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{exerciseId}")
     public ApiResponse<ExerciseResponse> updateExercise(
-            @PathVariable Long exerciseId,
+            @PathVariable String exerciseId,
             @Valid @RequestBody com.dev.backend.model.dto.request.UpdateExerciseRequest request) {
         ExerciseResponse response = exerciseService.updateExercise(exerciseId, request);
         return ApiResponse.success(response, "Exercise updated successfully");
@@ -163,7 +163,7 @@ public class ExerciseController {
     @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{exerciseId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public ApiResponse<Void> deleteExercise(@PathVariable Long exerciseId) {
+    public ApiResponse<Void> deleteExercise(@PathVariable String exerciseId) {
         exerciseService.deleteExercise(exerciseId);
         return ApiResponse.success(null, "Exercise deleted successfully");
     }
@@ -172,7 +172,7 @@ public class ExerciseController {
     @SecurityRequirement(name = "bearerAuth")
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{exerciseId}/in-use")
-    public ApiResponse<Boolean> isExerciseInUse(@PathVariable Long exerciseId) {
+    public ApiResponse<Boolean> isExerciseInUse(@PathVariable String exerciseId) {
         boolean inUse = exerciseService.isExerciseInUse(exerciseId);
         return ApiResponse.success(inUse);
     }
@@ -183,8 +183,8 @@ public class ExerciseController {
     @PostMapping("/{exerciseId}/alternatives/{alternativeId}")
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<Void> addAlternativeExercise(
-            @PathVariable Long exerciseId,
-            @PathVariable Long alternativeId,
+            @PathVariable String exerciseId,
+            @PathVariable String alternativeId,
             @RequestParam(required = false) String reason) {
         exerciseService.addAlternativeExercise(exerciseId, alternativeId, reason);
         return ApiResponse.success(null, "Alternative exercise added successfully");
@@ -196,8 +196,8 @@ public class ExerciseController {
     @DeleteMapping("/{exerciseId}/alternatives/{alternativeId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public ApiResponse<Void> removeAlternativeExercise(
-            @PathVariable Long exerciseId,
-            @PathVariable Long alternativeId) {
+            @PathVariable String exerciseId,
+            @PathVariable String alternativeId) {
         exerciseService.removeAlternativeExercise(exerciseId, alternativeId);
         return ApiResponse.success(null, "Alternative exercise removed successfully");
     }

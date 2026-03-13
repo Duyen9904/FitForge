@@ -9,7 +9,7 @@ class ExerciseSummary with _$ExerciseSummary {
   const factory ExerciseSummary({
     required String exerciseId,
     required String exerciseName,
-    required String description,
+    @Default('') String description,
     required String difficultyLevel,
     required String exerciseType,
     String? imageUrl,
@@ -26,10 +26,10 @@ class Exercise with _$Exercise {
   const factory Exercise({
     required String exerciseId,
     required String exerciseName,
-    required String description,
+    @Default('') String description,
     required String difficultyLevel,
     required String exerciseType,
-    required String instructions,
+    @Default('') String instructions,
     String? videoUrl,
     String? imageUrl,
     int? caloriesBurnedPerMin,
@@ -66,8 +66,8 @@ class MuscleGroup with _$MuscleGroup {
 class Equipment with _$Equipment {
   const factory Equipment({
     required int equipmentId,
-    required String equipmentName,
-    required String equipmentType,
+    @Default('') String equipmentName,
+    @Default('') String equipmentType,
     String? description,
   }) = _Equipment;
 

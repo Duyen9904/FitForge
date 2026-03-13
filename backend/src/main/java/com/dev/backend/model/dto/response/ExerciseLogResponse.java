@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 public class ExerciseLogResponse {
 
     private Long logId;
-    private Long exerciseId;
+    private String exerciseId;
     private String exerciseName;
     private Integer setNumber;
     private Integer repetitionsCompleted;

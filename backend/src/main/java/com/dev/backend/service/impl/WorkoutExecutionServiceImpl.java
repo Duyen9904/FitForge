@@ -251,7 +251,7 @@ public class WorkoutExecutionServiceImpl implements WorkoutExecutionService {
 
     @Override
     @Transactional(readOnly = true)
-    public ProgressChartResponse getProgressCharts(Long userId, Instant startDate, Instant endDate, Long exerciseId) {
+    public ProgressChartResponse getProgressCharts(Long userId, Instant startDate, Instant endDate, String exerciseId) {
         log.info("Getting progress charts for user {} from {} to {}", userId, startDate, endDate);
 
         if (startDate == null) {

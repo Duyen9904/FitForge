@@ -169,7 +169,6 @@ public class AdminAnalyticsServiceImpl implements AdminAnalyticsService {
         return exerciseRepository.findAll().stream()
                 .limit(10)
                 .map(e -> PopularItem.builder()
-                        .id(e.getExerciseId())
                         .name(e.getExerciseName())
                         .usageCount(0L) // Would need to count from exercise_log
                         .build())

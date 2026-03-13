@@ -25,7 +25,12 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     Page<Notification> findByUserUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
     /**
-     * Find unread notifications for a user
+     * Find notifications for a user filtered by read status (paginated)
+     */
+    Page<Notification> findByUserUserIdAndIsReadOrderByCreatedAtDesc(Long userId, Boolean isRead, Pageable pageable);
+
+    /**
+     * Find unread notifications for a user (used internally for count)
      */
     List<Notification> findByUserUserIdAndIsReadFalseOrderByCreatedAtDesc(Long userId);
 

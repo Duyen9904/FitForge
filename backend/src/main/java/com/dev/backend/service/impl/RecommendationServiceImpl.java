@@ -57,7 +57,7 @@ public class RecommendationServiceImpl implements RecommendationService {
         }
 
         // Get user's favorite exercises for preference weighting
-        Set<Long> favoriteExerciseIds = workoutFavoriteRepository
+        Set<String> favoriteExerciseIds = workoutFavoriteRepository
                 .findByUserUserId(userId, PageRequest.of(0, 100))
                 .stream()
                 .filter(f -> f.getExercise() != null)
@@ -101,7 +101,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     private int calculateRelevanceScore(Exercise exercise, Goal goal, String fitnessLevel,
-                                         Set<Long> targetedMuscleGroupIds, Set<Long> favoriteIds) {
+                                         Set<Long> targetedMuscleGroupIds, Set<String> favoriteIds) {
         int score = 50; // Base score
 
         // Bonus for matching fitness level
@@ -146,7 +146,7 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     private String generateRationale(Exercise exercise, Goal goal, 
-                                      Set<Long> targetedMuscleGroupIds, Set<Long> favoriteIds) {
+                                      Set<Long> targetedMuscleGroupIds, Set<String> favoriteIds) {
         List<String> reasons = new ArrayList<>();
 
         // Check for complementary muscles

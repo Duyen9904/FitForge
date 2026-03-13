@@ -15,11 +15,11 @@ public interface WorkoutFavoriteRepository extends JpaRepository<WorkoutFavorite
 
     Page<WorkoutFavorite> findByUserUserId(Long userId, Pageable pageable);
 
-    Optional<WorkoutFavorite> findByUserUserIdAndExerciseExerciseId(Long userId, Long exerciseId);
+    Optional<WorkoutFavorite> findByUserUserIdAndExerciseExerciseId(Long userId, String exerciseId);
 
-    boolean existsByUserUserIdAndExerciseExerciseId(Long userId, Long exerciseId);
+    boolean existsByUserUserIdAndExerciseExerciseId(Long userId, String exerciseId);
 
-    void deleteByUserUserIdAndExerciseExerciseId(Long userId, Long exerciseId);
+    void deleteByUserUserIdAndExerciseExerciseId(Long userId, String exerciseId);
 
     @Query("SELECT wf FROM WorkoutFavorite wf " +
            "LEFT JOIN FETCH wf.exercise e " +
@@ -31,5 +31,5 @@ public interface WorkoutFavoriteRepository extends JpaRepository<WorkoutFavorite
     /**
      * Delete all favorites for an exercise (UC-16.1)
      */
-    void deleteByExerciseExerciseId(Long exerciseId);
+    void deleteByExerciseExerciseId(String exerciseId);
 }

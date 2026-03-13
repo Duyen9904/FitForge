@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 import reactor.core.publisher.Mono;
@@ -45,6 +46,7 @@ public class MealAPIClient {
         this.webClient = WebClient.builder()
                 .baseUrl(baseUrl)
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .filter(logRequest())
                 .build();
     }
 
@@ -76,7 +78,7 @@ public class MealAPIClient {
                     .build()
                     .toUriString();
 
-            return webClient.get()
+            EdamamRecipeResponse result = webClient.get()
                     .uri(uri)
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, response -> {
@@ -93,6 +95,8 @@ public class MealAPIClient {
                             .doBeforeRetry(signal -> 
                                 log.warn("Retrying Edamam API call, attempt: {}", signal.totalRetries() + 1)))
                     .block(Duration.ofSeconds(30));
+            log.debug("Edamam searchRecipes response data: {}", result);
+            return result;
         } catch (Exception e) {
             log.error("Failed to fetch recipes from Edamam for mealType: {}", mealType, e);
             return new EdamamRecipeResponse(0, 0, 0, List.of());
@@ -134,7 +138,7 @@ public class MealAPIClient {
 
             String uri = builder.build().toUriString();
 
-            return webClient.get()
+            EdamamRecipeResponse result = webClient.get()
                     .uri(uri)
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, response -> {
@@ -151,6 +155,8 @@ public class MealAPIClient {
                             .doBeforeRetry(signal -> 
                                 log.warn("Retrying Edamam API call, attempt: {}", signal.totalRetries() + 1)))
                     .block(Duration.ofSeconds(30));
+            log.debug("Edamam searchRecipesWithDiet response data: {}", result);
+            return result;
         } catch (Exception e) {
             log.error("Failed to fetch recipes from Edamam for mealType: {} with diet: {}", mealType, diet, e);
             return new EdamamRecipeResponse(0, 0, 0, List.of());
@@ -185,7 +191,7 @@ public class MealAPIClient {
                     .build()
                     .toUriString();
 
-            return webClient.get()
+            EdamamRecipeResponse result = webClient.get()
                     .uri(uri)
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, response -> {
@@ -202,9 +208,26 @@ public class MealAPIClient {
                             .doBeforeRetry(signal -> 
                                 log.warn("Retrying Edamam API call, attempt: {}", signal.totalRetries() + 1)))
                     .block(Duration.ofSeconds(30));
+            log.debug("Edamam searchByQuery response data: {}", result);
+            return result;
         } catch (Exception e) {
             log.error("Failed to fetch recipes from Edamam for query: {}", query, e);
             return new EdamamRecipeResponse(0, 0, 0, List.of());
         }
+    }
+
+    /**
+     * Logs outgoing HTTP requests as full curl commands for debugging.
+     */
+    private ExchangeFilterFunction logRequest() {
+        return ExchangeFilterFunction.ofRequestProcessor(clientRequest -> {
+            StringBuilder curl = new StringBuilder("curl -X ")
+                    .append(clientRequest.method().name())
+                    .append(" '").append(clientRequest.url()).append("'");
+            clientRequest.headers().forEach((name, values) ->
+                    values.forEach(value -> curl.append(" -H '").append(name).append(": ").append(value).append("'")));
+            log.info("External API request: {}", curl);
+            return Mono.just(clientRequest);
+        });
     }
 }

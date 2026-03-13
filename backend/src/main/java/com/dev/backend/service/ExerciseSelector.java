@@ -24,5 +24,5 @@ public interface ExerciseSelector {
     Exercise selectExercise(AiExerciseSlot slot,
                             List<String> availableEquipment,
                             String difficultyLevel,
-                            Set<Long> alreadyUsedIds);
+                            Set<String> alreadyUsedIds);
 }

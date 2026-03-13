@@ -1,16 +1,21 @@
 package com.dev.backend.service.impl;
 
+import com.dev.backend.client.ExerciseAPIClient;
 import com.dev.backend.config.CacheNames;
 import com.dev.backend.exception.DuplicateResourceException;
 import com.dev.backend.exception.ResourceNotFoundException;
 import com.dev.backend.mapper.ExerciseMapper;
+import com.dev.backend.model.dto.external.ExerciseDBResponse;
+import com.dev.backend.model.dto.external.ExerciseDBV2ListResponse;
 import com.dev.backend.model.dto.request.CreateExerciseRequest;
 import com.dev.backend.model.dto.request.ExerciseFilterRequest;
+import com.dev.backend.model.dto.request.ExerciseSearchRequest;
 import com.dev.backend.model.dto.response.*;
 import com.dev.backend.model.entity.*;
 import com.dev.backend.model.enums.ExerciseType;
 import com.dev.backend.model.enums.TargetMuscleGroup;
 import com.dev.backend.repository.*;
+import com.dev.backend.service.ExerciseAPIService;
 import com.dev.backend.service.ExerciseService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -24,9 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,6 +43,8 @@ public class ExerciseServiceImpl implements ExerciseService {
     private final ExerciseAlternativeRepository exerciseAlternativeRepository;
     private final UserRepository userRepository;
     private final ExerciseMapper exerciseMapper;
+    private final ExerciseAPIService exerciseAPIService;
+    private final ExerciseAPIClient exerciseAPIClient;
 
     public ExerciseServiceImpl(ExerciseRepository exerciseRepository,
                                MuscleGroupRepository muscleGroupRepository,
@@ -47,7 +52,9 @@ public class ExerciseServiceImpl implements ExerciseService {
                                WorkoutFavoriteRepository workoutFavoriteRepository,
                                ExerciseAlternativeRepository exerciseAlternativeRepository,
                                UserRepository userRepository,
-                               ExerciseMapper exerciseMapper) {
+                               ExerciseMapper exerciseMapper,
+                               ExerciseAPIService exerciseAPIService,
+                               ExerciseAPIClient exerciseAPIClient) {
         this.exerciseRepository = exerciseRepository;
         this.muscleGroupRepository = muscleGroupRepository;
         this.equipmentRepository = equipmentRepository;
@@ -55,17 +62,71 @@ public class ExerciseServiceImpl implements ExerciseService {
         this.exerciseAlternativeRepository = exerciseAlternativeRepository;
         this.userRepository = userRepository;
         this.exerciseMapper = exerciseMapper;
+        this.exerciseAPIService = exerciseAPIService;
+        this.exerciseAPIClient = exerciseAPIClient;
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public Page<ExerciseSummaryResponse> browseExercises(ExerciseFilterRequest filter, Pageable pageable) {
         log.info("Browsing exercises with filter: {}", filter);
 
+        // 1. Check local DB first (Cache-Aside)
         Specification<Exercise> spec = buildSpecification(filter);
-        Page<Exercise> exercises = exerciseRepository.findAll(spec, pageable);
+        Page<Exercise> localResults = exerciseRepository.findAll(spec, pageable);
 
-        return exercises.map(exerciseMapper::toSummaryResponse);
+        if (localResults.hasContent()) {
+            log.info("Returning {} exercises from local DB", localResults.getTotalElements());
+            return localResults.map(exerciseMapper::toSummaryResponse);
+        }
+
+        // 2. DB empty/no match → call external API
+        log.info("No local results, fetching from external API");
+        try {
+            ExerciseSearchRequest apiRequest = mapFilterToApiRequest(filter, pageable);
+            List<ExerciseDBResponse> apiResults = exerciseAPIClient.searchExercises(apiRequest);
+
+            if (apiResults != null && !apiResults.isEmpty()) {
+                log.info("External API returned {} results, saving to DB", apiResults.size());
+
+                // 3. Save to DB and return (no N+1 — passes response directly)
+                List<Exercise> saved = apiResults.stream()
+                        .map(exerciseAPIService::getOrCreateFromResponse)
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toList());
+
+                List<ExerciseSummaryResponse> responses = saved.stream()
+                        .map(exerciseMapper::toSummaryResponse)
+                        .collect(Collectors.toList());
+
+                return new PageImpl<>(responses, pageable, saved.size());
+            }
+        } catch (Exception e) {
+            log.warn("External API failed: {}", e.getMessage());
+        }
+
+        return Page.empty(pageable);
+    }
+
+    /**
+     * Map ExerciseFilterRequest fields to an ExerciseSearchRequest for the external API.
+     */
+    private ExerciseSearchRequest mapFilterToApiRequest(ExerciseFilterRequest filter, Pageable pageable) {
+        ExerciseSearchRequest.ExerciseSearchRequestBuilder builder = ExerciseSearchRequest.builder()
+                .limit(Math.min(pageable.getPageSize(), 25));
+
+        if (filter != null) {
+            builder.name(filter.getSearchQuery())
+                   .targetMuscles(filter.getTargetMuscles())
+                   .bodyParts(filter.getBodyParts())
+                   .equipments(filter.getEquipments())
+                   .exerciseType(filter.getExerciseType())
+                   .keywords(filter.getKeywords())
+                   .after(filter.getAfter())
+                   .before(filter.getBefore());
+        }
+
+        return builder.build();
     }
 
     private Specification<Exercise> buildSpecification(ExerciseFilterRequest filter) {
@@ -78,7 +139,7 @@ public class ExerciseServiceImpl implements ExerciseService {
                 }
 
                 if (filter.getExerciseType() != null) {
-                    predicates.add(criteriaBuilder.equal(root.get("exerciseType"), filter.getExerciseType().name()));
+                    predicates.add(criteriaBuilder.equal(root.get("exerciseType"), filter.getExerciseType()));
                 }
 
                 if (filter.getRequiresSpotter() != null) {
@@ -99,21 +160,39 @@ public class ExerciseServiceImpl implements ExerciseService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     @Cacheable(value = CacheNames.EXERCISE_BY_ID, keyGenerator = "customKeyGenerator")
-    public ExerciseResponse getExerciseById(Long exerciseId) {
+    public ExerciseResponse getExerciseById(String exerciseId) {
         log.info("Getting exercise details for ID: {}", exerciseId);
-        Exercise exercise = exerciseRepository.findByIdWithMuscleGroups(exerciseId)
-                .orElseThrow(() -> new ResourceNotFoundException("Exercise", "id", exerciseId));
 
-        // Initialize equipment collection in the same persistence context
-        exerciseRepository.findByIdWithEquipments(exerciseId)
-                .orElseThrow(() -> new ResourceNotFoundException("Exercise", "id", exerciseId));
+        // 1. Check local DB first (Cache-Aside)
+        Optional<Exercise> local = exerciseRepository.findByIdWithMuscleGroups(exerciseId);
+        if (local.isPresent()) {
+            exerciseRepository.findByIdWithEquipments(exerciseId); // init equipment
+            log.info("Returning exercise {} from local DB", exerciseId);
+            return buildExerciseResponse(local.get());
+        }
 
+        // 2. Not found → call external API → save → return
+        log.info("Exercise {} not in local DB, fetching from API", exerciseId);
+        try {
+            Exercise exercise = exerciseAPIService.getOrCreateExercise(exerciseId);
+            if (exercise != null) {
+                return buildExerciseResponse(exercise);
+            }
+        } catch (Exception e) {
+            log.warn("External API failed for exercise {}: {}", exerciseId, e.getMessage());
+        }
+
+        throw new ResourceNotFoundException("Exercise", "id", exerciseId);
+    }
+
+    private ExerciseResponse buildExerciseResponse(Exercise exercise) {
         ExerciseResponse response = exerciseMapper.toResponse(exercise);
 
         // Add alternatives
-        List<ExerciseAlternative> alternatives = exerciseAlternativeRepository.findByOriginalExerciseId(exerciseId);
+        List<ExerciseAlternative> alternatives = exerciseAlternativeRepository
+                .findByOriginalExerciseId(exercise.getExerciseId());
         response.setAlternatives(alternatives.stream()
                 .map(exerciseMapper::toAlternativeResponse)
                 .collect(Collectors.toList()));
@@ -123,7 +202,7 @@ public class ExerciseServiceImpl implements ExerciseService {
 
     @Override
     @Transactional
-    public void addToFavorites(Long userId, Long exerciseId) {
+    public void addToFavorites(Long userId, String exerciseId) {
         log.info("Adding exercise {} to favorites for user {}", exerciseId, userId);
 
         if (workoutFavoriteRepository.existsByUserUserIdAndExerciseExerciseId(userId, exerciseId)) {
@@ -148,7 +227,7 @@ public class ExerciseServiceImpl implements ExerciseService {
 
     @Override
     @Transactional
-    public void removeFromFavorites(Long userId, Long exerciseId) {
+    public void removeFromFavorites(Long userId, String exerciseId) {
         log.info("Removing exercise {} from favorites for user {}", exerciseId, userId);
 
         workoutFavoriteRepository.deleteByUserUserIdAndExerciseExerciseId(userId, exerciseId);
@@ -171,13 +250,13 @@ public class ExerciseServiceImpl implements ExerciseService {
 
     @Override
     @Transactional(readOnly = true)
-    public boolean isFavorite(Long userId, Long exerciseId) {
+    public boolean isFavorite(Long userId, String exerciseId) {
         return workoutFavoriteRepository.existsByUserUserIdAndExerciseExerciseId(userId, exerciseId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<ExerciseAlternativeResponse> getAlternatives(Long exerciseId) {
+    public List<ExerciseAlternativeResponse> getAlternatives(String exerciseId) {
         log.info("Getting alternatives for exercise {}", exerciseId);
 
         // Verify exercise exists
@@ -249,23 +328,71 @@ public class ExerciseServiceImpl implements ExerciseService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     @Cacheable(value = CacheNames.MUSCLE_GROUPS, keyGenerator = "customKeyGenerator")
     public List<MuscleGroupResponse> getAllMuscleGroups() {
         log.info("Getting all muscle groups");
-        return muscleGroupRepository.findAll().stream()
-                .map(exerciseMapper::toMuscleGroupResponse)
-                .collect(Collectors.toList());
+
+        // 1. Check local DB first (Cache-Aside)
+        List<MuscleGroup> localGroups = muscleGroupRepository.findAll();
+        if (!localGroups.isEmpty()) {
+            log.info("Returning {} muscle groups from local DB", localGroups.size());
+            return localGroups.stream()
+                    .map(exerciseMapper::toMuscleGroupResponse)
+                    .collect(Collectors.toList());
+        }
+
+        // 2. DB empty → fetch from external API
+        log.info("No local muscle groups, fetching from external API");
+        try {
+            List<ExerciseDBV2ListResponse.Item> apiItems = exerciseAPIClient.fetchMuscles();
+            if (!apiItems.isEmpty()) {
+                List<MuscleGroup> saved = apiItems.stream()
+                        .map(item -> findOrCreateMuscleGroup(item.getName(), item.getImageUrl()))
+                        .collect(Collectors.toList());
+                return saved.stream()
+                        .map(exerciseMapper::toMuscleGroupResponse)
+                        .collect(Collectors.toList());
+            }
+        } catch (Exception e) {
+            log.warn("External API failed for muscles: {}", e.getMessage());
+        }
+
+        return List.of();
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     @Cacheable(value = CacheNames.EQUIPMENT, keyGenerator = "customKeyGenerator")
     public List<EquipmentResponse> getAllEquipment() {
         log.info("Getting all equipment");
-        return equipmentRepository.findAll().stream()
-                .map(exerciseMapper::toEquipmentResponse)
-                .collect(Collectors.toList());
+
+        // 1. Check local DB first (Cache-Aside)
+        List<Equipment> localEquipment = equipmentRepository.findAll();
+        if (!localEquipment.isEmpty()) {
+            log.info("Returning {} equipment from local DB", localEquipment.size());
+            return localEquipment.stream()
+                    .map(exerciseMapper::toEquipmentResponse)
+                    .collect(Collectors.toList());
+        }
+
+        // 2. DB empty → fetch from external API
+        log.info("No local equipment, fetching from external API");
+        try {
+            List<ExerciseDBV2ListResponse.Item> apiItems = exerciseAPIClient.fetchEquipments();
+            if (!apiItems.isEmpty()) {
+                List<Equipment> saved = apiItems.stream()
+                        .map(item -> findOrCreateEquipment(item.getName(), item.getImageUrl()))
+                        .collect(Collectors.toList());
+                return saved.stream()
+                        .map(exerciseMapper::toEquipmentResponse)
+                        .collect(Collectors.toList());
+            }
+        } catch (Exception e) {
+            log.warn("External API failed for equipment: {}", e.getMessage());
+        }
+
+        return List.of();
     }
 
     @Override
@@ -279,10 +406,13 @@ public class ExerciseServiceImpl implements ExerciseService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
+    @Cacheable(value = CacheNames.EXERCISES, keyGenerator = "customKeyGenerator")
     public List<ExerciseTypeResponse> getAllExerciseTypes() {
-        log.info("Getting all exercise types with counts");
-        return Arrays.stream(ExerciseType.values())
+        log.info("Getting all exercise types");
+
+        // 1. Check local DB for distinct exercise types
+        List<ExerciseTypeResponse> localTypes = Arrays.stream(ExerciseType.values())
                 .map(type -> {
                     long count = exerciseRepository.countByExerciseType(type.name());
                     return ExerciseTypeResponse.builder()
@@ -290,14 +420,40 @@ public class ExerciseServiceImpl implements ExerciseService {
                             .exerciseCount(count)
                             .build();
                 })
+                .filter(t -> t.getExerciseCount() > 0)
                 .collect(Collectors.toList());
+
+        if (!localTypes.isEmpty()) {
+            return localTypes;
+        }
+
+        // 2. DB empty → fetch from external API
+        log.info("No local exercise types with data, fetching from external API");
+        try {
+            List<ExerciseDBV2ListResponse.Item> apiItems = exerciseAPIClient.fetchExerciseTypes();
+            if (!apiItems.isEmpty()) {
+                return apiItems.stream()
+                        .map(item -> ExerciseTypeResponse.builder()
+                                .typeName(item.getName())
+                                .exerciseCount(0L)
+                                .build())
+                        .collect(Collectors.toList());
+            }
+        } catch (Exception e) {
+            log.warn("External API failed for exercise types: {}", e.getMessage());
+        }
+
+        return List.of();
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
+    @Cacheable(value = CacheNames.MUSCLE_GROUPS, keyGenerator = "customKeyGenerator")
     public List<ExerciseCategoryResponse> getAllExerciseCategories() {
-        log.info("Getting all exercise categories with counts");
-        return Arrays.stream(TargetMuscleGroup.values())
+        log.info("Getting all exercise categories");
+
+        // 1. Check local DB for muscle group categories
+        List<ExerciseCategoryResponse> localCategories = Arrays.stream(TargetMuscleGroup.values())
                 .map(category -> {
                     long count = exerciseRepository.countByMuscleGroupCategory(category.name());
                     return ExerciseCategoryResponse.builder()
@@ -305,7 +461,52 @@ public class ExerciseServiceImpl implements ExerciseService {
                             .exerciseCount(count)
                             .build();
                 })
+                .filter(c -> c.getExerciseCount() > 0)
                 .collect(Collectors.toList());
+
+        if (!localCategories.isEmpty()) {
+            return localCategories;
+        }
+
+        // 2. DB empty → fetch from external API
+        log.info("No local categories with data, fetching from external API");
+        try {
+            List<ExerciseDBV2ListResponse.Item> apiItems = exerciseAPIClient.fetchMuscles();
+            if (!apiItems.isEmpty()) {
+                return apiItems.stream()
+                        .map(item -> ExerciseCategoryResponse.builder()
+                                .categoryName(item.getName())
+                                .exerciseCount(0L)
+                                .build())
+                        .collect(Collectors.toList());
+            }
+        } catch (Exception e) {
+            log.warn("External API failed for exercise categories: {}", e.getMessage());
+        }
+
+        return List.of();
+    }
+
+    // ============= Reference Data Helpers =============
+
+    private MuscleGroup findOrCreateMuscleGroup(String name, String imageUrl) {
+        return muscleGroupRepository.findByGroupName(name)
+                .orElseGet(() -> {
+                    MuscleGroup mg = new MuscleGroup();
+                    mg.setGroupName(name);
+                    mg.setImageUrl(imageUrl);
+                    return muscleGroupRepository.save(mg);
+                });
+    }
+
+    private Equipment findOrCreateEquipment(String name, String imageUrl) {
+        return equipmentRepository.findByEquipmentName(name)
+                .orElseGet(() -> {
+                    Equipment eq = new Equipment();
+                    eq.setEquipmentName(name);
+                    eq.setImageUrl(imageUrl);
+                    return equipmentRepository.save(eq);
+                });
     }
 
     @Override
@@ -344,7 +545,7 @@ public class ExerciseServiceImpl implements ExerciseService {
         @CacheEvict(value = CacheNames.MUSCLE_GROUPS, allEntries = true),
         @CacheEvict(value = CacheNames.EQUIPMENT, allEntries = true)
     })
-    public ExerciseResponse updateExercise(Long exerciseId, com.dev.backend.model.dto.request.UpdateExerciseRequest request) {
+    public ExerciseResponse updateExercise(String exerciseId, com.dev.backend.model.dto.request.UpdateExerciseRequest request) {
         log.info("Updating exercise: {}", exerciseId);
 
         Exercise exercise = exerciseRepository.findById(exerciseId)
@@ -418,7 +619,7 @@ public class ExerciseServiceImpl implements ExerciseService {
         @CacheEvict(value = CacheNames.MUSCLE_GROUPS, allEntries = true),
         @CacheEvict(value = CacheNames.EQUIPMENT, allEntries = true)
     })
-    public void deleteExercise(Long exerciseId) {
+    public void deleteExercise(String exerciseId) {
         log.info("Deleting exercise: {}", exerciseId);
 
         Exercise exercise = exerciseRepository.findById(exerciseId)
@@ -441,7 +642,7 @@ public class ExerciseServiceImpl implements ExerciseService {
 
     @Override
     @Transactional
-    public void addAlternativeExercise(Long exerciseId, Long alternativeExerciseId, String reason) {
+    public void addAlternativeExercise(String exerciseId, String alternativeExerciseId, String reason) {
         log.info("Adding alternative {} to exercise {}", alternativeExerciseId, exerciseId);
 
         Exercise originalExercise = exerciseRepository.findById(exerciseId)
@@ -468,7 +669,7 @@ public class ExerciseServiceImpl implements ExerciseService {
 
     @Override
     @Transactional
-    public void removeAlternativeExercise(Long exerciseId, Long alternativeExerciseId) {
+    public void removeAlternativeExercise(String exerciseId, String alternativeExerciseId) {
         log.info("Removing alternative {} from exercise {}", alternativeExerciseId, exerciseId);
 
         exerciseAlternativeRepository.deleteByOriginalExerciseIdAndAlternativeExerciseId(
@@ -478,7 +679,7 @@ public class ExerciseServiceImpl implements ExerciseService {
 
     @Override
     @Transactional(readOnly = true)
-    public boolean isExerciseInUse(Long exerciseId) {
+    public boolean isExerciseInUse(String exerciseId) {
         // Check if exercise is used in any session exercises
         return exerciseRepository.isExerciseInUse(exerciseId);
     }

@@ -15,7 +15,7 @@ import lombok.NoArgsConstructor;
 public class SkipExerciseRequest {
 
     @NotNull(message = "Exercise ID is required")
-    private Long exerciseId;
+    private String exerciseId;
 
     @NotNull(message = "Skip reason is required")
     private SkipReason reason;

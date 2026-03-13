@@ -1,0 +1,2 @@
+- Widget classes (even private ones like helper widgets used in a screen) should always be placed in separate files under the `widgets/` directory of the relevant feature, not inlined within screen files.
+- Screen files should only contain the screen's StatefulWidget/StatelessWidget and its State class. Any sub-widget used by the screen should be imported from the widgets directory.

@@ -60,17 +60,14 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<NotificationResponse> getUserNotifications(Long userId, Pageable pageable) {
-        return notificationRepository.findByUserUserIdOrderByCreatedAtDesc(userId, pageable)
-                .map(notificationMapper::toResponse);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<NotificationResponse> getUnreadNotifications(Long userId) {
-        List<Notification> notifications = notificationRepository
-                .findByUserUserIdAndIsReadFalseOrderByCreatedAtDesc(userId);
-        return notificationMapper.toResponseList(notifications);
+    public Page<NotificationResponse> getUserNotifications(Long userId, Boolean isRead, Pageable pageable) {
+        Page<Notification> page;
+        if (isRead != null) {
+            page = notificationRepository.findByUserUserIdAndIsReadOrderByCreatedAtDesc(userId, isRead, pageable);
+        } else {
+            page = notificationRepository.findByUserUserIdOrderByCreatedAtDesc(userId, pageable);
+        }
+        return page.map(notificationMapper::toResponse);
     }
 
     @Override

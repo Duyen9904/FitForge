@@ -15,9 +15,9 @@ public interface ExerciseAlternativeRepository extends JpaRepository<ExerciseAlt
     @Query("SELECT ea FROM ExerciseAlternative ea " +
            "LEFT JOIN FETCH ea.alternativeExercise " +
            "WHERE ea.originalExercise.exerciseId = :exerciseId")
-    List<ExerciseAlternative> findByOriginalExerciseId(@Param("exerciseId") Long exerciseId);
+    List<ExerciseAlternative> findByOriginalExerciseId(@Param("exerciseId") String exerciseId);
 
-    boolean existsByOriginalExerciseExerciseIdAndAlternativeExerciseExerciseId(Long originalId, Long alternativeId);
+    boolean existsByOriginalExerciseExerciseIdAndAlternativeExerciseExerciseId(String originalId, String alternativeId);
 
     /**
      * Check if alternative exists (simplified method name for UC-16.1)
@@ -26,22 +26,22 @@ public interface ExerciseAlternativeRepository extends JpaRepository<ExerciseAlt
            "WHERE ea.originalExercise.exerciseId = :originalId " +
            "AND ea.alternativeExercise.exerciseId = :alternativeId")
     boolean existsByOriginalExerciseIdAndAlternativeExerciseId(
-            @Param("originalId") Long originalId, 
-            @Param("alternativeId") Long alternativeId);
+            @Param("originalId") String originalId, 
+            @Param("alternativeId") String alternativeId);
 
     /**
      * Delete all alternatives for an exercise (UC-16.1)
      */
     @Modifying
     @Query("DELETE FROM ExerciseAlternative ea WHERE ea.originalExercise.exerciseId = :exerciseId")
-    void deleteByOriginalExerciseId(@Param("exerciseId") Long exerciseId);
+    void deleteByOriginalExerciseId(@Param("exerciseId") String exerciseId);
 
     /**
      * Delete all alternatives referencing an exercise (UC-16.1)
      */
     @Modifying
     @Query("DELETE FROM ExerciseAlternative ea WHERE ea.alternativeExercise.exerciseId = :exerciseId")
-    void deleteByAlternativeExerciseId(@Param("exerciseId") Long exerciseId);
+    void deleteByAlternativeExerciseId(@Param("exerciseId") String exerciseId);
 
     /**
      * Delete specific alternative relationship (UC-16.1)
@@ -51,6 +51,6 @@ public interface ExerciseAlternativeRepository extends JpaRepository<ExerciseAlt
            "WHERE ea.originalExercise.exerciseId = :originalId " +
            "AND ea.alternativeExercise.exerciseId = :alternativeId")
     void deleteByOriginalExerciseIdAndAlternativeExerciseId(
-            @Param("originalId") Long originalId, 
-            @Param("alternativeId") Long alternativeId);
+            @Param("originalId") String originalId, 
+            @Param("alternativeId") String alternativeId);
 }

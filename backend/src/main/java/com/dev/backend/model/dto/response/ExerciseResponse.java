@@ -15,7 +15,7 @@ import java.util.List;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ExerciseResponse {
 
-    private Long exerciseId;
+    private String exerciseId;
     private String exerciseName;
     private String description;
     private String difficultyLevel;

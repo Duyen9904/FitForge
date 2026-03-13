@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/app_colors.dart';
@@ -118,12 +119,20 @@ class _ExerciseCardState extends ConsumerState<ExerciseCard> {
                     top: Radius.circular(AppDimensions.borderRadius12),
                   ),
                   child: widget.exercise.imageUrl != null
-                      ? Image.network(
-                          widget.exercise.imageUrl!,
+                      ? CachedNetworkImage(
+                          imageUrl: widget.exercise.imageUrl!,
                           height: 120,
                           width: double.infinity,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
+                          placeholder: (context, url) => Container(
+                            height: 120,
+                            width: double.infinity,
+                            color: AppColors.grey200,
+                            child: const Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) =>
                               _buildPlaceholder(),
                         )
                       : _buildPlaceholder(),

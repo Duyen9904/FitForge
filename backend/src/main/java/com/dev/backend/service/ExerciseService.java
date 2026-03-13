@@ -18,17 +18,17 @@ public interface ExerciseService {
     /**
      * Get exercise details (UC-4.2)
      */
-    ExerciseResponse getExerciseById(Long exerciseId);
+    ExerciseResponse getExerciseById(String exerciseId);
 
     /**
      * Add exercise to favorites (UC-4.3)
      */
-    void addToFavorites(Long userId, Long exerciseId);
+    void addToFavorites(Long userId, String exerciseId);
 
     /**
      * Remove exercise from favorites (UC-4.3)
      */
-    void removeFromFavorites(Long userId, Long exerciseId);
+    void removeFromFavorites(Long userId, String exerciseId);
 
     /**
      * Get user's favorite exercises
@@ -38,12 +38,12 @@ public interface ExerciseService {
     /**
      * Check if exercise is in user's favorites
      */
-    boolean isFavorite(Long userId, Long exerciseId);
+    boolean isFavorite(Long userId, String exerciseId);
 
     /**
      * Get alternative exercises (UC-4.4)
      */
-    List<ExerciseAlternativeResponse> getAlternatives(Long exerciseId);
+    List<ExerciseAlternativeResponse> getAlternatives(String exerciseId);
 
     /**
      * Create a new exercise - admin only (UC-4.5)
@@ -90,26 +90,26 @@ public interface ExerciseService {
     /**
      * Update an existing exercise - admin only (UC-16.1)
      */
-    ExerciseResponse updateExercise(Long exerciseId, com.dev.backend.model.dto.request.UpdateExerciseRequest request);
+    ExerciseResponse updateExercise(String exerciseId, com.dev.backend.model.dto.request.UpdateExerciseRequest request);
 
     /**
      * Delete an exercise - admin only (UC-16.1)
      * @throws IllegalStateException if exercise is in use
      */
-    void deleteExercise(Long exerciseId);
+    void deleteExercise(String exerciseId);
 
     /**
      * Add an alternative exercise - admin only (UC-16.1)
      */
-    void addAlternativeExercise(Long exerciseId, Long alternativeExerciseId, String reason);
+    void addAlternativeExercise(String exerciseId, String alternativeExerciseId, String reason);
 
     /**
      * Remove an alternative exercise - admin only (UC-16.1)
      */
-    void removeAlternativeExercise(Long exerciseId, Long alternativeExerciseId);
+    void removeAlternativeExercise(String exerciseId, String alternativeExerciseId);
 
     /**
      * Check if an exercise is in use (in workout sessions or plans)
      */
-    boolean isExerciseInUse(Long exerciseId);
+    boolean isExerciseInUse(String exerciseId);
 }

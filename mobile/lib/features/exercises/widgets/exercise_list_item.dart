@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
@@ -38,12 +39,20 @@ class ExerciseListItem extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(AppDimensions.borderRadius8),
               child: exercise.imageUrl != null
-                  ? Image.network(
-                      exercise.imageUrl!,
+                  ? CachedNetworkImage(
+                      imageUrl: exercise.imageUrl!,
                       width: 64,
                       height: 64,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
+                      placeholder: (context, url) => Container(
+                        width: 64,
+                        height: 64,
+                        color: AppColors.grey200,
+                        child: const Center(
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) =>
                           _buildPlaceholder(),
                     )
                   : _buildPlaceholder(),

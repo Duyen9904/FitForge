@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 public class LogExerciseRequest {
 
     @NotNull(message = "Exercise ID is required")
-    private Long exerciseId;
+    private String exerciseId;
 
     @NotNull(message = "Set number is required")
     @Min(value = 1, message = "Set number must be at least 1")

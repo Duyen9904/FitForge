@@ -58,7 +58,7 @@ class _ExercisesByTypeScreenState
   void _loadExercises() {
     final filter = ExerciseFilter(
       exerciseType: widget.typeName,
-      muscleGroupCategory: widget.categoryName,
+      targetMuscles: widget.categoryName,
       equipmentIds:
           widget.equipmentId != null ? [widget.equipmentId!] : null,
       difficultyLevel: _selectedDifficulty,

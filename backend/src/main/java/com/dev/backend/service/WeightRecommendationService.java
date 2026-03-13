@@ -19,7 +19,7 @@ public interface WeightRecommendationService {
      * @param goalType Goal type (e.g., "STRENGTH", "MUSCLE_GAIN", "FAT_LOSS")
      * @return Recommended weight in kg, or null if bodyweight exercise
      */
-    Float recommendWeight(Long userId, Long exerciseId, Integer targetReps, String goalType);
+    Float recommendWeight(Long userId, String exerciseId, Integer targetReps, String goalType);
 
     /**
      * Estimate starting weight for a new user or exercise without history.

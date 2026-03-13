@@ -14,7 +14,7 @@ public interface ExercisePerformanceLogRepository extends JpaRepository<Exercise
 
     @Query("SELECT p FROM ExercisePerformanceLog p WHERE p.sessionLog.user.userId = :userId " +
            "AND p.exercise.exerciseId = :exerciseId ORDER BY p.sessionLog.performedAt DESC")
-    List<ExercisePerformanceLog> findByUserAndExercise(@Param("userId") Long userId, @Param("exerciseId") Long exerciseId);
+    List<ExercisePerformanceLog> findByUserAndExercise(@Param("userId") Long userId, @Param("exerciseId") String exerciseId);
 
     @Query("SELECT p FROM ExercisePerformanceLog p WHERE p.sessionLog.user.userId = :userId " +
            "AND p.painFlag = true AND p.sessionLog.performedAt >= :since")

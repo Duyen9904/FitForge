@@ -17,4 +17,5 @@ public class EquipmentResponse {
     private String equipmentName;
     private String equipmentType;
     private String description;
+    private String imageUrl;
 }

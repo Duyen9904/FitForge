@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AiExerciseResult {
-    private Long exerciseId;
+    private String exerciseId;
     private String exerciseName; // fallback if exerciseId not found
     private Integer sets;
     private String repetitions;

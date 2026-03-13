@@ -48,7 +48,7 @@ public class ExerciseSelectorImpl implements ExerciseSelector {
     public Exercise selectExercise(AiExerciseSlot slot,
                                    List<String> availableEquipment,
                                    String difficultyLevel,
-                                   Set<Long> alreadyUsedIds) {
+                                   Set<String> alreadyUsedIds) {
         if (slot == null || slot.getMuscleGroup() == null) {
             log.warn("[ExerciseSelector] Null slot or muscle group, cannot select exercise");
             return null;

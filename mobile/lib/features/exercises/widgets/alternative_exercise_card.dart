@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
@@ -36,12 +37,20 @@ class AlternativeExerciseCard extends StatelessWidget {
                   top: Radius.circular(AppDimensions.borderRadius12),
                 ),
                 child: alternative.alternativeExercise.imageUrl != null
-                    ? Image.network(
-                        alternative.alternativeExercise.imageUrl!,
+                    ? CachedNetworkImage(
+                        imageUrl: alternative.alternativeExercise.imageUrl!,
                         height: 100,
                         width: double.infinity,
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
+                        placeholder: (context, url) => Container(
+                          height: 100,
+                          width: double.infinity,
+                          color: AppColors.grey200,
+                          child: const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) =>
                             _buildPlaceholder(),
                       )
                     : _buildPlaceholder(),
