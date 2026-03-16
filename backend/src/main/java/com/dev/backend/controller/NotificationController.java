@@ -119,4 +119,19 @@ public class NotificationController {
         notificationService.removeDeviceToken(token);
         return ApiResponse.success(null, "Device unregistered from push notifications");
     }
+
+    // ============= Test Endpoint =============
+
+    @Operation(summary = "Test push notification",
+            description = "Send a test push notification to the authenticated user's devices. For development/testing only.")
+    @PreAuthorize("isAuthenticated()")
+    @PostMapping("/test-push")
+    public ApiResponse<String> testPushNotification(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam(defaultValue = "🔔 Test Notification") String title,
+            @RequestParam(defaultValue = "This is a test push notification from FitForge!") String body) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        notificationService.sendPushNotification(userId, title, body, "{\"type\":\"TEST\"}");
+        return ApiResponse.success("Push notification sent", "Test notification dispatched to all registered devices");
+    }
 }

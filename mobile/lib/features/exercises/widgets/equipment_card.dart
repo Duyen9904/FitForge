@@ -68,9 +68,20 @@ class EquipmentCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppDimensions.spacing8),
-              Icon(
-                Icons.chevron_right,
-                color: AppColors.grey400,
+              Image.network(
+                equipment.imageUrl,
+                width: 40,
+                height: 40,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 40,
+                  height: 40,
+                  color: AppColors.grey200,
+                  child: const Icon(
+                    Icons.fitness_center,
+                    size: 24,
+                    color: AppColors.grey400,
+                  ),
+                ),
               ),
             ],
           ),

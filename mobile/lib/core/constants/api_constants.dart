@@ -2,7 +2,7 @@
 class ApiConstants {
   ApiConstants._();
 
-  static const String baseUrl = 'http://172.16.0.106:8080/api/v1';
+  static const String baseUrl = 'http://192.168.1.20:8080/api/v1';
 
   // Auth endpoints
   static const String login = '/auth/login';

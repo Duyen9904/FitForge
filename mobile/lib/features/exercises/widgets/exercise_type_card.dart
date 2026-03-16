@@ -51,14 +51,6 @@ class ExerciseTypeCard extends StatelessWidget {
                                   color: AppColors.grey900,
                                 ),
                       ),
-                      const SizedBox(height: AppDimensions.spacing4),
-                      Text(
-                        '${exerciseType.exerciseCount} Workout Programs',
-                        style:
-                            Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: AppColors.grey500,
-                                ),
-                      ),
                     ],
                   ),
                 ),

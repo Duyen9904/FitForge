@@ -69,6 +69,7 @@ class Equipment with _$Equipment {
     @Default('') String equipmentName,
     @Default('') String equipmentType,
     String? description,
+    @Default('') String imageUrl,
   }) = _Equipment;
 
   factory Equipment.fromJson(Map<String, dynamic> json) =>

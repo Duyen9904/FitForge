@@ -5,7 +5,7 @@ import '../../../core/constants/app_dimensions.dart';
 import '../models/home_models.dart';
 import 'chart_metric_toggle.dart';
 import 'chart_summary_row.dart';
-import 'chart_empty_state.dart';
+
 
 class WeeklyProgressChart extends StatefulWidget {
   final WeeklyWorkoutProgressResponse weeklyProgress;
@@ -22,10 +22,7 @@ class WeeklyProgressChart extends StatefulWidget {
 class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
   ChartMetric _selectedMetric = ChartMetric.calories;
 
-  bool get _hasAnyData {
-    return widget.weeklyProgress.dailyData.any((d) =>
-        d.caloriesBurned > 0 || d.minutesExercised > 0 || d.workoutsCompleted > 0);
-  }
+
 
   /// A day is "missed" when the backend marks it as missed.
   bool _isDayMissed(DailyWorkoutData? day) {
@@ -62,29 +59,26 @@ class _WeeklyProgressChartState extends State<WeeklyProgressChart> {
           ),
           const SizedBox(height: AppDimensions.spacing16),
 
-          // Chart or Empty State
-          if (_hasAnyData) ...[
-            SizedBox(
-              height: 150,
-              child: BarChart(
-                BarChartData(
-                  alignment: BarChartAlignment.spaceAround,
-                  maxY: _getMaxValue() * 1.25,
-                  barTouchData: _buildTouchData(),
-                  titlesData: _buildTitlesData(),
-                  gridData: _buildGridData(),
-                  borderData: FlBorderData(show: false),
-                  barGroups: _buildBarGroups(),
-                ),
-                swapAnimationDuration: const Duration(milliseconds: 400),
-                swapAnimationCurve: Curves.easeInOut,
+          // Chart (always visible, even with no data)
+          SizedBox(
+            height: 150,
+            child: BarChart(
+              BarChartData(
+                alignment: BarChartAlignment.spaceAround,
+                maxY: _getMaxValue() * 1.25,
+                barTouchData: _buildTouchData(),
+                titlesData: _buildTitlesData(),
+                gridData: _buildGridData(),
+                borderData: FlBorderData(show: false),
+                barGroups: _buildBarGroups(),
               ),
+              swapAnimationDuration: const Duration(milliseconds: 400),
+              swapAnimationCurve: Curves.easeInOut,
             ),
-            const SizedBox(height: AppDimensions.spacing12),
-            // Weekly Summary
-            _buildSummaryRow(),
-          ] else
-            const ChartEmptyState(),
+          ),
+          const SizedBox(height: AppDimensions.spacing12),
+          // Weekly Summary
+          _buildSummaryRow(),
         ],
       ),
     );

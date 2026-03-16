@@ -2,6 +2,7 @@ import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'app.dart';
 import 'firebase_options.dart';
 void main() async {
@@ -12,6 +13,10 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    // Print FCM token
+    final token = await FirebaseMessaging.instance.getToken();
+    developer.log('FCM Token: $token', name: 'FCM');
+    debugPrint('🔑 FCM Token: $token');
   } catch (e) {
     developer.log('Firebase init failed: $e', name: 'FIREBASE');
   }
