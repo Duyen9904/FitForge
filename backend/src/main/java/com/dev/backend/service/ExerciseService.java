@@ -20,25 +20,6 @@ public interface ExerciseService {
      */
     ExerciseResponse getExerciseById(String exerciseId);
 
-    /**
-     * Add exercise to favorites (UC-4.3)
-     */
-    void addToFavorites(Long userId, String exerciseId);
-
-    /**
-     * Remove exercise from favorites (UC-4.3)
-     */
-    void removeFromFavorites(Long userId, String exerciseId);
-
-    /**
-     * Get user's favorite exercises
-     */
-    Page<ExerciseSummaryResponse> getUserFavorites(Long userId, Pageable pageable);
-
-    /**
-     * Check if exercise is in user's favorites
-     */
-    boolean isFavorite(Long userId, String exerciseId);
 
     /**
      * Get alternative exercises (UC-4.4)
@@ -112,4 +93,9 @@ public interface ExerciseService {
      * Check if an exercise is in use (in workout sessions or plans)
      */
     boolean isExerciseInUse(String exerciseId);
+
+    /**
+     * Get exercise suggestions for a given muscle group
+     */
+    List<ExerciseSuggestionResponse> getExerciseSuggestions(String muscleGroup, int limit);
 }

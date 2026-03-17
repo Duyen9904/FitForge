@@ -1,6 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import '../../auth/models/user_model.dart';
-import '../../workouts/models/workout_plan_models.dart';
+import '../models/profile_models.dart';
 
 part 'profile_state.freezed.dart';
 
@@ -17,10 +17,10 @@ class ProfileState with _$ProfileState {
   const factory ProfileState.loaded({
     required UserModel user,
     @Default(0) int achievementPoints,
-    @Default([]) List<WorkoutPlanSummaryResponse> activePlans,
+    ProfileSummaryResponse? profileSummary,
+    @Default(false) bool isUploadingAvatar,
   }) = ProfileStateLoaded;
 
   /// Error loading profile
   const factory ProfileState.error(String message) = ProfileStateError;
 }
-

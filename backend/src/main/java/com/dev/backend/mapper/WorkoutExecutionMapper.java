@@ -5,6 +5,8 @@ import com.dev.backend.model.dto.response.WorkoutHistoryResponse;
 import com.dev.backend.model.dto.response.WorkoutProgressResponse;
 import com.dev.backend.model.entity.ExerciseLog;
 import com.dev.backend.model.entity.WorkoutProgress;
+import com.dev.backend.service.GcpService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;
@@ -12,9 +14,14 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
+@Slf4j
 public class WorkoutExecutionMapper {
 
     public WorkoutProgressResponse toProgressResponse(WorkoutProgress progress) {
+        return toProgressResponse(progress, null);
+    }
+
+    public WorkoutProgressResponse toProgressResponse(WorkoutProgress progress, GcpService gcpService) {
         return WorkoutProgressResponse.builder()
                 .progressId(progress.getProgressId())
                 .planId(progress.getWorkoutPlan() != null ? progress.getWorkoutPlan().getPlanId() : null)
@@ -31,6 +38,7 @@ public class WorkoutExecutionMapper {
                 .caloriesBurned(progress.getCaloriesBurned())
                 .averageHeartRate(progress.getAverageHeartRate())
                 .moodRating(progress.getMoodRating())
+                .proofPhotoUrl(resolveSignedUrl(progress.getProofPhotoUrl(), gcpService))
                 .exerciseLogs(toExerciseLogResponseList(progress.getExerciseLogs()))
                 .build();
     }
@@ -66,7 +74,27 @@ public class WorkoutExecutionMapper {
                 .exercisesCompleted(completed)
                 .exercisesSkipped(skipped)
                 .totalVolumeKg(totalVolume)
+                .proofPhotoUrl(resolveSignedUrl(progress.getProofPhotoUrl(), null))
                 .build();
+    }
+
+    /**
+     * Resolve a GCS object path to a signed URL.
+     * Returns the raw path as fallback if GcpService is unavailable or signing fails.
+     */
+    private String resolveSignedUrl(String objectPath, GcpService gcpService) {
+        if (objectPath == null || objectPath.isBlank()) {
+            return null;
+        }
+        if (gcpService == null) {
+            return objectPath;
+        }
+        try {
+            return gcpService.getSignedUrl(objectPath);
+        } catch (Exception e) {
+            log.warn("Failed to generate signed URL for {}: {}", objectPath, e.getMessage());
+            return objectPath;
+        }
     }
 
     public List<ExerciseLogResponse> toExerciseLogResponseList(List<ExerciseLog> logs) {

@@ -1,15 +1,17 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+
 import '../../../core/constants/app_dimensions.dart';
-import '../../../core/config/routes.dart';
 import '../viewmodels/profile_viewmodel.dart';
 import '../widgets/profile_header.dart';
-import '../widgets/weekly_stats_section.dart';
-import '../widgets/profile_trainings_section.dart';
+import '../widgets/profile_activity_grid.dart';
+import '../widgets/profile_photos_section.dart';
 
 /// Profile screen — redesigned to match the reference UI:
-/// ProfileHeader → Statistics → Trainings
+/// ProfileHeader → Statistics (Activity Heatmap) → Photos
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
@@ -18,11 +20,85 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  final _imagePicker = ImagePicker();
+
   @override
   void initState() {
     super.initState();
     Future.microtask(
         () => ref.read(profileViewModelProvider.notifier).loadProfile());
+  }
+
+  /// Show bottom sheet to pick image from camera or gallery, then upload.
+  Future<void> _pickAndUploadAvatar() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[400],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Change Avatar',
+              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_rounded),
+              title: const Text('Take a Photo'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded),
+              title: const Text('Choose from Gallery'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+
+    if (source == null || !mounted) return;
+
+    final pickedFile = await _imagePicker.pickImage(
+      source: source,
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 85,
+    );
+
+    if (pickedFile == null || !mounted) return;
+
+    final file = File(pickedFile.path);
+    final vm = ref.read(profileViewModelProvider.notifier);
+    final success = await vm.uploadAvatar(file);
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'Avatar updated successfully!'
+              : 'Failed to upload avatar. Please try again.',
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
@@ -32,11 +108,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: theme.colorScheme.background,
+      appBar: AppBar(
+        backgroundColor: theme.colorScheme.background,
+        elevation: 0,
+        title: Text(
+          'My Profile',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+        actions: [
+          Icon(Icons.more_vert_outlined)
+        ],
+      ),
       body: profileState.when(
         initial: () => const SizedBox.shrink(),
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (message) => _buildErrorView(message, theme),
-        loaded: (user, achievementPoints, activePlans) {
+        loaded: (user, achievementPoints, profileSummary, isUploadingAvatar) {
           return RefreshIndicator(
             onRefresh: () =>
                 ref.read(profileViewModelProvider.notifier).loadProfile(),
@@ -52,42 +142,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       email: user.email,
                       profileImageUrl: user.profileImageUrl,
                       memberSince: user.dateJoined,
-                      achievementPoints: achievementPoints,
+                      currentWeightKg: user.currentWeightKg,
+                      targetWeightKg: user.targetWeightKg,
                       fitnessLevel: user.fitnessLevel,
                       primaryGoal: user.primaryGoalName,
-                      onSettings: () => context.push(Routes.settings),
-                      onNotifications: () => context.push(Routes.notifications),
+                      onAvatarTap: _pickAndUploadAvatar,
+                      isUploadingAvatar: isUploadingAvatar,
                     ),
 
-                    const SizedBox(height: AppDimensions.spacing16),
-
-                    // ── Divider ──
-                    Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: theme.colorScheme.outlineVariant
-                          .withOpacity(0.3),
-                      indent: AppDimensions.spacing20,
-                      endIndent: AppDimensions.spacing20,
+                    // ── Statistics (Activity Heatmap) ──
+                    ProfileActivityGrid(
+                      heatmapData: profileSummary?.activityHeatmap,
+                      totalWorkoutsCompleted:
+                          profileSummary?.totalWorkoutsCompleted ?? 0,
                     ),
 
-                    const SizedBox(height: AppDimensions.spacing24),
-
-                    // ── Statistics Section ──
-                    const WeeklyStatsSection(),
-
-                    const SizedBox(height: AppDimensions.spacing32),
-
-                    // ── Trainings Section ──
-                    ProfileTrainingsSection(
-                      plans: activePlans,
-                      onShowAll: () =>
-                          context.go(Routes.workouts),
-                      onPlanTap: (planId) => context
-                          .push(Routes.workoutPlanDetail(planId)),
+                    // ── Check-in Photos ──
+                    ProfilePhotosSection(
+                      photos: profileSummary?.checkInPhotos ?? [],
                     ),
-
-                    const SizedBox(height: AppDimensions.spacing48),
                   ],
                 ),
               ),

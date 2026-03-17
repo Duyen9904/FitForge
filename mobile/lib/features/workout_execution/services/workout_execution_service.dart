@@ -1,6 +1,13 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http_parser/http_parser.dart';
+import 'package:mime/mime.dart';
+
 import '../../../core/constants/api_constants.dart';
 import '../../../core/network/api_client.dart';
+import '../../../core/network/api_exceptions.dart';
 import '../../../core/network/api_response.dart';
 import '../../exercises/models/exercise_models.dart';
 import '../models/workout_execution_models.dart';
@@ -11,12 +18,68 @@ final workoutExecutionServiceProvider = Provider<WorkoutExecutionService>((ref) 
   return WorkoutExecutionService(apiClient: apiClient);
 });
 
+/// Allowed image MIME types for proof photo uploads.
+const _allowedImageTypes = {'image/jpeg', 'image/png', 'image/webp'};
+
+/// Max image size: 10 MB.
+const _maxImageSize = 10 * 1024 * 1024;
+
 /// Service for workout execution API operations.
 /// All methods return [ApiResponse] to preserve error details.
 class WorkoutExecutionService {
   final ApiClient apiClient;
 
   WorkoutExecutionService({required this.apiClient});
+
+  /// Upload a proof photo for a workout.
+  ///
+  /// Validates file type and size, then sends a multipart POST request.
+  /// Returns updated [WorkoutProgressResponse] with signed `proofPhotoUrl`.
+  Future<ApiResponse<WorkoutProgressResponse>> uploadWorkoutProof(
+    int progressId,
+    File proofPhoto,
+  ) async {
+    // Client-side validation
+    final fileSize = await proofPhoto.length();
+    if (fileSize == 0) {
+      throw ValidationException(message: 'File is empty');
+    }
+    if (fileSize > _maxImageSize) {
+      throw ValidationException(
+        message:
+            'Image size ${(fileSize / 1024 / 1024).toStringAsFixed(1)} MB '
+            'exceeds max 10 MB',
+      );
+    }
+    final mimeType =
+        lookupMimeType(proofPhoto.path) ?? 'application/octet-stream';
+    if (!_allowedImageTypes.contains(mimeType)) {
+      throw ValidationException(
+        message: 'Unsupported file type: $mimeType. '
+            'Allowed: JPEG, PNG, WebP',
+      );
+    }
+
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(
+        proofPhoto.path,
+        filename: proofPhoto.path.split(Platform.pathSeparator).last,
+        contentType: MediaType.parse(mimeType),
+      ),
+    });
+
+    final response = await apiClient.post(
+      ApiConstants.workoutProofPhoto(progressId),
+      data: formData,
+      options: Options(contentType: 'multipart/form-data'),
+    );
+
+    return ApiResponse.fromJson(
+      response.data as Map<String, dynamic>,
+      (json) =>
+          WorkoutProgressResponse.fromJson(json as Map<String, dynamic>),
+    );
+  }
 
   /// UC-5.1: Start a workout session
   Future<ApiResponse<WorkoutProgressResponse>> startWorkout(

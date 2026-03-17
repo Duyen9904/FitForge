@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 
 /// Card with icon and decimal input for a single measurement metric.
@@ -43,10 +44,10 @@ class MeasurementMetricCard extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer,
+              color:AppColors.primary,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: theme.colorScheme.primary),
+            child: Icon(icon, color: AppColors.white,),
           ),
           const SizedBox(width: AppDimensions.spacing16),
           Expanded(
@@ -71,7 +72,7 @@ class MeasurementMetricCard extends StatelessWidget {
                     hintText: hint,
                     suffixText: suffix,
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 2, horizontal: 6),
                     isDense: true,
                   ),
                   style: theme.textTheme.headlineSmall?.copyWith(

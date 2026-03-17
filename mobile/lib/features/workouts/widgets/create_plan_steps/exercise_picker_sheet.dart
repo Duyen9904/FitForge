@@ -23,10 +23,16 @@ class ExercisePickerSheet extends ConsumerStatefulWidget {
 
 class _ExercisePickerSheetState
     extends ConsumerState<ExercisePickerSheet> {
+  static const _pageSize = 10;
+
   final _searchController = TextEditingController();
   List<ExerciseSummary> _exercises = [];
   bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  int _currentPage = 0;
   String? _error;
+  String? _currentQuery;
 
   @override
   void initState() {
@@ -44,16 +50,25 @@ class _ExercisePickerSheetState
     setState(() {
       _isLoading = true;
       _error = null;
+      _currentPage = 0;
+      _hasMore = true;
+      _currentQuery = name;
+      _exercises = [];
     });
     try {
       final repo = ref.read(exerciseRepositoryProvider);
       final filter = name != null && name.isNotEmpty
           ? ExerciseFilter(searchQuery: name)
           : null;
-      final pageData = await repo.browseExercises(filter: filter, size: 50);
+      final pageData = await repo.browseExercises(
+        filter: filter,
+        page: 0,
+        size: _pageSize,
+      );
       if (mounted) {
         setState(() {
           _exercises = pageData.content;
+          _hasMore = !pageData.last;
           _isLoading = false;
         });
       }
@@ -63,6 +78,37 @@ class _ExercisePickerSheetState
           _error = e.toString();
           _isLoading = false;
         });
+      }
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || !_hasMore) return;
+
+    setState(() => _isLoadingMore = true);
+    final nextPage = _currentPage + 1;
+
+    try {
+      final repo = ref.read(exerciseRepositoryProvider);
+      final filter = _currentQuery != null && _currentQuery!.isNotEmpty
+          ? ExerciseFilter(searchQuery: _currentQuery)
+          : null;
+      final pageData = await repo.browseExercises(
+        filter: filter,
+        page: nextPage,
+        size: _pageSize,
+      );
+      if (mounted) {
+        setState(() {
+          _exercises.addAll(pageData.content);
+          _currentPage = nextPage;
+          _hasMore = !pageData.last;
+          _isLoadingMore = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingMore = false);
       }
     }
   }
@@ -80,6 +126,14 @@ class _ExercisePickerSheetState
       minChildSize: 0.5,
       maxChildSize: 0.95,
       builder: (context, scrollController) {
+        // Attach scroll listener for load-more
+        scrollController.addListener(() {
+          if (scrollController.position.pixels >=
+              scrollController.position.maxScrollExtent * 0.8) {
+            _loadMore();
+          }
+        });
+
         return Container(
           decoration: BoxDecoration(
             color: AppColors.white,
@@ -172,8 +226,25 @@ class _ExercisePickerSheetState
                               )
                             : ListView.builder(
                                 controller: scrollController,
-                                itemCount: _exercises.length,
+                                itemCount: _exercises.length + (_hasMore ? 1 : 0),
                                 itemBuilder: (context, index) {
+                                  // Loading indicator at the bottom
+                                  if (index == _exercises.length) {
+                                    return Padding(
+                                      padding: const EdgeInsets.all(
+                                          AppDimensions.spacing16),
+                                      child: Center(
+                                        child: SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            color: AppColors.primary,
+                                            strokeWidth: 2,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
                                   final exercise = _exercises[index];
                                   return _ExerciseListTile(
                                     exercise: exercise,

@@ -38,8 +38,6 @@ public class TransformationReportResponse {
     // Weight Chart Data
     private List<WeightDataPoint> weightHistory;
 
-    // Achievement Timeline
-    private List<AchievementItem> achievements;
 
     // Correlation Data
     private Double workoutVolumeCorrelation;
@@ -81,15 +79,5 @@ public class TransformationReportResponse {
     public static class WeightDataPoint {
         private LocalDate date;
         private Float weight;
-    }
-
-    @Data
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class AchievementItem {
-        private LocalDate date;
-        private String title;
-        private String description;
     }
 }

@@ -100,4 +100,13 @@ public interface WorkoutProgressRepository extends JpaRepository<WorkoutProgress
             @Param("userId") Long userId,
             @Param("start") Instant start,
             @Param("end") Instant end);
+
+    @Query("SELECT wp FROM WorkoutProgress wp " +
+           "LEFT JOIN FETCH wp.workoutSession " +
+           "LEFT JOIN FETCH wp.workoutPlan " +
+           "WHERE wp.user.userId = :userId " +
+           "AND wp.completed = true " +
+           "AND wp.proofPhotoUrl IS NOT NULL " +
+           "ORDER BY wp.workoutDate DESC")
+    List<WorkoutProgress> findCompletedWithProofPhoto(@Param("userId") Long userId);
 }

@@ -1,4 +1,5 @@
 import 'dart:developer' as developer;
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../workouts/models/workout_plan_models.dart';
@@ -302,6 +303,26 @@ class WorkoutExecutionViewModel
     _progressId = 0;
     _exercises = [];
     state = const WorkoutExecutionState.initial();
+  }
+
+  /// Upload a proof photo for the current workout.
+  ///
+  /// Returns `true` on success, `false` on failure.
+  Future<bool> uploadWorkoutProof(File proofPhoto) async {
+    if (_progressId <= 0) return false;
+
+    try {
+      await _repository.uploadWorkoutProof(_progressId, proofPhoto);
+      return true;
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to upload workout proof photo',
+        name: 'WorkoutExecutionViewModel',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return false;
+    }
   }
 
   /// Auto-complete after the last exercise.

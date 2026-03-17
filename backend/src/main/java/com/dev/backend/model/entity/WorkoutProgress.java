@@ -61,6 +61,10 @@ public class WorkoutProgress {
     @Column(length = 20)
     private String moodRating;
 
+    /** GCS object path for the workout check-in proof photo */
+    @Column(length = 500)
+    private String proofPhotoUrl;
+
     @OneToMany(mappedBy = "workoutProgress", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ExerciseLog> exerciseLogs = new ArrayList<>();
 }

@@ -64,56 +64,6 @@ public class ExerciseController {
         return ApiResponse.success(response);
     }
 
-    @Operation(summary = "Add exercise to favorites", description = "UC-4.3: Save exercise to favorites list")
-    @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("isAuthenticated()")
-    @PostMapping("/{exerciseId}/favorites")
-    @ResponseStatus(HttpStatus.CREATED)
-    public ApiResponse<Void> addToFavorites(
-            @AuthenticationPrincipal Jwt jwt,
-            @PathVariable String exerciseId) {
-        Long userId = Long.parseLong(jwt.getSubject());
-        exerciseService.addToFavorites(userId, exerciseId);
-        return ApiResponse.success(null, "Exercise added to favorites");
-    }
-
-    @Operation(summary = "Remove exercise from favorites", description = "Remove exercise from favorites list")
-    @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("isAuthenticated()")
-    @DeleteMapping("/{exerciseId}/favorites")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public ApiResponse<Void> removeFromFavorites(
-            @AuthenticationPrincipal Jwt jwt,
-            @PathVariable String exerciseId) {
-        Long userId = Long.parseLong(jwt.getSubject());
-        exerciseService.removeFromFavorites(userId, exerciseId);
-        return ApiResponse.success(null, "Exercise removed from favorites");
-    }
-
-    @Operation(summary = "Check if exercise is favorited", description = "Check if exercise is in user's favorites")
-    @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("isAuthenticated()")
-    @GetMapping("/{exerciseId}/favorites/status")
-    public ApiResponse<Boolean> isFavorite(
-            @AuthenticationPrincipal Jwt jwt,
-            @PathVariable String exerciseId) {
-        Long userId = Long.parseLong(jwt.getSubject());
-        boolean isFavorite = exerciseService.isFavorite(userId, exerciseId);
-        return ApiResponse.success(isFavorite);
-    }
-
-    @Operation(summary = "Get user's favorite exercises", description = "Get all exercises in user's favorites")
-    @SecurityRequirement(name = "bearerAuth")
-    @PreAuthorize("isAuthenticated()")
-    @GetMapping("/favorites")
-    public ApiResponse<Page<ExerciseSummaryResponse>> getUserFavorites(
-            @AuthenticationPrincipal Jwt jwt,
-            @PageableDefault(size = 20) Pageable pageable) {
-        Long userId = Long.parseLong(jwt.getSubject());
-        Page<ExerciseSummaryResponse> response = exerciseService.getUserFavorites(userId, pageable);
-        return ApiResponse.success(response);
-    }
-
     @Operation(summary = "Get alternative exercises", description = "UC-4.4: Find substitute exercises")
     @GetMapping("/{exerciseId}/alternatives")
     public ApiResponse<List<ExerciseAlternativeResponse>> getAlternatives(@PathVariable String exerciseId) {
@@ -143,6 +93,16 @@ public class ExerciseController {
     public ApiResponse<ExerciseResponse> createExercise(@Valid @RequestBody CreateExerciseRequest request) {
         ExerciseResponse response = exerciseService.createExercise(request);
         return ApiResponse.success(response, "Exercise created successfully");
+    }
+
+    @Operation(summary = "Get exercise suggestions", description = "Get exercise suggestions for a muscle group with default workout parameters")
+    @GetMapping("/suggestions")
+    public ApiResponse<List<com.dev.backend.model.dto.response.ExerciseSuggestionResponse>> getExerciseSuggestions(
+            @RequestParam String muscleGroup,
+            @RequestParam(defaultValue = "2") int limit) {
+        List<com.dev.backend.model.dto.response.ExerciseSuggestionResponse> suggestions =
+                exerciseService.getExerciseSuggestions(muscleGroup, limit);
+        return ApiResponse.success(suggestions);
     }
 
     // ============= Admin Endpoints (UC-16.1) =============

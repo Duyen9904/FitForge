@@ -21,8 +21,8 @@ public class ExerciseFilterRequest {
     private String searchQuery;
     private Boolean requiresSpotter;
     
+    
     // UC-14.1: Additional filter options
-    private Boolean favoritesOnly;
     private Boolean recentlyUsed;
 
     // External API pass-through fields (for ExerciseDB v2 /api/v1/exercises)

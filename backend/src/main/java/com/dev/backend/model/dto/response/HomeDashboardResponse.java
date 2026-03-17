@@ -20,6 +20,9 @@ public class HomeDashboardResponse {
     /** Today's scheduled workout session (null if rest day or no active plan) */
     private TodaySessionInfo todaySession;
 
+    /** Next upcoming workout session after today (null if none scheduled) */
+    private TodaySessionInfo nextSession;
+
     /** Aggregated stats for the current week */
     private WeeklyQuickStats weeklyStats;
 

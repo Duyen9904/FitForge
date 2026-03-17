@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/repositories/auth_repository.dart';
+import '../models/profile_models.dart';
 import '../services/profile_service.dart';
 
 /// Provider for ProfileRepository
@@ -29,12 +32,26 @@ class ProfileRepository {
     return _authRepository.getCurrentUser();
   }
 
+  /// Upload a new avatar image. Returns the updated user model.
+  Future<UserModel> uploadAvatar(File imageFile) async {
+    return _profileService.uploadAvatar(imageFile);
+  }
+
   /// Get achievement points.
   Future<int> getAchievementPoints() async {
     try {
       return await _profileService.getAchievementPoints();
     } catch (_) {
       return 0;
+    }
+  }
+
+  /// Get unified profile summary (heatmap + photos).
+  Future<ProfileSummaryResponse?> getProfileSummary({int months = 6}) async {
+    try {
+      return await _profileService.getProfileSummary(months: months);
+    } catch (_) {
+      return null;
     }
   }
 }

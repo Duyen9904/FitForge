@@ -97,6 +97,18 @@ public class ExerciseMapper {
                 .build();
     }
 
+    public ExerciseSuggestionResponse toSuggestionResponse(Exercise exercise) {
+        return ExerciseSuggestionResponse.builder()
+                .exerciseId(exercise.getExerciseId())
+                .exerciseName(exercise.getExerciseName())
+                .imageUrl(exercise.getImageUrl())
+                .defaultSets(3)
+                .defaultReps(10)
+                .defaultWeightKg(20.0)
+                .defaultRestSeconds(60)
+                .build();
+    }
+
     public Exercise toEntity(CreateExerciseRequest request) {
         Exercise exercise = new Exercise();
         exercise.setExerciseName(request.getExerciseName());

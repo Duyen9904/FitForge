@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../viewmodels/exercise_types_viewmodel.dart';
 import '../viewmodels/equipment_list_viewmodel.dart';
+import '../widgets/browse_all_tab_content.dart';
 import '../widgets/categories_tab_content.dart';
 import '../widgets/equipment_tab_content.dart';
 
@@ -28,7 +28,7 @@ class _ExerciseLibraryScreenState
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       // Rebuild when tab changes so we can show/hide the dropdown
       if (!_tabController.indexIsChanging) {
@@ -39,6 +39,7 @@ class _ExerciseLibraryScreenState
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(exerciseTypesViewModelProvider.notifier).loadTypes();
       ref.read(equipmentListViewModelProvider.notifier).loadEquipment();
+      // Browse All tab loads its own data via its widget's initState
     });
   }
 
@@ -94,6 +95,7 @@ class _ExerciseLibraryScreenState
               indicatorSize: TabBarIndicatorSize.label,
               dividerColor: Colors.transparent,
               tabs: const [
+                Tab(text: 'Browse All'),
                 Tab(text: 'Categories'),
                 Tab(text: 'Equipment'),
               ],
@@ -107,6 +109,7 @@ class _ExerciseLibraryScreenState
             child: TabBarView(
               controller: _tabController,
               children: const [
+                BrowseAllTabContent(),
                 CategoriesTabContent(),
                 EquipmentTabContent(),
               ],

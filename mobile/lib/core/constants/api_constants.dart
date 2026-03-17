@@ -2,7 +2,7 @@
 class ApiConstants {
   ApiConstants._();
 
-  static const String baseUrl = 'http://192.168.1.20:8080/api/v1';
+  static const String baseUrl = 'http://192.168.1.15:8080/api/v1';
 
   // Auth endpoints
   static const String login = '/auth/login';
@@ -17,6 +17,7 @@ class ApiConstants {
   static const String currentUser = '/users/me';
   static const String userPreferences = '/users/me/preferences';
   static const String userPrimaryGoal = '/users/me/primary-goal';
+  static const String userAvatar = '/users/me/avatar';
 
   // Workout Plan endpoints
   static const String workoutPlans = '/workout-plans';
@@ -47,6 +48,7 @@ class ApiConstants {
   static const String equipment = '/equipment';
   static const String exerciseFavorites = '/exercises/favorites';
   static const String exerciseRecommendations = '/exercises/recommendations';
+  static const String exerciseSuggestions = '/exercises/suggestions';
   static String exerciseDetail(String id) => '/exercises/$id';
   static String exerciseAddFavorite(String id) => '/exercises/$id/favorites';
   static String exerciseRemoveFavorite(String id) => '/exercises/$id/favorites';
@@ -57,6 +59,7 @@ class ApiConstants {
   static const String workoutStart = '/workouts/start';
   static String workoutLog(int progressId) => '/workouts/$progressId/log';
   static String workoutComplete(int progressId) => '/workouts/$progressId/complete';
+  static String workoutProofPhoto(int progressId) => '/workouts/$progressId/proof';
   static String workoutSkip(int progressId) => '/workouts/$progressId/skip';
   static const String workoutHistory = '/workouts/history';
   static const String workoutCurrent = '/workouts/current';
@@ -66,6 +69,7 @@ class ApiConstants {
   static const String workoutWeeklyProgress = '/workouts/weekly-progress';
   static const String workoutProgressCharts = '/workouts/progress/charts';
   static const String workoutDashboard = '/workouts/dashboard';
+  static const String workoutProfileSummary = '/workouts/profile-summary';
 
   // Nutrition endpoints
   static const String nutrition = '/nutrition';

@@ -1,7 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/viewmodels/auth_viewmodel.dart';
-import '../../workouts/models/workout_plan_models.dart';
-import '../../workouts/services/workout_plan_service.dart';
+import '../models/profile_models.dart';
 import '../repositories/profile_repository.dart';
 import 'profile_state.dart';
 
@@ -11,46 +12,72 @@ final profileViewModelProvider =
   return ProfileViewModel(ref);
 });
 
-/// ViewModel for profile screen. Loads user data + achievement points + active plans.
+/// ViewModel for profile screen. Loads user data + achievement points + profile summary.
 class ProfileViewModel extends StateNotifier<ProfileState> {
   final Ref _ref;
 
   ProfileViewModel(this._ref) : super(const ProfileState.initial());
 
-  /// Load profile data: user model + achievement points + active workout plans.
+  /// Load profile data: user model + achievement points + profile summary.
   Future<void> loadProfile() async {
     state = const ProfileState.loading();
     try {
       final repo = _ref.read(profileRepositoryProvider);
-      final workoutService = _ref.read(workoutPlanServiceProvider);
 
       final results = await Future.wait([
         repo.getCurrentUser(),
         repo.getAchievementPoints(),
+        repo.getProfileSummary(),
       ]);
 
       final user = results[0] as dynamic;
       final points = results[1] as int;
-
-      // Fetch active plans separately (different return type)
-      List<WorkoutPlanSummaryResponse> activePlans = [];
-      try {
-        final plansResponse =
-            await workoutService.getActiveUserPlans(page: 0, size: 5);
-        if (plansResponse.success && plansResponse.data != null) {
-          activePlans = plansResponse.data!.content;
-        }
-      } catch (_) {
-        // Silently fail - plans are optional
-      }
+      final profileSummary = results[2] as ProfileSummaryResponse?;
 
       state = ProfileState.loaded(
         user: user,
         achievementPoints: points,
-        activePlans: activePlans,
+        profileSummary: profileSummary,
       );
     } catch (e) {
       state = ProfileState.error(e.toString());
+    }
+  }
+
+  /// Upload a new avatar image.
+  ///
+  /// Returns `true` on success, `false` on failure.
+  /// Updates the user in the loaded state with the new profileImageUrl.
+  Future<bool> uploadAvatar(File imageFile) async {
+    final currentState = state;
+    if (currentState is! ProfileStateLoaded) return false;
+
+    // Set uploading flag
+    state = ProfileState.loaded(
+      user: currentState.user,
+      achievementPoints: currentState.achievementPoints,
+      profileSummary: currentState.profileSummary,
+      isUploadingAvatar: true,
+    );
+
+    try {
+      final repo = _ref.read(profileRepositoryProvider);
+      final updatedUser = await repo.uploadAvatar(imageFile);
+
+      state = ProfileState.loaded(
+        user: updatedUser,
+        achievementPoints: currentState.achievementPoints,
+        profileSummary: currentState.profileSummary,
+      );
+      return true;
+    } catch (e) {
+      // Restore previous state without uploading flag
+      state = ProfileState.loaded(
+        user: currentState.user,
+        achievementPoints: currentState.achievementPoints,
+        profileSummary: currentState.profileSummary,
+      );
+      return false;
     }
   }
 
@@ -64,4 +91,3 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
     await _ref.read(authViewModelProvider.notifier).logout(email ?? '');
   }
 }
-

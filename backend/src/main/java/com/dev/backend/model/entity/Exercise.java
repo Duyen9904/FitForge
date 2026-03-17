@@ -73,7 +73,4 @@ public class Exercise {
 
     @OneToMany(mappedBy = "exercise", cascade = CascadeType.ALL)
     private List<ExerciseLog> exerciseLogs = new ArrayList<>();
-
-    @OneToMany(mappedBy = "exercise", cascade = CascadeType.ALL)
-    private List<WorkoutFavorite> workoutFavorites = new ArrayList<>();
 }

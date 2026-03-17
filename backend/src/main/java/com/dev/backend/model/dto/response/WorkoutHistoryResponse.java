@@ -27,4 +27,5 @@ public class WorkoutHistoryResponse {
     private Integer exercisesCompleted;
     private Integer exercisesSkipped;
     private Float totalVolumeKg;
+    private String proofPhotoUrl;
 }

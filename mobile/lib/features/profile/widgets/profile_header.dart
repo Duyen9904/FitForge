@@ -2,20 +2,21 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 
-/// Redesigned profile header matching the reference UI:
-/// – Circular avatar with gradient ring
-/// – Name + stat counters (achievement pts, member days)
-/// – Fitness level badge + primary goal chip
+/// Profile header matching the reference UI:
+/// – Avatar on the left, name + stats on the right (horizontal row)
+/// – Two stat counters (Current Weight & Target Weight) with horizontal spacing
+/// – Fitness level badge (green dot) on the left
 class ProfileHeader extends StatelessWidget {
   final String displayName;
   final String email;
   final String? profileImageUrl;
   final DateTime? memberSince;
-  final int achievementPoints;
+  final double? currentWeightKg;
+  final double? targetWeightKg;
   final String? fitnessLevel;
   final String? primaryGoal;
-  final VoidCallback? onSettings;
-  final VoidCallback? onNotifications;
+  final VoidCallback? onAvatarTap;
+  final bool isUploadingAvatar;
 
   const ProfileHeader({
     super.key,
@@ -23,16 +24,21 @@ class ProfileHeader extends StatelessWidget {
     required this.email,
     this.profileImageUrl,
     this.memberSince,
-    this.achievementPoints = 0,
+    this.currentWeightKg,
+    this.targetWeightKg,
     this.fitnessLevel,
     this.primaryGoal,
-    this.onSettings,
-    this.onNotifications,
+    this.onAvatarTap,
+    this.isUploadingAvatar = false,
   });
 
-  int get _memberDays {
-    if (memberSince == null) return 0;
-    return DateTime.now().difference(memberSince!).inDays;
+
+
+  String _formatWeight(double? weight) {
+    if (weight == null) return '--';
+    return weight == weight.roundToDouble()
+        ? weight.toInt().toString()
+        : weight.toStringAsFixed(1);
   }
 
   @override
@@ -45,84 +51,79 @@ class ProfileHeader extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // ── Top action bar ──
-          Padding(
-            padding: const EdgeInsets.only(
-              top: AppDimensions.spacing8,
-              bottom: AppDimensions.spacing4,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.notifications_none_rounded),
-                  onPressed: onNotifications,
-                  iconSize: 22,
-                  style: IconButton.styleFrom(
-                    backgroundColor:
-                        theme.colorScheme.surfaceVariant.withOpacity(0.5),
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppDimensions.radiusLarge),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppDimensions.spacing8),
-                IconButton(
-                  icon: const Icon(Icons.settings_outlined),
-                  onPressed: onSettings,
-                  iconSize: 22,
-                  style: IconButton.styleFrom(
-                    backgroundColor:
-                        theme.colorScheme.surfaceVariant.withOpacity(0.5),
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppDimensions.radiusLarge),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          const SizedBox(height: AppDimensions.spacing16),
 
-          const SizedBox(height: AppDimensions.spacing8),
-
-          // ── Avatar + Info ──
+          // ── Avatar (left) + Name & Stats (right) ──
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Avatar with gradient ring
+              // Avatar on the left
               _buildAvatar(theme),
 
-              const SizedBox(width: AppDimensions.spacing20),
+              const SizedBox(width: AppDimensions.spacing16),
 
-              // Name + stat counters
+              // Name + stats column on the right
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      displayName,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: AppDimensions.spacing12),
-                    // Stat counters row
+                    // ── Name + Fitness level chip ──
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            displayName,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 24,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (fitnessLevel != null && fitnessLevel!.isNotEmpty) ...[
+                          const SizedBox(width: AppDimensions.spacing6),
+                          Chip(
+                            label: Text(fitnessLevel!),
+                            labelStyle: theme.textTheme.labelSmall?.copyWith(
+                              color: AppColors.success,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 10,
+                            ),
+                            backgroundColor:
+                                AppColors.success.withValues(alpha: 0.15),
+                            side: BorderSide.none,
+                            labelPadding: const EdgeInsets.symmetric(
+                              horizontal: AppDimensions.spacing4,
+                            ),
+                            padding: EdgeInsets.zero,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: const VisualDensity(
+                              horizontal: -4,
+                              vertical: -4,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+
+                    const SizedBox(height: AppDimensions.spacing8),
+
+                    // ── Stats row (Current Weight & Target Weight) ──
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
                         _StatCounter(
-                          value: achievementPoints.toString(),
-                          label: 'points',
+                          value: '${_formatWeight(currentWeightKg)} kg',
+                          label: 'Current',
                           theme: theme,
                         ),
                         const SizedBox(width: AppDimensions.spacing24),
                         _StatCounter(
-                          value: _memberDays.toString(),
-                          label: 'days',
+                          value: '${_formatWeight(targetWeightKg)} kg',
+                          label: 'Target',
                           theme: theme,
                         ),
                       ],
@@ -132,143 +133,84 @@ class ProfileHeader extends StatelessWidget {
               ),
             ],
           ),
-
-          const SizedBox(height: AppDimensions.spacing16),
-
-          // ── Badge row ──
-          Row(
-            children: [
-              // Fitness level badge
-              if (fitnessLevel != null && fitnessLevel!.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimensions.spacing12,
-                    vertical: AppDimensions.spacing6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius:
-                        BorderRadius.circular(AppDimensions.radiusRound),
-                    border: Border.all(
-                      color: AppColors.primary.withOpacity(0.2),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.fitness_center,
-                        size: 14,
-                        color: AppColors.primary,
-                      ),
-                      const SizedBox(width: AppDimensions.spacing4),
-                      Text(
-                        fitnessLevel!,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-              if (fitnessLevel != null && fitnessLevel!.isNotEmpty)
-                const SizedBox(width: AppDimensions.spacing12),
-
-              // Primary goal chip
-              if (primaryGoal != null && primaryGoal!.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimensions.spacing12,
-                    vertical: AppDimensions.spacing6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.accent.withOpacity(0.1),
-                    borderRadius:
-                        BorderRadius.circular(AppDimensions.radiusRound),
-                    border: Border.all(
-                      color: AppColors.accent.withOpacity(0.2),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.track_changes,
-                        size: 14,
-                        color: AppColors.accent,
-                      ),
-                      const SizedBox(width: AppDimensions.spacing4),
-                      Flexible(
-                        child: Text(
-                          primaryGoal!,
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: AppColors.accent,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-
-          const SizedBox(height: AppDimensions.spacing8),
         ],
       ),
     );
   }
 
   Widget _buildAvatar(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primary,
-            AppColors.primaryLight,
-            AppColors.accent,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Container(
-        padding: const EdgeInsets.all(2),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: theme.colorScheme.surface,
-        ),
-        child: CircleAvatar(
-          radius: 44,
-          backgroundColor: AppColors.primary.withOpacity(0.12),
-          backgroundImage:
-              profileImageUrl != null && profileImageUrl!.isNotEmpty
-                  ? NetworkImage(profileImageUrl!)
-                  : null,
-          child: profileImageUrl == null || profileImageUrl!.isEmpty
-              ? Text(
-                  displayName.isNotEmpty
-                      ? displayName[0].toUpperCase()
-                      : '?',
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.bold,
+    return GestureDetector(
+      onTap: isUploadingAvatar ? null : onAvatarTap,
+      child: Stack(
+        children: [
+          CircleAvatar(
+            radius: 60,
+            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+            backgroundImage:
+                profileImageUrl != null && profileImageUrl!.isNotEmpty
+                    ? NetworkImage(profileImageUrl!)
+                    : null,
+            child: profileImageUrl == null || profileImageUrl!.isEmpty
+                ? Text(
+                    displayName.isNotEmpty
+                        ? displayName[0].toUpperCase()
+                        : '?',
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                : null,
+          ),
+          // Loading overlay
+          if (isUploadingAvatar)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: const Center(
+                  child: SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
                   ),
-                )
-              : null,
-        ),
+                ),
+              ),
+            )
+          // Camera icon overlay
+          else
+            Positioned(
+              bottom: 2,
+              right: 2,
+              child: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: theme.colorScheme.surface,
+                    width: 2,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.camera_alt_rounded,
+                  size: 16,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
 }
 
-/// Compact stat counter (value + label stacked vertically).
+/// Compact stat counter (value + label stacked vertically, centered).
 class _StatCounter extends StatelessWidget {
   final String value;
   final String label;
@@ -283,18 +225,20 @@ class _StatCounter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           value,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
+            fontSize: 18,
           ),
         ),
+        const SizedBox(height: 2),
         Text(
           label,
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
+            fontSize: 12,
           ),
         ),
       ],

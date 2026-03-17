@@ -7,18 +7,17 @@ import '../../../core/config/routes.dart';
 import '../../auth/viewmodels/auth_viewmodel.dart';
 import '../../recommendation/viewmodels/workout_plan_viewmodel.dart';
 import '../../workouts/viewmodels/workout_plans_viewmodel.dart';
-import '../../workouts/viewmodels/workout_plans_state.dart';
 import '../viewmodels/home_viewmodel.dart';
 import '../viewmodels/home_state.dart';
 import '../widgets/welcome_header.dart';
-import '../widgets/weekly_progress_chart.dart';
+
 import '../widgets/todays_workout_card.dart';
-import '../widgets/quick_stats_row.dart';
+import '../widgets/home_categories_section.dart';
 import '../widgets/active_plans_section.dart';
 import '../widgets/quick_actions_grid.dart';
 import '../widgets/plan_generation_options_sheet.dart';
 import '../models/plan_generation_option.dart';
-import '../models/home_models.dart';
+import '../models/home_dashboard_models.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -82,13 +81,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 _buildTodaysWorkout(homeState, hasPlans),
                 const SizedBox(height: AppDimensions.spacing20),
 
-                // 3. Quick Stats Row
-                _buildQuickStats(homeState),
+                // 3. Categories
+                const HomeCategoriesSection(),
                 const SizedBox(height: AppDimensions.spacing24),
 
-                // 4. Weekly Progress Chart
-                _buildWeeklyChart(homeState),
-                const SizedBox(height: AppDimensions.spacing24),
 
                 // 5. Active Plans Section
                 _buildActivePlans(homeState),
@@ -109,6 +105,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  /// Compute overall progress from active plans (0.0 – 1.0).
+  double _computeProgress(List<ActivePlanInfo>? activePlans) {
+    if (activePlans == null || activePlans.isEmpty) return 0.0;
+    final plan = activePlans.first;
+    final total = plan.totalSessions;
+    if (total == 0) return 0.0;
+    return (plan.sessionsCompleted / total).clamp(0.0, 1.0);
+  }
+
   /// Today's workout hero card
   Widget _buildTodaysWorkout(HomeState homeState, bool hasPlans) {
     return homeState.when(
@@ -126,17 +131,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
       ),
-      loaded: (_, __, dashboard) => TodaysWorkoutCard(
-        session: dashboard?.todaySession,
-        hasPlans: hasPlans || (dashboard?.activePlans.isNotEmpty ?? false),
-        onStartWorkout: () {
-          final session = dashboard?.todaySession;
-          if (session != null && session.planId != null) {
-            context.push(Routes.workoutPlanDetail(session.planId!));
-          }
-        },
-        onGeneratePlan: _showPlanGenerationOptionsSheet,
-      ),
+      loaded: (_, __, dashboard) {
+        final plans = dashboard?.activePlans ?? [];
+        return TodaysWorkoutCard(
+          session: dashboard?.todaySession,
+          hasPlans: hasPlans || plans.isNotEmpty,
+          progress: _computeProgress(plans),
+          onStartWorkout: () {
+            final session = dashboard?.todaySession;
+            if (session != null && session.planId != null) {
+              context.push(Routes.workoutPlanDetail(session.planId!));
+            }
+          },
+          onGeneratePlan: _showPlanGenerationOptionsSheet,
+        );
+      },
       error: (_) => TodaysWorkoutCard(
         hasPlans: hasPlans,
         onGeneratePlan: _showPlanGenerationOptionsSheet,
@@ -144,50 +153,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  /// Quick stats row
-  Widget _buildQuickStats(HomeState homeState) {
-    return homeState.maybeWhen(
-      loaded: (_, __, dashboard) => QuickStatsRow(stats: dashboard?.weeklyStats),
-      orElse: () => const QuickStatsRow(),
-    );
-  }
 
-  /// Weekly progress bar chart
-  Widget _buildWeeklyChart(HomeState homeState) {
-    return homeState.when(
-      initial: () => _buildEmptyChart(),
-      loading: () => Container(
-        height: 220,
-        decoration: BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusXLarge),
-        ),
-        child: const Center(
-          child: CircularProgressIndicator(color: AppColors.primary),
-        ),
-      ),
-      loaded: (weeklyProgress, _, __) => WeeklyProgressChart(
-        weeklyProgress: weeklyProgress,
-      ),
-      error: (_) => _buildEmptyChart(),
-    );
-  }
 
-  /// Empty chart placeholder
-  Widget _buildEmptyChart() {
-    return WeeklyProgressChart(
-      weeklyProgress: WeeklyWorkoutProgressResponse(
-        weekLabel: 'This Week',
-        dailyData: List.generate(
-          7,
-          (i) => DailyWorkoutData(
-            dayOfWeek: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][i],
-            isToday: i == DateTime.now().weekday % 7,
-          ),
-        ),
-      ),
-    );
-  }
+
 
   /// Active plans section
   Widget _buildActivePlans(HomeState homeState) {

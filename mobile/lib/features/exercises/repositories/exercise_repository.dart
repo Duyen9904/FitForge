@@ -144,6 +144,18 @@ class ExerciseRepository {
     return _unwrapResponse(response);
   }
 
+  /// Get exercise suggestions for a muscle group
+  Future<List<ExerciseSuggestion>> getExerciseSuggestions({
+    required String muscleGroup,
+    int limit = 2,
+  }) async {
+    final response = await _service.getExerciseSuggestions(
+      muscleGroup: muscleGroup,
+      limit: limit,
+    );
+    return _unwrapResponse(response);
+  }
+
   /// UC-12.3: Get exercise recommendations
   Future<List<ExerciseRecommendation>> getRecommendations({
     int? sessionId,

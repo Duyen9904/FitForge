@@ -10,6 +10,7 @@ import com.dev.backend.model.entity.User;
 import com.dev.backend.model.entity.User.Role;
 import com.dev.backend.repository.GoalRepository;
 import com.dev.backend.repository.UserRepository;
+import com.dev.backend.service.GcpService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -38,6 +39,9 @@ class UserServiceImplTest {
 
     @Mock
     private UserMapper userMapper;
+
+    @Mock
+    private GcpService gcpService;
 
     @InjectMocks
     private UserServiceImpl userService;

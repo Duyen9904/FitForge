@@ -11,7 +11,12 @@ import com.dev.backend.model.dto.request.CreateExerciseRequest;
 import com.dev.backend.model.dto.request.ExerciseFilterRequest;
 import com.dev.backend.model.dto.request.ExerciseSearchRequest;
 import com.dev.backend.model.dto.response.*;
-import com.dev.backend.model.entity.*;
+import com.dev.backend.model.entity.Equipment;
+import com.dev.backend.model.entity.Exercise;
+import com.dev.backend.model.entity.ExerciseAlternative;
+import com.dev.backend.model.entity.ExerciseEquipment;
+import com.dev.backend.model.entity.ExerciseMuscleGroup;
+import com.dev.backend.model.entity.MuscleGroup;
 import com.dev.backend.model.enums.ExerciseType;
 import com.dev.backend.model.enums.TargetMuscleGroup;
 import com.dev.backend.repository.*;
@@ -39,9 +44,7 @@ public class ExerciseServiceImpl implements ExerciseService {
     private final ExerciseRepository exerciseRepository;
     private final MuscleGroupRepository muscleGroupRepository;
     private final EquipmentRepository equipmentRepository;
-    private final WorkoutFavoriteRepository workoutFavoriteRepository;
     private final ExerciseAlternativeRepository exerciseAlternativeRepository;
-    private final UserRepository userRepository;
     private final ExerciseMapper exerciseMapper;
     private final ExerciseAPIService exerciseAPIService;
     private final ExerciseAPIClient exerciseAPIClient;
@@ -49,18 +52,14 @@ public class ExerciseServiceImpl implements ExerciseService {
     public ExerciseServiceImpl(ExerciseRepository exerciseRepository,
                                MuscleGroupRepository muscleGroupRepository,
                                EquipmentRepository equipmentRepository,
-                               WorkoutFavoriteRepository workoutFavoriteRepository,
                                ExerciseAlternativeRepository exerciseAlternativeRepository,
-                               UserRepository userRepository,
                                ExerciseMapper exerciseMapper,
                                ExerciseAPIService exerciseAPIService,
                                ExerciseAPIClient exerciseAPIClient) {
         this.exerciseRepository = exerciseRepository;
         this.muscleGroupRepository = muscleGroupRepository;
         this.equipmentRepository = equipmentRepository;
-        this.workoutFavoriteRepository = workoutFavoriteRepository;
         this.exerciseAlternativeRepository = exerciseAlternativeRepository;
-        this.userRepository = userRepository;
         this.exerciseMapper = exerciseMapper;
         this.exerciseAPIService = exerciseAPIService;
         this.exerciseAPIClient = exerciseAPIClient;
@@ -200,59 +199,7 @@ public class ExerciseServiceImpl implements ExerciseService {
         return response;
     }
 
-    @Override
-    @Transactional
-    public void addToFavorites(Long userId, String exerciseId) {
-        log.info("Adding exercise {} to favorites for user {}", exerciseId, userId);
 
-        if (workoutFavoriteRepository.existsByUserUserIdAndExerciseExerciseId(userId, exerciseId)) {
-            log.info("Exercise {} is already in favorites for user {}", exerciseId, userId);
-            return; // Already favorited, no action needed
-        }
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
-
-        Exercise exercise = exerciseRepository.findById(exerciseId)
-                .orElseThrow(() -> new ResourceNotFoundException("Exercise", "id", exerciseId));
-
-        WorkoutFavorite favorite = new WorkoutFavorite();
-        favorite.setUser(user);
-        favorite.setExercise(exercise);
-        favorite.setFavoritedAt(Instant.now());
-
-        workoutFavoriteRepository.save(favorite);
-        log.info("Added exercise {} to favorites for user {}", exerciseId, userId);
-    }
-
-    @Override
-    @Transactional
-    public void removeFromFavorites(Long userId, String exerciseId) {
-        log.info("Removing exercise {} from favorites for user {}", exerciseId, userId);
-
-        workoutFavoriteRepository.deleteByUserUserIdAndExerciseExerciseId(userId, exerciseId);
-        log.info("Removed exercise {} from favorites for user {}", exerciseId, userId);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<ExerciseSummaryResponse> getUserFavorites(Long userId, Pageable pageable) {
-        log.info("Getting favorite exercises for user {}", userId);
-
-        Page<WorkoutFavorite> favorites = workoutFavoriteRepository.findByUserIdWithExercises(userId, pageable);
-
-        List<ExerciseSummaryResponse> responses = favorites.getContent().stream()
-                .map(fav -> exerciseMapper.toSummaryResponse(fav.getExercise()))
-                .collect(Collectors.toList());
-
-        return new PageImpl<>(responses, pageable, favorites.getTotalElements());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public boolean isFavorite(Long userId, String exerciseId) {
-        return workoutFavoriteRepository.existsByUserUserIdAndExerciseExerciseId(userId, exerciseId);
-    }
 
     @Override
     @Transactional(readOnly = true)
@@ -629,9 +576,6 @@ public class ExerciseServiceImpl implements ExerciseService {
             throw new IllegalStateException("Cannot delete exercise that is in use in workout sessions");
         }
 
-        // Remove from favorites first
-        workoutFavoriteRepository.deleteByExerciseExerciseId(exerciseId);
-
         // Remove exercise alternatives
         exerciseAlternativeRepository.deleteByOriginalExerciseId(exerciseId);
         exerciseAlternativeRepository.deleteByAlternativeExerciseId(exerciseId);
@@ -682,5 +626,25 @@ public class ExerciseServiceImpl implements ExerciseService {
     public boolean isExerciseInUse(String exerciseId) {
         // Check if exercise is used in any session exercises
         return exerciseRepository.isExerciseInUse(exerciseId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ExerciseSuggestionResponse> getExerciseSuggestions(String muscleGroup, int limit) {
+        log.info("Getting exercise suggestions for muscle group: {}, limit: {}", muscleGroup, limit);
+
+        List<Exercise> exercises = exerciseRepository.findByMuscleGroupCategory(muscleGroup);
+
+        if (exercises.isEmpty()) {
+            log.info("No exercises found for muscle group: {}", muscleGroup);
+            return List.of();
+        }
+
+        // Shuffle for variety, then take the requested limit
+        Collections.shuffle(exercises);
+        return exercises.stream()
+                .limit(limit)
+                .map(exerciseMapper::toSuggestionResponse)
+                .collect(Collectors.toList());
     }
 }

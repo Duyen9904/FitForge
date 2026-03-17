@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 
 /// Tappable card showing measurement date; opens date picker on tap.
@@ -37,12 +38,12 @@ class MeasurementDateCard extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer,
+                color:AppColors.primary,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 Icons.calendar_today,
-                color: theme.colorScheme.primary,
+                color:AppColors.white,
               ),
             ),
             const SizedBox(width: AppDimensions.spacing16),

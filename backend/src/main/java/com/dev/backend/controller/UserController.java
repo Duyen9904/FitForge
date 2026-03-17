@@ -8,10 +8,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -42,5 +44,15 @@ public class UserController {
         Long userId = Long.parseLong(jwt.getSubject());
         UserProfileResponse response = userService.setPrimaryGoal(userId, request);
         return ApiResponse.success(response, "Primary fitness goal updated successfully");
+    }
+
+    @Operation(summary = "Upload or replace avatar", description = "Upload a profile avatar image. Replaces existing avatar if present.")
+    @PutMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<UserProfileResponse> uploadAvatar(
+            @AuthenticationPrincipal Jwt jwt,
+            @RequestParam("file") MultipartFile file) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        UserProfileResponse response = userService.uploadAvatar(userId, file);
+        return ApiResponse.success(response, "Avatar uploaded successfully");
     }
 }

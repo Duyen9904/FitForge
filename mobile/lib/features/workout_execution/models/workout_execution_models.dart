@@ -24,6 +24,7 @@ class WorkoutProgressResponse with _$WorkoutProgressResponse {
     int? caloriesBurned,
     double? averageHeartRate,
     String? moodRating,
+    String? proofPhotoUrl,
     @Default([]) List<ExerciseLogResponse> exerciseLogs,
   }) = _WorkoutProgressResponse;
 

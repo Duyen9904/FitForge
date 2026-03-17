@@ -7,15 +7,15 @@ import com.dev.backend.model.dto.request.CompleteWorkoutRequest;
 import com.dev.backend.model.dto.request.LogExerciseRequest;
 import com.dev.backend.model.dto.request.SkipExerciseRequest;
 import com.dev.backend.model.dto.request.StartWorkoutRequest;
-import com.dev.backend.model.dto.response.HomeDashboardResponse;
-import com.dev.backend.model.dto.response.ProgressChartResponse;
-import com.dev.backend.model.dto.response.WeeklyWorkoutProgressResponse;
-import com.dev.backend.model.dto.response.WorkoutHistoryResponse;
-import com.dev.backend.model.dto.response.WorkoutProgressResponse;
+import com.dev.backend.model.dto.response.*;
 import com.dev.backend.model.entity.*;
 import com.dev.backend.model.projection.DailyWorkoutAggregate;
 import com.dev.backend.repository.*;
+import com.dev.backend.service.GcpService;
 import com.dev.backend.service.WorkoutExecutionService;
+import com.dev.backend.model.dto.response.MediaUploadResponse;
+import com.dev.backend.model.enums.MediaCategory;
+import org.springframework.web.multipart.MultipartFile;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -45,6 +45,7 @@ public class WorkoutExecutionServiceImpl implements WorkoutExecutionService {
     private final UserRepository userRepository;
     private final MissedWorkoutRepository missedWorkoutRepository;
     private final WorkoutExecutionMapper mapper;
+    private final GcpService gcpService;
 
     public WorkoutExecutionServiceImpl(WorkoutProgressRepository workoutProgressRepository,
                                        ExerciseLogRepository exerciseLogRepository,
@@ -53,7 +54,8 @@ public class WorkoutExecutionServiceImpl implements WorkoutExecutionService {
                                        ExerciseRepository exerciseRepository,
                                        UserRepository userRepository,
                                        MissedWorkoutRepository missedWorkoutRepository,
-                                       WorkoutExecutionMapper mapper) {
+                                       WorkoutExecutionMapper mapper,
+                                       GcpService gcpService) {
         this.workoutProgressRepository = workoutProgressRepository;
         this.exerciseLogRepository = exerciseLogRepository;
         this.workoutSessionRepository = workoutSessionRepository;
@@ -62,6 +64,7 @@ public class WorkoutExecutionServiceImpl implements WorkoutExecutionService {
         this.userRepository = userRepository;
         this.missedWorkoutRepository = missedWorkoutRepository;
         this.mapper = mapper;
+        this.gcpService = gcpService;
     }
 
     @Override
@@ -161,6 +164,7 @@ public class WorkoutExecutionServiceImpl implements WorkoutExecutionService {
             progress.setMoodRating(request.getMoodRating().name());
         }
 
+
         // Calculate calories burned (simplified estimation)
         int caloriesBurned = calculateCaloriesBurned(progress);
         progress.setCaloriesBurned(caloriesBurned);
@@ -168,7 +172,7 @@ public class WorkoutExecutionServiceImpl implements WorkoutExecutionService {
         progress = workoutProgressRepository.save(progress);
 
         log.info("Completed workout {} with duration {} minutes", progressId, durationMinutes);
-        return mapper.toProgressResponse(progress);
+        return mapper.toProgressResponse(progress, gcpService);
     }
 
     private int calculateCaloriesBurned(WorkoutProgress progress) {
@@ -413,11 +417,15 @@ public class WorkoutExecutionServiceImpl implements WorkoutExecutionService {
         // 3. Today's session
         HomeDashboardResponse.TodaySessionInfo todaySession = findTodaySession(userId, referenceDate);
 
-        // 4. Active plans
+        // 4. Next upcoming session (look ahead 14 days from tomorrow)
+        HomeDashboardResponse.TodaySessionInfo nextSession = findNextSession(userId, referenceDate);
+
+        // 5. Active plans
         List<HomeDashboardResponse.ActivePlanInfo> activePlans = buildActivePlans(userId, referenceDate);
 
         return HomeDashboardResponse.builder()
                 .todaySession(todaySession)
+                .nextSession(nextSession)
                 .weeklyStats(weeklyStats)
                 .weeklyProgress(weeklyProgress)
                 .activePlans(activePlans)
@@ -545,5 +553,157 @@ public class WorkoutExecutionServiceImpl implements WorkoutExecutionService {
         }
 
         return streak;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProfileSummaryResponse getProfileSummary(Long userId, int heatmapMonths) {
+        log.info("Getting profile summary for user {}", userId);
+
+        // 1. Activity heatmap
+        ActivityHeatmapResponse heatmap = buildActivityHeatmap(userId, heatmapMonths);
+
+        // 2. Check-in photos
+        List<CheckInPhotoResponse> checkInPhotos = buildCheckInPhotos(userId);
+
+        // 3. Total completed workouts (all time)
+        long totalCompleted = workoutProgressRepository.countCompletedByUserId(userId);
+
+        return ProfileSummaryResponse.builder()
+                .activityHeatmap(heatmap)
+                .checkInPhotos(checkInPhotos)
+                .totalWorkoutsCompleted((int) totalCompleted)
+                .build();
+    }
+
+    // ====== Private helpers for profile summary ======
+
+    private List<CheckInPhotoResponse> buildCheckInPhotos(Long userId) {
+        List<WorkoutProgress> progressWithPhotos = workoutProgressRepository.findCompletedWithProofPhoto(userId);
+
+        return progressWithPhotos.stream()
+                .map(wp -> CheckInPhotoResponse.builder()
+                        .progressId(wp.getProgressId())
+                        .sessionName(wp.getWorkoutSession() != null ? wp.getWorkoutSession().getSessionName() : null)
+                        .planName(wp.getWorkoutPlan() != null ? wp.getWorkoutPlan().getPlanName() : null)
+                        .workoutDate(wp.getWorkoutDate())
+                        .durationMinutes(wp.getDurationMinutes())
+                        .proofPhotoUrl(resolveSignedUrl(wp.getProofPhotoUrl()))
+                        .build())
+                .collect(Collectors.toList());
+    }
+
+    private ActivityHeatmapResponse buildActivityHeatmap(Long userId, int months) {
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusMonths(months);
+
+        List<DailyWorkoutAggregate> aggregates =
+                workoutProgressRepository.getDailyWorkoutTotals(userId, startDate, endDate);
+
+        Map<LocalDate, DailyWorkoutAggregate> dataMap = aggregates.stream()
+                .collect(Collectors.toMap(DailyWorkoutAggregate::getWorkoutDate, d -> d));
+
+        List<ActivityHeatmapResponse.DailyActivity> dailyActivities = new ArrayList<>();
+        int totalActiveDays = 0;
+        int totalWorkouts = 0;
+
+        for (LocalDate date = startDate; !date.isAfter(endDate); date = date.plusDays(1)) {
+            DailyWorkoutAggregate data = dataMap.get(date);
+            int workouts = data != null ? data.getTotalWorkouts().intValue() : 0;
+            int minutes = data != null ? data.getTotalMinutes().intValue() : 0;
+            int calories = data != null ? data.getTotalCalories() : 0;
+
+            if (workouts > 0) {
+                totalActiveDays++;
+                totalWorkouts += workouts;
+            }
+
+            dailyActivities.add(ActivityHeatmapResponse.DailyActivity.builder()
+                    .date(date)
+                    .workoutsCompleted(workouts)
+                    .totalMinutes(minutes)
+                    .caloriesBurned(calories)
+                    .build());
+        }
+
+        return ActivityHeatmapResponse.builder()
+                .startDate(startDate)
+                .endDate(endDate)
+                .totalActiveDays(totalActiveDays)
+                .totalWorkouts(totalWorkouts)
+                .dailyActivities(dailyActivities)
+                .build();
+    }
+
+    private HomeDashboardResponse.TodaySessionInfo findNextSession(Long userId, LocalDate referenceDate) {
+        LocalDate tomorrow = referenceDate.plusDays(1);
+        LocalDate lookAhead = referenceDate.plusDays(14);
+
+        List<WorkoutSession> upcomingSessions =
+                workoutSessionRepository.findScheduledSessionsByUserAndDateRange(userId, tomorrow, lookAhead);
+
+        // Return the earliest upcoming non-completed session
+        for (WorkoutSession session : upcomingSessions) {
+            List<String> muscleGroups = new ArrayList<>();
+            if (session.getFocusArea() != null && !session.getFocusArea().isEmpty()) {
+                muscleGroups.add(session.getFocusArea());
+            }
+
+            return HomeDashboardResponse.TodaySessionInfo.builder()
+                    .planId(session.getWorkoutPlan().getPlanId())
+                    .sessionId(session.getSessionId())
+                    .planName(session.getWorkoutPlan().getPlanName())
+                    .sessionName(session.getSessionName())
+                    .exerciseCount(session.getSessionExercises() != null ? session.getSessionExercises().size() : 0)
+                    .estimatedMinutes(session.getEstimatedDuration())
+                    .scheduledDate(session.getScheduledDate())
+                    .targetMuscleGroups(muscleGroups)
+                    .alreadyCompleted(false)
+                    .build();
+        }
+
+        return null;
+    }
+
+    private String resolveSignedUrl(String objectPath) {
+        if (objectPath == null || objectPath.isBlank()) {
+            return null;
+        }
+        try {
+            return gcpService.getSignedUrl(objectPath);
+        } catch (Exception e) {
+            log.warn("Failed to generate signed URL for {}: {}", objectPath, e.getMessage());
+            return objectPath;
+        }
+    }
+
+    @Override
+    @Transactional
+    public WorkoutProgressResponse uploadWorkoutProof(Long userId, Long progressId, MultipartFile file) {
+        log.info("Uploading workout proof for progress {} by user {}", progressId, userId);
+
+        WorkoutProgress progress = workoutProgressRepository.findByIdWithExerciseLogs(progressId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("WorkoutProgress", "id", progressId));
+
+        // Delete old proof photo from GCS if present
+        String oldPath = progress.getProofPhotoUrl();
+        if (oldPath != null && !oldPath.isBlank()) {
+            try {
+                gcpService.delete(oldPath);
+                log.info("Deleted old proof photo for progress {}: {}", progressId, oldPath);
+            } catch (Exception e) {
+                log.warn("Failed to delete old proof photo for progress {}: {}", progressId, e.getMessage());
+            }
+        }
+
+        // Upload new proof photo to GCS
+        MediaUploadResponse uploadResponse = gcpService.upload(file, MediaCategory.WORKOUT_PROOF, userId);
+
+        // Link the GCS object path to the progress entity
+        progress.setProofPhotoUrl(uploadResponse.getObjectPath());
+        workoutProgressRepository.save(progress);
+
+        log.info("Uploaded workout proof for progress {}: {}", progressId, uploadResponse.getObjectPath());
+        return mapper.toProgressResponse(progress, gcpService);
     }
 }

@@ -171,6 +171,33 @@ class ExerciseService {
     );
   }
 
+  /// Get exercise suggestions for a muscle group with default workout parameters
+  Future<ApiResponse<List<ExerciseSuggestion>>> getExerciseSuggestions({
+    required String muscleGroup,
+    int limit = 2,
+  }) async {
+    final queryParams = <String, dynamic>{
+      'muscleGroup': muscleGroup,
+      'limit': limit,
+    };
+
+    final response = await apiClient.get(
+      ApiConstants.exerciseSuggestions,
+      queryParameters: queryParams,
+    );
+
+    return ApiResponse.fromJson(
+      response.data as Map<String, dynamic>,
+      (json) {
+        final list = json as List;
+        return list
+            .map((item) =>
+                ExerciseSuggestion.fromJson(item as Map<String, dynamic>))
+            .toList();
+      },
+    );
+  }
+
   /// UC-12.3: Get exercise recommendations
   Future<ApiResponse<List<ExerciseRecommendation>>> getRecommendations({
     int? sessionId,

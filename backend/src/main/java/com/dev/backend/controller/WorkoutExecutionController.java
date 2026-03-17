@@ -6,6 +6,7 @@ import com.dev.backend.model.dto.request.SkipExerciseRequest;
 import com.dev.backend.model.dto.request.StartWorkoutRequest;
 import com.dev.backend.model.dto.response.ApiResponse;
 import com.dev.backend.model.dto.response.HomeDashboardResponse;
+import com.dev.backend.model.dto.response.ProfileSummaryResponse;
 import com.dev.backend.model.dto.response.ProgressChartResponse;
 import com.dev.backend.model.dto.response.WeeklyWorkoutProgressResponse;
 import com.dev.backend.model.dto.response.WorkoutHistoryResponse;
@@ -22,10 +23,12 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.DayOfWeek;
 import java.time.Instant;
@@ -75,6 +78,17 @@ public class WorkoutExecutionController {
         Long userId = Long.parseLong(jwt.getSubject());
         WorkoutProgressResponse response = workoutExecutionService.completeWorkout(userId, progressId, request);
         return ApiResponse.success(response, "Workout completed successfully");
+    }
+
+    @Operation(summary = "Upload workout proof photo", description = "Upload or replace a proof photo for a workout. Can be called before or after completing the workout.")
+    @PostMapping(value = "/{progressId}/proof", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiResponse<WorkoutProgressResponse> uploadWorkoutProof(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable Long progressId,
+            @RequestParam("file") MultipartFile file) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        WorkoutProgressResponse response = workoutExecutionService.uploadWorkoutProof(userId, progressId, file);
+        return ApiResponse.success(response, "Workout proof photo uploaded successfully");
     }
 
     @Operation(summary = "Skip exercise", description = "UC-5.4: Skip an exercise during workout with reason")
@@ -173,6 +187,17 @@ public class WorkoutExecutionController {
         Long userId = Long.parseLong(jwt.getSubject());
         LocalDate refDate = date != null ? date : LocalDate.now();
         HomeDashboardResponse response = workoutExecutionService.getDashboard(userId, refDate);
+        return ApiResponse.success(response);
+    }
+
+    @Operation(summary = "Get profile summary", description = "Get unified profile data: activity heatmap + check-in photos")
+    @GetMapping("/profile-summary")
+    public ApiResponse<ProfileSummaryResponse> getProfileSummary(
+            @AuthenticationPrincipal Jwt jwt,
+            @Parameter(description = "Number of months for activity heatmap (default 6)")
+            @RequestParam(defaultValue = "6") int months) {
+        Long userId = Long.parseLong(jwt.getSubject());
+        ProfileSummaryResponse response = workoutExecutionService.getProfileSummary(userId, months);
         return ApiResponse.success(response);
     }
 }

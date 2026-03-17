@@ -31,5 +31,6 @@ public class WorkoutProgressResponse {
     private Integer caloriesBurned;
     private Float averageHeartRate;
     private String moodRating;
+    private String proofPhotoUrl;
     private List<ExerciseLogResponse> exerciseLogs;
 }

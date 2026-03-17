@@ -108,6 +108,23 @@ class ExerciseRecommendation with _$ExerciseRecommendation {
       _$ExerciseRecommendationFromJson(json);
 }
 
+/// Exercise suggestion with default workout parameters
+@freezed
+class ExerciseSuggestion with _$ExerciseSuggestion {
+  const factory ExerciseSuggestion({
+    required String exerciseId,
+    required String exerciseName,
+    String? imageUrl,
+    @Default(3) int? defaultSets,
+    @Default(10) int? defaultReps,
+    double? defaultWeightKg,
+    @Default(60) int? defaultRestSeconds,
+  }) = _ExerciseSuggestion;
+
+  factory ExerciseSuggestion.fromJson(Map<String, dynamic> json) =>
+      _$ExerciseSuggestionFromJson(json);
+}
+
 /// Pagination wrapper for Spring Page responses
 @Freezed(genericArgumentFactories: true)
 class PageData<T> with _$PageData<T> {

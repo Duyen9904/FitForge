@@ -5,12 +5,14 @@ import com.dev.backend.model.dto.request.LogExerciseRequest;
 import com.dev.backend.model.dto.request.SkipExerciseRequest;
 import com.dev.backend.model.dto.request.StartWorkoutRequest;
 import com.dev.backend.model.dto.response.HomeDashboardResponse;
+import com.dev.backend.model.dto.response.ProfileSummaryResponse;
 import com.dev.backend.model.dto.response.ProgressChartResponse;
 import com.dev.backend.model.dto.response.WeeklyWorkoutProgressResponse;
 import com.dev.backend.model.dto.response.WorkoutHistoryResponse;
 import com.dev.backend.model.dto.response.WorkoutProgressResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -68,7 +70,18 @@ public interface WorkoutExecutionService {
     WeeklyWorkoutProgressResponse getWeeklyProgress(Long userId, LocalDate startDate);
 
     /**
-     * Get aggregated home dashboard data
+     * Get aggregated home dashboard data (includes nextSession)
      */
     HomeDashboardResponse getDashboard(Long userId, LocalDate referenceDate);
+
+    /**
+     * Get unified profile summary: activity heatmap + check-in photos
+     */
+    ProfileSummaryResponse getProfileSummary(Long userId, int heatmapMonths);
+
+    /**
+     * Upload or replace a proof photo for a workout progress entry.
+     * Atomically uploads to GCS, deletes old proof if present, and links to progress.
+     */
+    WorkoutProgressResponse uploadWorkoutProof(Long userId, Long progressId, MultipartFile file);
 }

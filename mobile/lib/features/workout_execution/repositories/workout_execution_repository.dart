@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_response.dart';
@@ -133,6 +135,15 @@ class WorkoutExecutionRepository {
   Future<void> cancelWorkout(int progressId) async {
     final response = await _service.cancelWorkout(progressId);
     _unwrapVoidResponse(response);
+  }
+
+  /// Upload a workout proof photo
+  Future<WorkoutProgressResponse> uploadWorkoutProof(
+    int progressId,
+    File proofPhoto,
+  ) async {
+    final response = await _service.uploadWorkoutProof(progressId, proofPhoto);
+    return _unwrapResponse(response);
   }
 }
 

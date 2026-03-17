@@ -2,6 +2,7 @@ import 'dart:developer' as developer;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../exercises/models/exercise_models.dart';
+import '../../exercises/repositories/exercise_repository.dart';
 import '../models/workout_plan_models.dart';
 import '../repositories/workout_plan_repository.dart';
 import '../services/workout_plan_service.dart';
@@ -11,14 +12,22 @@ import 'create_workout_plan_state.dart';
 final createWorkoutPlanViewModelProvider = StateNotifierProvider.autoDispose<
     CreateWorkoutPlanViewModel, CreateWorkoutPlanState>((ref) {
   final repository = ref.watch(workoutPlanRepositoryProvider);
-  return CreateWorkoutPlanViewModel(repository: repository);
+  final exerciseRepository = ref.watch(exerciseRepositoryProvider);
+  return CreateWorkoutPlanViewModel(
+    repository: repository,
+    exerciseRepository: exerciseRepository,
+  );
 });
 
 /// Active viewmodel provider — used by step widgets
 final activeWorkoutPlanViewModelProvider = StateNotifierProvider.autoDispose<
     CreateWorkoutPlanViewModel, CreateWorkoutPlanState>((ref) {
   final repository = ref.watch(workoutPlanRepositoryProvider);
-  return CreateWorkoutPlanViewModel(repository: repository);
+  final exerciseRepository = ref.watch(exerciseRepositoryProvider);
+  return CreateWorkoutPlanViewModel(
+    repository: repository,
+    exerciseRepository: exerciseRepository,
+  );
 });
 
 /// FutureProvider for fetching all goals from the API
@@ -45,10 +54,13 @@ final muscleGroupsProvider = FutureProvider.autoDispose<List<MuscleGroup>>((ref)
 class CreateWorkoutPlanViewModel
     extends StateNotifier<CreateWorkoutPlanState> {
   final WorkoutPlanRepository _repository;
+  final ExerciseRepository _exerciseRepository;
 
   CreateWorkoutPlanViewModel({
     required WorkoutPlanRepository repository,
+    required ExerciseRepository exerciseRepository,
   })  : _repository = repository,
+        _exerciseRepository = exerciseRepository,
         super(CreateWorkoutPlanState.editing(startDate: DateTime.now()));
 
   // ======================== STEP NAVIGATION ========================
@@ -115,7 +127,7 @@ class CreateWorkoutPlanViewModel
 
   // ======================== STEP 2 – SESSIONS ========================
 
-  // Prefilled session templates for easy testing
+  // Session templates for auto-generating session drafts
   static const _sessionTemplates = [
     {'name': 'Chest & Triceps', 'focus': 'Chest', 'duration': 45},
     {'name': 'Back & Biceps', 'focus': 'Back', 'duration': 50},
@@ -126,71 +138,72 @@ class CreateWorkoutPlanViewModel
     {'name': 'Active Recovery', 'focus': 'Core', 'duration': 30},
   ];
 
-  // Sample exercises for each focus area (exerciseId, name)
-  static const _sampleExercises = {
-    'Chest': [
-      {'id': '1', 'name': 'Bench Press'},
-      {'id': '2', 'name': 'Incline Dumbbell Press'},
-    ],
-    'Back': [
-      {'id': '3', 'name': 'Barbell Row'},
-      {'id': '4', 'name': 'Lat Pulldown'},
-    ],
-    'Legs': [
-      {'id': '5', 'name': 'Barbell Squat'},
-      {'id': '6', 'name': 'Romanian Deadlift'},
-    ],
-    'Core': [
-      {'id': '7', 'name': 'Plank'},
-      {'id': '8', 'name': 'Russian Twist'},
-    ],
-  };
-
   /// Generate 7 session drafts (one per weekday).
   /// The first [frequencyPerWeek] days get workout templates;
   /// the remaining days are marked as rest days.
   /// Each session gets a scheduledDate based on the plan's startDate.
-  void _generateSessionDrafts(CreateWorkoutPlanEditing current) {
+  /// Exercises are fetched from the backend suggestions API.
+  Future<void> _generateSessionDrafts(CreateWorkoutPlanEditing current) async {
     final startDate = current.startDate ?? DateTime.now();
     final freq = current.frequencyPerWeek;
     int workoutIndex = 0;
 
-    final sessions = List.generate(7, (i) {
+    final sessions = <SessionDraft>[];
+
+    for (int i = 0; i < 7; i++) {
       final date = startDate.add(Duration(days: i));
       final isRest = i >= freq;
 
       if (isRest) {
-        return SessionDraft(
+        sessions.add(SessionDraft(
           sessionName: 'Rest Day',
           dayNumber: i + 1,
           scheduledDate: date,
           isRestDay: true,
-        );
+        ));
+        continue;
       }
 
       final template = _sessionTemplates[workoutIndex % _sessionTemplates.length];
       final focusArea = template['focus'] as String;
-      final exercises = (_sampleExercises[focusArea] ?? _sampleExercises['Chest']!)
-          .map((e) => ExerciseDraft(
-                exerciseId: e['id'] as String,
-                exerciseName: e['name'] as String,
-                sets: 3,
-                repetitions: 10,
-                weightKg: 20.0,
-                restTimeSeconds: 60,
-              ))
-          .toList();
+
+      // Fetch suggested exercises from the API
+      List<ExerciseDraft> exercises = [];
+      try {
+        final suggestions = await _exerciseRepository.getExerciseSuggestions(
+          muscleGroup: focusArea,
+          limit: 2,
+        );
+        exercises = suggestions
+            .map((s) => ExerciseDraft(
+                  exerciseId: s.exerciseId,
+                  exerciseName: s.exerciseName,
+                  imageUrl: s.imageUrl,
+                  sets: s.defaultSets ?? 3,
+                  repetitions: s.defaultReps ?? 10,
+                  weightKg: s.defaultWeightKg,
+                  restTimeSeconds: s.defaultRestSeconds ?? 60,
+                ))
+            .toList();
+      } catch (e) {
+        developer.log(
+          'Failed to fetch exercise suggestions for $focusArea',
+          name: 'CreateWorkoutPlanViewModel',
+          error: e,
+        );
+        // Gracefully continue with empty exercises
+      }
 
       workoutIndex++;
-      return SessionDraft(
+      sessions.add(SessionDraft(
         sessionName: template['name'] as String,
         dayNumber: i + 1,
         scheduledDate: date,
         focusArea: focusArea,
         estimatedDuration: template['duration'] as int,
         exercises: exercises,
-      );
-    });
+      ));
+    }
 
     state = current.copyWith(
       currentStep: 1,
