@@ -26,7 +26,6 @@ public class ReportServiceImpl implements ReportService {
     private final NutritionPlanRepository nutritionPlanRepository;
     private final UserMeasurementRepository userMeasurementRepository;
     private final ProgressPhotoRepository progressPhotoRepository;
-    private final UserAchievementRepository userAchievementRepository;
     private final MissedWorkoutRepository missedWorkoutRepository;
     private final ExerciseLogRepository exerciseLogRepository;
 
@@ -36,7 +35,6 @@ public class ReportServiceImpl implements ReportService {
             NutritionPlanRepository nutritionPlanRepository,
             UserMeasurementRepository userMeasurementRepository,
             ProgressPhotoRepository progressPhotoRepository,
-            UserAchievementRepository userAchievementRepository,
             MissedWorkoutRepository missedWorkoutRepository,
             ExerciseLogRepository exerciseLogRepository) {
         this.workoutProgressRepository = workoutProgressRepository;
@@ -44,7 +42,6 @@ public class ReportServiceImpl implements ReportService {
         this.nutritionPlanRepository = nutritionPlanRepository;
         this.userMeasurementRepository = userMeasurementRepository;
         this.progressPhotoRepository = progressPhotoRepository;
-        this.userAchievementRepository = userAchievementRepository;
         this.missedWorkoutRepository = missedWorkoutRepository;
         this.exerciseLogRepository = exerciseLogRepository;
     }
@@ -213,32 +210,12 @@ public class ReportServiceImpl implements ReportService {
         Float weightChange = (startWeight != null && currentWeight != null) 
                 ? currentWeight - startWeight : null;
 
-        // Get achievements in range
-        List<UserAchievement> achievements = userAchievementRepository
-                .findByUserUserIdOrderByEarnedDateDesc(userId).stream()
-                .filter(a -> {
-                    LocalDate awardDate = a.getEarnedDate().atZone(ZoneId.systemDefault()).toLocalDate();
-                    return !awardDate.isBefore(startDate) && !awardDate.isAfter(endDate);
-                })
-                .collect(Collectors.toList());
-
-        List<TransformationReportResponse.AchievementItem> achievementItems = achievements.stream()
-                .map(a -> TransformationReportResponse.AchievementItem.builder()
-                        .date(a.getEarnedDate().atZone(ZoneId.systemDefault()).toLocalDate())
-                        .title(a.getAchievement().getAchievementName())
-                        .description(a.getAchievement().getDescription())
-                        .build())
-                .collect(Collectors.toList());
-
         // Build milestones
         List<String> milestones = new ArrayList<>();
         if (weightChange != null && weightChange < 0) {
             milestones.add(String.format("Lost %.1f kg - Great progress!", Math.abs(weightChange)));
         } else if (weightChange != null && weightChange > 0) {
             milestones.add(String.format("Gained %.1f kg", weightChange));
-        }
-        if (!achievements.isEmpty()) {
-            milestones.add(String.format("Earned %d achievements", achievements.size()));
         }
 
         return TransformationReportResponse.builder()
@@ -248,7 +225,6 @@ public class ReportServiceImpl implements ReportService {
                 .currentWeight(currentWeight)
                 .weightChange(weightChange)
                 .weightHistory(weightHistory)
-                .achievements(achievementItems)
                 .milestones(milestones)
                 .build();
     }

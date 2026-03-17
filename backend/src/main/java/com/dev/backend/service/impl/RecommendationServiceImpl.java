@@ -19,19 +19,16 @@ public class RecommendationServiceImpl implements RecommendationService {
     private final UserRepository userRepository;
     private final ExerciseRepository exerciseRepository;
     private final WorkoutSessionRepository workoutSessionRepository;
-    private final WorkoutFavoriteRepository workoutFavoriteRepository;
     private final ExerciseLogRepository exerciseLogRepository;
 
     public RecommendationServiceImpl(
             UserRepository userRepository,
             ExerciseRepository exerciseRepository,
             WorkoutSessionRepository workoutSessionRepository,
-            WorkoutFavoriteRepository workoutFavoriteRepository,
             ExerciseLogRepository exerciseLogRepository) {
         this.userRepository = userRepository;
         this.exerciseRepository = exerciseRepository;
         this.workoutSessionRepository = workoutSessionRepository;
-        this.workoutFavoriteRepository = workoutFavoriteRepository;
         this.exerciseLogRepository = exerciseLogRepository;
     }
 
@@ -56,24 +53,16 @@ public class RecommendationServiceImpl implements RecommendationService {
             });
         }
 
-        // Get user's favorite exercises for preference weighting
-        Set<String> favoriteExerciseIds = workoutFavoriteRepository
-                .findByUserUserId(userId, PageRequest.of(0, 100))
-                .stream()
-                .filter(f -> f.getExercise() != null)
-                .map(f -> f.getExercise().getExerciseId())
-                .collect(Collectors.toSet());
-
         // Get exercises and score them
         List<Exercise> allExercises = exerciseRepository.findAll();
         List<ExerciseRecommendationResponse> recommendations = new ArrayList<>();
 
         for (Exercise exercise : allExercises) {
-            int score = calculateRelevanceScore(exercise, primaryGoal, fitnessLevel, 
-                    targetedMuscleGroupIds, favoriteExerciseIds);
+            int score = calculateRelevanceScore(exercise, primaryGoal, fitnessLevel,
+                    targetedMuscleGroupIds);
             
             if (score > 0) {
-                String rationale = generateRationale(exercise, primaryGoal, targetedMuscleGroupIds, favoriteExerciseIds);
+                String rationale = generateRationale(exercise, primaryGoal, targetedMuscleGroupIds);
                 String primaryMuscle = exercise.getExerciseMuscleGroups().stream()
                         .filter(emg -> Boolean.TRUE.equals(emg.getIsPrimary()))
                         .findFirst()
@@ -101,17 +90,12 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     private int calculateRelevanceScore(Exercise exercise, Goal goal, String fitnessLevel,
-                                         Set<Long> targetedMuscleGroupIds, Set<String> favoriteIds) {
+                                         Set<Long> targetedMuscleGroupIds) {
         int score = 50; // Base score
 
         // Bonus for matching fitness level
         if (fitnessLevel != null && fitnessLevel.equalsIgnoreCase(exercise.getDifficultyLevel())) {
             score += 15;
-        }
-
-        // Bonus for favorites
-        if (favoriteIds.contains(exercise.getExerciseId())) {
-            score += 20;
         }
 
         // Bonus for complementary muscle groups (not already targeted)
@@ -145,8 +129,8 @@ public class RecommendationServiceImpl implements RecommendationService {
         return 0;
     }
 
-    private String generateRationale(Exercise exercise, Goal goal, 
-                                      Set<Long> targetedMuscleGroupIds, Set<String> favoriteIds) {
+    private String generateRationale(Exercise exercise, Goal goal,
+                                      Set<Long> targetedMuscleGroupIds) {
         List<String> reasons = new ArrayList<>();
 
         // Check for complementary muscles
@@ -160,10 +144,6 @@ public class RecommendationServiceImpl implements RecommendationService {
                     .map(emg -> emg.getMuscleGroup().getGroupName())
                     .orElse("new muscle group");
             reasons.add("Targets " + newMuscle + " for balanced development");
-        }
-
-        if (favoriteIds.contains(exercise.getExerciseId())) {
-            reasons.add("One of your favorites");
         }
 
         if (goal != null) {
