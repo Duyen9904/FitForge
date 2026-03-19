@@ -9,7 +9,6 @@
 .buildlog/
 .history
 .svn/
-.swiftpm/
 migrate_working_dir/
 
 # IntelliJ related
@@ -18,10 +17,8 @@ migrate_working_dir/
 *.iws
 .idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# VS Code related
+.vscode/
 
 # Flutter/Dart/Pub related
 **/doc/api/
@@ -29,47 +26,11 @@ migrate_working_dir/
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
+.packages
 .pub-cache/
 .pub/
 /build/
-
-# Symbolication related
-app.*.symbols
-
-# Obfuscation related
-app.*.map.json
-
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
-
-# Environment and secrets
-.env
-.env.*
-*.key
-*.jks
-*.keystore
-
-# Build outputs
-*.apk
-*.aab
-*.ipa
-*.app.dSYM.zip
-
-# Coverage reports
-coverage/
-.test_coverage/
-
-# Generated files
-*.g.dart
-*.freezed.dart
-*.gr.dart
-
-# Firebase/Google Services (uncomment if you want to keep credentials private)
-# android/app/google-services.json
-# ios/Runner/GoogleService-Info.plist
-# lib/firebase_options.dart
+pubspec.lock
 
 # Web builds
 /build/web/
@@ -83,5 +44,36 @@ coverage/
 # Linux builds
 /build/linux/
 
-# Crashlytics
+# Platform builds
+*.ipa
+*.apk
+*.aab
+
+# Crashlytics related
 crashlytics-build.properties
+
+# Coverage reports
+coverage/
+
+# ============= Secrets (NEVER commit) =============
+# Firebase configuration files (contain API keys)
+lib/firebase_options.dart
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+ios/firebase_app_id_file.json
+
+# Environment files
+.env
+.env.*
+*.env
+
+# Key files
+*.pem
+*.p12
+*.key
+*.keystore
+*.jks
+
+# Service account files
+*service-account*.json
+*credentials*.json

@@ -34,7 +34,14 @@ build/
 
 # ============= Secrets (NEVER commit) =============
 *.properties
+*.yml
 firebase-service-account.json
+*service-account*.json
+*credentials*.json
 *.pem
+*.p12
+*.key
+*.keystore
+*.jks
 .env
 .env.*
