@@ -116,17 +116,7 @@ class _WorkoutCountdownScreenState
 
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppColors.grey900,
-              AppColors.primaryDark.withValues(alpha: 0.9),
-              AppColors.primary.withValues(alpha: 0.8),
-            ],
-          ),
-        ),
+        color: AppColors.grey900,
         child: SafeArea(
           child: Column(
             children: [

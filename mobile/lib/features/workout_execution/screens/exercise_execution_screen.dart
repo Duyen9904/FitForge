@@ -139,7 +139,7 @@ class _ExerciseExecutionScreenState
     if (confirmed == true && mounted) {
       final vm = ref.read(workoutExecutionViewModelProvider.notifier);
       await vm.cancelWorkout();
-      if (mounted) context.go('/');
+      if (mounted) context.go(Routes.home);
     }
   }
 
@@ -157,17 +157,7 @@ class _ExerciseExecutionScreenState
 
         return Scaffold(
           body: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  AppColors.primary.withValues(alpha: 0.95),
-                  AppColors.primaryDark.withValues(alpha: 0.85),
-                  AppColors.backgroundLight,
-                ],
-              ),
-            ),
+            color: AppColors.primary,
             child: SafeArea(
               child: Column(
                 children: [

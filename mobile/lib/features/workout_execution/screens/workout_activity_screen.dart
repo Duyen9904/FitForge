@@ -132,12 +132,7 @@ class _WorkoutActivityScreenState extends State<WorkoutActivityScreen>
         vertical: AppDimensions.spacing12,
       ),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primary.withValues(alpha: 0.08),
-            AppColors.primaryLight.withValues(alpha: 0.05),
-          ],
-        ),
+        color: AppColors.primary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
         border: Border.all(
           color: AppColors.primary.withValues(alpha: 0.1),

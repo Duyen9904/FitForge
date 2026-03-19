@@ -138,17 +138,7 @@ class _RestTimerScreenState extends ConsumerState<RestTimerScreen>
 
         return Scaffold(
           body: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  AppColors.primary.withValues(alpha: 0.95),
-                  AppColors.primaryDark.withValues(alpha: 0.8),
-                  AppColors.backgroundLight,
-                ],
-              ),
-            ),
+            color: AppColors.primaryDark,
             child: SafeArea(
               child: Column(
                 children: [

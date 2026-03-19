@@ -187,17 +187,7 @@ class _WorkoutCongratulationsScreenState
   Widget _buildLoadingScreen(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppColors.primary.withValues(alpha: 0.95),
-              AppColors.primaryDark.withValues(alpha: 0.8),
-              AppColors.backgroundLight,
-            ],
-          ),
-        ),
+        color: AppColors.primary,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -229,17 +219,7 @@ class _WorkoutCongratulationsScreenState
     return Scaffold(
       body: Container(
         width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppColors.primary.withValues(alpha: 0.95),
-              AppColors.primaryDark.withValues(alpha: 0.8),
-              AppColors.backgroundLight,
-            ],
-          ),
-        ),
+        color: AppColors.primary,
         child: SafeArea(
           child: Column(
             children: [

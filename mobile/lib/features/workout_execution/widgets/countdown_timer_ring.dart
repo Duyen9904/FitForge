@@ -47,7 +47,7 @@ class CountdownTimerRing extends StatelessWidget {
               AppColors.primaryLight,
               AppColors.accent,
             ],
-            backgroundColor: AppColors.grey200,
+            backgroundColor: AppColors.white.withValues(alpha: 0.15),
             isUrgent: isUrgent,
           ),
           child: Center(
@@ -59,7 +59,7 @@ class CountdownTimerRing extends StatelessWidget {
                   style: Theme.of(context).textTheme.displayLarge?.copyWith(
                         fontSize: size * 0.32,
                         fontWeight: FontWeight.bold,
-                        color: isUrgent ? AppColors.accent : AppColors.grey900,
+                        color: isUrgent ? AppColors.accent : AppColors.white,
                         height: 1.0,
                       ),
                 ),
@@ -67,7 +67,7 @@ class CountdownTimerRing extends StatelessWidget {
                 Text(
                   'seconds',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.grey500,
+                        color: AppColors.white.withValues(alpha: 0.7),
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                         letterSpacing: 1.0,

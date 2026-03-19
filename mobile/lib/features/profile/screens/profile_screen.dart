@@ -107,8 +107,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
+
       backgroundColor: theme.colorScheme.background,
       appBar: AppBar(
+        scrolledUnderElevation: 0,
         backgroundColor: theme.colorScheme.background,
         elevation: 0,
         title: Text(
