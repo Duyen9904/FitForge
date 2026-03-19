@@ -31,4 +31,10 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# ============= Secrets (NEVER commit) =============
 *.properties
+firebase-service-account.json
+*.pem
+.env
+.env.*
