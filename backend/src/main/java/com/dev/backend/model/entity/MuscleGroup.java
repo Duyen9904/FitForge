@@ -15,6 +15,9 @@ import java.util.List;
     name = "muscle_group",
     uniqueConstraints = {
         @UniqueConstraint(name = "uk_muscle_group_name", columnNames = "group_name")
+    },
+    indexes = {
+        @Index(name = "idx_muscle_group_category", columnList = "category")
     }
 )
 @Getter

@@ -480,7 +480,7 @@ INSERT IGNORE INTO workout_template (name, description, goal_type, experience_le
 -- 10. MEAL TEMPLATES (Standalone system-level templates)
 -- =====================================================
 INSERT IGNORE INTO meal_template (meal_name, source, meal_type, description, calories, proteinG, carbsG, fatsG, recipe_instructions) VALUES
--- ===== BREAKFAST =====
+-- ===== BREAKFAST (10) =====
 ('Classic Oatmeal & Eggs', 'SYSTEM', 'BREAKFAST', 'A hearty breakfast combining slow-digesting oats with protein-rich eggs for sustained energy.', 450, 30.0, 45.0, 15.0,
  'Ingredients:\n- 80g rolled oats\n- 3 whole eggs\n- 1 banana\n- 1 tbsp honey\n- Pinch of cinnamon\n\nInstructions:\n1. Cook oats with water or milk until creamy\n2. Scramble or fry eggs to your preference\n3. Top oats with sliced banana, honey, and cinnamon\n4. Serve eggs on the side'),
 
@@ -502,7 +502,16 @@ INSERT IGNORE INTO meal_template (meal_name, source, meal_type, description, cal
 ('Smoothie Power Bowl', 'SYSTEM', 'BREAKFAST', 'A thick, blended smoothie bowl with toppings for a refreshing high-protein breakfast.', 440, 32.0, 50.0, 10.0,
  'Ingredients:\n- 1 scoop protein powder (vanilla)\n- 1 frozen banana\n- 100g frozen mixed berries\n- 100ml almond milk\n- 20g granola\n- 10g coconut flakes\n- 1 tbsp pumpkin seeds\n\nInstructions:\n1. Blend protein powder, banana, berries, and milk until thick\n2. Pour into a bowl\n3. Top with granola, coconut flakes, and pumpkin seeds\n4. Eat immediately with a spoon'),
 
--- ===== LUNCH =====
+('Breakfast Burrito', 'SYSTEM', 'BREAKFAST', 'A filling breakfast burrito loaded with eggs, beans, cheese, and salsa for a savory start.', 520, 32.0, 48.0, 20.0,
+ 'Ingredients:\n- 1 large whole wheat tortilla\n- 3 eggs (scrambled)\n- 50g black beans (canned, drained)\n- 30g shredded cheddar cheese\n- 30g salsa\n- 1/4 avocado (sliced)\n- Hot sauce (optional)\n\nInstructions:\n1. Scramble eggs in a non-stick pan\n2. Warm tortilla in microwave for 15 seconds\n3. Layer eggs, beans, cheese, avocado, and salsa on tortilla\n4. Roll tightly, tucking ends in\n5. Optional: grill seam-side down for a crispy finish'),
+
+('Cottage Cheese & Fruit Plate', 'SYSTEM', 'BREAKFAST', 'High-protein, low-effort breakfast with creamy cottage cheese and fresh seasonal fruits.', 350, 30.0, 38.0, 8.0,
+ 'Ingredients:\n- 200g cottage cheese (2% fat)\n- 1 peach or nectarine (sliced)\n- 80g blueberries\n- 15g walnuts\n- 1 tbsp honey\n- Mint leaves\n\nInstructions:\n1. Scoop cottage cheese into a bowl\n2. Arrange sliced peach and blueberries on top\n3. Sprinkle with walnuts\n4. Drizzle honey and garnish with mint\n5. Serve immediately'),
+
+('Smoked Salmon Bagel', 'SYSTEM', 'BREAKFAST', 'A luxurious breakfast featuring omega-3 rich smoked salmon with cream cheese on a whole grain bagel.', 460, 30.0, 42.0, 18.0,
+ 'Ingredients:\n- 1 whole grain bagel\n- 80g smoked salmon\n- 30g cream cheese (light)\n- 1 tbsp capers\n- Red onion (thinly sliced)\n- Fresh dill\n- Lemon wedge\n\nInstructions:\n1. Slice and toast bagel until golden\n2. Spread cream cheese on both halves\n3. Layer smoked salmon on top\n4. Add capers and red onion slices\n5. Garnish with dill and a squeeze of lemon'),
+
+-- ===== LUNCH (10) =====
 ('Grilled Chicken & Quinoa Bowl', 'SYSTEM', 'LUNCH', 'A balanced, macro-friendly bowl with lean protein, complex carbs, and fiber-rich vegetables.', 550, 42.0, 50.0, 16.0,
  'Ingredients:\n- 150g chicken breast\n- 80g quinoa (dry)\n- 100g broccoli\n- 50g cherry tomatoes\n- 1/2 avocado\n- Lemon juice, garlic, paprika\n\nInstructions:\n1. Season chicken with garlic, paprika, salt, and pepper\n2. Grill chicken 6-7 minutes per side until cooked through\n3. Cook quinoa in water for 15 minutes\n4. Steam broccoli until tender-crisp\n5. Slice chicken and arrange over quinoa\n6. Add tomatoes and avocado slices\n7. Drizzle with lemon juice'),
 
@@ -524,7 +533,16 @@ INSERT IGNORE INTO meal_template (meal_name, source, meal_type, description, cal
 ('Lentil & Chickpea Buddha Bowl', 'SYSTEM', 'LUNCH', 'Plant-based powerhouse bowl with legumes, roasted veggies, and tahini dressing.', 510, 28.0, 60.0, 16.0,
  'Ingredients:\n- 80g green lentils (dry)\n- 80g chickpeas (canned, drained)\n- 100g roasted sweet potato cubes\n- 50g baby spinach\n- 50g cucumber\n- 1 tbsp tahini\n- Lemon juice, garlic\n\nInstructions:\n1. Cook lentils in salted water 20-25 minutes\n2. Roast sweet potato cubes at 200C for 20 minutes\n3. Make dressing: mix tahini, lemon juice, garlic, and water\n4. Arrange spinach, lentils, chickpeas, sweet potato, cucumber in a bowl\n5. Drizzle with tahini dressing'),
 
--- ===== DINNER =====
+('Mediterranean Chicken Salad', 'SYSTEM', 'LUNCH', 'Fresh and vibrant salad with grilled chicken, olives, feta, and a tangy vinaigrette.', 490, 40.0, 28.0, 24.0,
+ 'Ingredients:\n- 150g chicken breast (grilled, sliced)\n- 80g mixed greens\n- 50g cucumber (diced)\n- 40g cherry tomatoes\n- 30g kalamata olives\n- 30g feta cheese\n- 30g red onion (sliced)\n- 1 tbsp olive oil, red wine vinegar, oregano\n\nInstructions:\n1. Grill and slice chicken breast\n2. Arrange mixed greens as base\n3. Top with cucumber, tomatoes, olives, onion, and feta\n4. Add sliced chicken on top\n5. Whisk olive oil, vinegar, and oregano for dressing\n6. Drizzle dressing over salad'),
+
+('Pork Tenderloin & Couscous', 'SYSTEM', 'LUNCH', 'Tender, lean pork paired with fluffy couscous and roasted Mediterranean vegetables.', 530, 42.0, 50.0, 14.0,
+ 'Ingredients:\n- 150g pork tenderloin\n- 80g couscous (dry)\n- 80g roasted bell peppers\n- 50g roasted zucchini\n- 30g sun-dried tomatoes\n- 1 tbsp olive oil\n- Paprika, garlic, cumin\n\nInstructions:\n1. Season pork with paprika, garlic, and cumin\n2. Sear pork in hot pan 3 min per side, then bake at 190C for 15 minutes\n3. Cook couscous in boiling water, cover 5 minutes, fluff\n4. Roast peppers and zucchini with olive oil\n5. Slice pork and serve over couscous with roasted veggies\n6. Garnish with sun-dried tomatoes'),
+
+('Egg Fried Rice Bowl', 'SYSTEM', 'LUNCH', 'Quick and satisfying fried rice with eggs, vegetables, and a touch of sesame.', 470, 22.0, 58.0, 16.0,
+ 'Ingredients:\n- 150g cooked jasmine rice (cold)\n- 3 eggs (beaten)\n- 50g peas\n- 50g carrot (diced small)\n- 30g green onion (sliced)\n- 2 tbsp soy sauce (low sodium)\n- 1 tsp sesame oil\n- 1 clove garlic (minced)\n\nInstructions:\n1. Heat sesame oil in wok over high heat\n2. Scramble eggs, break into pieces, set aside\n3. Stir-fry garlic, carrots, and peas 2-3 minutes\n4. Add cold rice, toss on high heat 3-4 minutes\n5. Add soy sauce and scrambled eggs\n6. Garnish with green onion and serve'),
+
+-- ===== DINNER (10) =====
 ('Baked Chicken Breast & Veggies', 'SYSTEM', 'DINNER', 'A lean, clean dinner with perfectly seasoned chicken and roasted seasonal vegetables.', 480, 42.0, 30.0, 18.0,
  'Ingredients:\n- 180g chicken breast\n- 100g broccoli\n- 100g zucchini\n- 50g bell pepper\n- 1 tbsp olive oil\n- Italian seasoning, garlic powder\n\nInstructions:\n1. Preheat oven to 200C (400F)\n2. Season chicken with Italian seasoning, garlic powder, salt, pepper\n3. Cut vegetables into even pieces\n4. Toss veggies in olive oil and seasoning\n5. Bake chicken and veggies on sheet pan for 25 minutes\n6. Let chicken rest 5 minutes before slicing'),
 
@@ -544,4 +562,76 @@ INSERT IGNORE INTO meal_template (meal_name, source, meal_type, description, cal
  'Ingredients:\n- 200g firm tofu (pressed, cubed)\n- 100ml light coconut milk\n- 80g brown rice (dry)\n- 100g mixed vegetables (peppers, peas, carrots)\n- 2 tbsp curry paste (red or yellow)\n- 1 tbsp coconut oil\n- Fresh cilantro, lime\n\nInstructions:\n1. Cook rice according to package\n2. Press and cube tofu, pan-fry until golden\n3. Saute curry paste in coconut oil 1 minute\n4. Add coconut milk and vegetables, simmer 10 minutes\n5. Add tofu, cook 5 more minutes\n6. Serve curry over rice\n7. Garnish with cilantro and lime wedge'),
 
 ('Herb-Crusted Cod with Quinoa', 'SYSTEM', 'DINNER', 'Light yet satisfying white fish dinner with herbed crust and fluffy quinoa pilaf.', 450, 38.0, 40.0, 14.0,
- 'Ingredients:\n- 170g cod fillet\n- 80g quinoa (dry)\n- 100g spinach\n- 30g breadcrumbs\n- Fresh parsley, dill\n- 1 tbsp olive oil\n- Lemon, garlic\n\nInstructions:\n1. Cook quinoa in vegetable broth for 15 minutes\n2. Mix breadcrumbs with chopped herbs, garlic, and olive oil\n3. Press herb mixture onto cod fillet\n4. Bake at 200C for 15-18 minutes until flaky\n5. Saute spinach with garlic until wilted\n6. Plate quinoa, spinach, and cod\n7. Squeeze fresh lemon over fish');
+ 'Ingredients:\n- 170g cod fillet\n- 80g quinoa (dry)\n- 100g spinach\n- 30g breadcrumbs\n- Fresh parsley, dill\n- 1 tbsp olive oil\n- Lemon, garlic\n\nInstructions:\n1. Cook quinoa in vegetable broth for 15 minutes\n2. Mix breadcrumbs with chopped herbs, garlic, and olive oil\n3. Press herb mixture onto cod fillet\n4. Bake at 200C for 15-18 minutes until flaky\n5. Saute spinach with garlic until wilted\n6. Plate quinoa, spinach, and cod\n7. Squeeze fresh lemon over fish'),
+
+('Chicken Fajita Bowl', 'SYSTEM', 'DINNER', 'Colorful Tex-Mex fajita bowl with seasoned chicken strips, peppers, and cilantro-lime rice.', 550, 40.0, 52.0, 18.0,
+ 'Ingredients:\n- 160g chicken breast (sliced into strips)\n- 80g jasmine rice (dry)\n- 80g bell peppers (mixed, sliced)\n- 50g onion (sliced)\n- 30g sour cream (light)\n- 1 tbsp olive oil\n- Cumin, chili powder, lime, cilantro\n\nInstructions:\n1. Cook rice, then stir in chopped cilantro and lime juice\n2. Season chicken with cumin, chili powder, salt, and pepper\n3. Saute chicken strips in olive oil over high heat 5-6 minutes\n4. Cook peppers and onion until slightly charred\n5. Build bowl: cilantro-lime rice, chicken, peppers, onion\n6. Top with sour cream and a lime wedge'),
+
+('Lamb Kofta with Tabbouleh', 'SYSTEM', 'DINNER', 'Middle Eastern-inspired dinner with spiced lamb kofta and refreshing parsley tabbouleh.', 520, 36.0, 40.0, 24.0,
+ 'Ingredients:\n- 150g ground lamb (lean)\n- 60g bulgur wheat\n- 50g parsley (finely chopped)\n- 50g tomato (diced)\n- 30g cucumber (diced)\n- 30g red onion (diced)\n- 1 tbsp olive oil\n- Cumin, coriander, mint, lemon\n\nInstructions:\n1. Mix lamb with cumin, coriander, salt, pepper, and minced onion\n2. Shape into small kofta sausages or patties\n3. Grill or pan-fry kofta 4-5 min per side\n4. Soak bulgur in boiling water 15 minutes, drain and cool\n5. Mix bulgur with parsley, tomato, cucumber, onion, olive oil, and lemon juice\n6. Serve kofta alongside tabbouleh'),
+
+('Stuffed Bell Peppers', 'SYSTEM', 'DINNER', 'Colorful bell peppers stuffed with a savory mix of ground turkey, rice, and vegetables.', 440, 34.0, 40.0, 16.0,
+ 'Ingredients:\n- 2 large bell peppers (halved, seeds removed)\n- 120g ground turkey\n- 60g cooked brown rice\n- 50g diced tomatoes\n- 30g corn kernels\n- 30g shredded mozzarella\n- Italian herbs, garlic, onion\n\nInstructions:\n1. Preheat oven to 190C (375F)\n2. Brown turkey with garlic and onion\n3. Mix turkey with rice, tomatoes, corn, and herbs\n4. Stuff pepper halves with mixture\n5. Top with shredded mozzarella\n6. Bake for 25-30 minutes until peppers are tender\n7. Let cool 5 minutes before serving'),
+
+-- ===== SNACK (10) =====
+('Protein Shake - Classic', 'SYSTEM', 'SNACK', 'A simple, fast-absorbing protein shake perfect for between meals or post-workout.', 200, 30.0, 12.0, 4.0,
+ 'Ingredients:\n- 1.5 scoops whey protein (vanilla or chocolate)\n- 250ml water or almond milk\n- 1/2 banana (optional)\n- Ice cubes\n\nInstructions:\n1. Add liquid, protein powder, and banana to shaker or blender\n2. Blend or shake until smooth\n3. Serve immediately'),
+
+('PB & Banana Rice Cakes', 'SYSTEM', 'SNACK', 'Crunchy rice cakes topped with peanut butter and banana for a quick energy boost.', 250, 10.0, 30.0, 12.0,
+ 'Ingredients:\n- 2 plain rice cakes\n- 2 tbsp natural peanut butter\n- 1 small banana (sliced)\n- Drizzle of honey\n- Pinch of sea salt\n\nInstructions:\n1. Spread peanut butter evenly on each rice cake\n2. Top with banana slices\n3. Drizzle with honey and sprinkle sea salt\n4. Eat immediately'),
+
+('Trail Mix Power Pack', 'SYSTEM', 'SNACK', 'A portable, calorie-dense snack mix with nuts, seeds, and dried fruits for sustained energy.', 280, 10.0, 24.0, 18.0,
+ 'Ingredients:\n- 20g almonds\n- 15g cashews\n- 10g pumpkin seeds\n- 15g dried cranberries\n- 10g dark chocolate chips\n- 10g coconut flakes\n\nInstructions:\n1. Combine all ingredients in a small container or bag\n2. Shake to mix\n3. Portion into snack bags for the week\n4. Store in a cool, dry place'),
+
+('Hard Boiled Eggs & Hummus', 'SYSTEM', 'SNACK', 'Simple high-protein snack pairing eggs with creamy hummus and fresh vegetables.', 220, 18.0, 10.0, 14.0,
+ 'Ingredients:\n- 2 hard-boiled eggs\n- 40g hummus\n- 50g carrot sticks\n- 50g celery sticks\n- Paprika, salt\n\nInstructions:\n1. Boil eggs for 10-12 minutes, then ice bath and peel\n2. Slice eggs in half, sprinkle with paprika and salt\n3. Serve with hummus and veggie sticks for dipping'),
+
+('Cottage Cheese & Pineapple', 'SYSTEM', 'SNACK', 'A sweet and savory high-protein snack with tropical flavor.', 180, 20.0, 18.0, 3.0,
+ 'Ingredients:\n- 150g cottage cheese (2% fat)\n- 80g fresh pineapple chunks\n- 1 tsp honey\n- Pinch of cinnamon\n\nInstructions:\n1. Scoop cottage cheese into a bowl\n2. Top with pineapple chunks\n3. Drizzle with honey and dust with cinnamon\n4. Eat chilled'),
+
+('Apple Slices with Almond Butter', 'SYSTEM', 'SNACK', 'A satisfying combination of crisp apple and rich almond butter for healthy fats and fiber.', 230, 6.0, 28.0, 12.0,
+ 'Ingredients:\n- 1 medium apple (sliced)\n- 2 tbsp almond butter\n- 1 tsp chia seeds\n- Pinch of cinnamon\n\nInstructions:\n1. Wash and slice apple into wedges\n2. Serve with almond butter for dipping\n3. Sprinkle chia seeds and cinnamon on almond butter\n4. Eat immediately to prevent browning'),
+
+('Tuna Cucumber Bites', 'SYSTEM', 'SNACK', 'Light, refreshing, and high-protein snack using cucumber rounds as a cracker substitute.', 160, 22.0, 6.0, 6.0,
+ 'Ingredients:\n- 1 large cucumber (sliced into thick rounds)\n- 100g canned tuna (in water, drained)\n- 1 tbsp Greek yogurt\n- 1 tsp Dijon mustard\n- Salt, pepper, fresh dill\n\nInstructions:\n1. Slice cucumber into 1cm thick rounds\n2. Mix tuna with Greek yogurt, mustard, salt, and pepper\n3. Spoon tuna mixture onto each cucumber round\n4. Garnish with dill and serve'),
+
+('Edamame with Sea Salt', 'SYSTEM', 'SNACK', 'Simple steamed edamame pods lightly salted - a plant-based protein snack staple.', 190, 17.0, 14.0, 8.0,
+ 'Ingredients:\n- 200g frozen edamame (in pods)\n- 1 tsp sea salt\n- 1 tsp sesame oil (optional)\n- Red pepper flakes (optional)\n\nInstructions:\n1. Boil edamame for 4-5 minutes or microwave for 3 minutes\n2. Drain and toss with sea salt\n3. Optional: drizzle sesame oil and sprinkle red pepper flakes\n4. Pop beans out of shells to eat'),
+
+('Protein Energy Balls', 'SYSTEM', 'SNACK', 'No-bake energy balls made with oats, protein powder, and nut butter - great for meal prep.', 210, 14.0, 22.0, 10.0,
+ 'Ingredients:\n- 50g rolled oats\n- 1 scoop protein powder (chocolate)\n- 2 tbsp peanut butter\n- 1 tbsp honey\n- 1 tbsp mini chocolate chips\n- 1 tbsp flax seeds\n\nInstructions:\n1. Mix all ingredients in a bowl until combined\n2. If too dry, add a splash of milk\n3. Roll into 6-8 small balls\n4. Refrigerate for at least 30 minutes\n5. Store in fridge for up to 5 days'),
+
+('Greek Yogurt & Honey Cup', 'SYSTEM', 'SNACK', 'A creamy, protein-rich snack with natural sweetness from honey and crunch from walnuts.', 200, 18.0, 20.0, 6.0,
+ 'Ingredients:\n- 150g Greek yogurt (0% fat)\n- 1 tbsp honey\n- 15g walnuts (crushed)\n- 1 tsp vanilla extract\n\nInstructions:\n1. Spoon yogurt into a cup or bowl\n2. Stir in vanilla extract\n3. Drizzle honey on top\n4. Sprinkle crushed walnuts\n5. Enjoy immediately or chill for later'),
+
+-- ===== PRE_WORKOUT (5) =====
+('Banana & Oat Energy Smoothie', 'SYSTEM', 'PRE_WORKOUT', 'Quick-digesting carbs and moderate protein for fuel 30-60 minutes before training.', 340, 20.0, 52.0, 6.0,
+ 'Ingredients:\n- 1 ripe banana\n- 40g rolled oats\n- 200ml milk\n- 1/2 scoop whey protein\n- 1 tbsp honey\n- Pinch of cinnamon\n\nInstructions:\n1. Blend all ingredients until smooth\n2. Drink 30-60 minutes before workout\n3. Avoid adding fats to keep digestion fast'),
+
+('PB&J Toast', 'SYSTEM', 'PRE_WORKOUT', 'Simple pre-workout toast combining fast carbs with a touch of protein and healthy fats.', 320, 12.0, 42.0, 12.0,
+ 'Ingredients:\n- 2 slices white bread\n- 1 tbsp peanut butter\n- 1 tbsp strawberry jam\n\nInstructions:\n1. Toast bread lightly\n2. Spread peanut butter on one slice\n3. Spread jam on the other\n4. Press together and eat 30-45 minutes before training'),
+
+('Rice Cake & Honey Stack', 'SYSTEM', 'PRE_WORKOUT', 'Ultra-light, fast-digesting pre-workout snack for quick energy with no stomach discomfort.', 220, 4.0, 48.0, 2.0,
+ 'Ingredients:\n- 3 plain rice cakes\n- 2 tbsp honey\n- Pinch of sea salt\n- Optional: 1/2 banana (sliced)\n\nInstructions:\n1. Stack rice cakes or serve separately\n2. Drizzle honey generously over each\n3. Add banana slices if desired\n4. Sprinkle sea salt for electrolytes\n5. Eat 20-30 minutes before workout'),
+
+('Oatmeal Raisin Energy Bowl', 'SYSTEM', 'PRE_WORKOUT', 'Warm, comforting bowl of oats with natural sugars from raisins for sustained workout energy.', 380, 14.0, 62.0, 8.0,
+ 'Ingredients:\n- 70g rolled oats\n- 200ml water or milk\n- 30g raisins\n- 1 tbsp honey\n- 1 tsp cinnamon\n- 10g walnuts\n\nInstructions:\n1. Cook oats in water or milk until creamy\n2. Stir in raisins and cinnamon\n3. Top with honey and walnuts\n4. Eat 45-60 minutes before workout'),
+
+('Fruit & Yogurt Parfait', 'SYSTEM', 'PRE_WORKOUT', 'Layered parfait with easily digestible carbs and a protein base for pre-training fuel.', 300, 18.0, 45.0, 6.0,
+ 'Ingredients:\n- 120g Greek yogurt (0% fat)\n- 80g mango chunks\n- 50g blueberries\n- 20g granola\n- 1 tsp honey\n\nInstructions:\n1. Layer yogurt in a glass or bowl\n2. Add mango and blueberries in layers\n3. Top with granola and honey\n4. Eat 30-45 minutes before training'),
+
+-- ===== POST_WORKOUT (5) =====
+('Chicken & White Rice Recovery', 'SYSTEM', 'POST_WORKOUT', 'Fast-absorbing carbs and lean protein to kickstart muscle recovery after intense training.', 500, 42.0, 55.0, 8.0,
+ 'Ingredients:\n- 160g chicken breast\n- 100g white jasmine rice (dry)\n- 1 tsp soy sauce\n- 1 tsp honey\n- Steamed broccoli (optional)\n\nInstructions:\n1. Cook rice according to package\n2. Season chicken with salt and pepper\n3. Grill or pan-sear chicken 5-6 min per side\n4. Slice chicken, drizzle with soy sauce and honey\n5. Serve over rice with optional steamed broccoli'),
+
+('Whey Protein & Banana Shake', 'SYSTEM', 'POST_WORKOUT', 'Fast-digesting post-workout shake to rapidly deliver protein and glycogen replenishment.', 350, 35.0, 40.0, 5.0,
+ 'Ingredients:\n- 1.5 scoops whey protein (chocolate or vanilla)\n- 1 large banana\n- 250ml milk\n- 5g creatine monohydrate (optional)\n- Ice cubes\n\nInstructions:\n1. Add all ingredients to blender\n2. Blend until smooth and creamy\n3. Drink within 30 minutes of finishing workout'),
+
+('Tuna Pasta Salad', 'SYSTEM', 'POST_WORKOUT', 'Protein and carb-rich cold pasta salad perfect for post-gym refueling and meal prep.', 480, 36.0, 55.0, 12.0,
+ 'Ingredients:\n- 120g canned tuna (drained)\n- 80g whole wheat pasta\n- 50g corn kernels\n- 50g cherry tomatoes (halved)\n- 30g red onion (diced)\n- 1 tbsp olive oil\n- Lemon juice, salt, pepper, parsley\n\nInstructions:\n1. Cook pasta al dente, drain and cool\n2. Mix tuna with olive oil and lemon juice\n3. Combine pasta, tuna, corn, tomatoes, and onion\n4. Season with salt, pepper, and chopped parsley\n5. Serve cold or at room temperature'),
+
+('Egg White & Sweet Potato Plate', 'SYSTEM', 'POST_WORKOUT', 'Low-fat, high-protein recovery meal with complex carbs to restore glycogen stores.', 400, 34.0, 50.0, 6.0,
+ 'Ingredients:\n- 200g egg whites (about 6 egg whites)\n- 200g sweet potato\n- 50g spinach\n- Salt, pepper, hot sauce\n\nInstructions:\n1. Bake or microwave sweet potato until tender (about 8 min in microwave)\n2. Cook egg whites in non-stick pan, scramble or make an omelette\n3. Saute spinach briefly\n4. Plate sweet potato, egg whites, and spinach\n5. Season with salt, pepper, and hot sauce'),
+
+('Chocolate Milk & Oat Bar', 'SYSTEM', 'POST_WORKOUT', 'The classic, research-backed post-workout combo - chocolate milk with a homemade oat bar.', 420, 22.0, 58.0, 12.0,
+ 'Ingredients:\n- 350ml chocolate milk\n- 50g rolled oats\n- 1 tbsp peanut butter\n- 1 tbsp honey\n- 15g dark chocolate chips\n- Pinch of salt\n\nInstructions:\n1. For the bar: Mix oats, peanut butter, honey, chocolate chips, and salt\n2. Press into a small container and refrigerate 1 hour\n3. Cut into bars\n4. Drink chocolate milk alongside the oat bar after workout\n5. Prep bars in batch for the week');

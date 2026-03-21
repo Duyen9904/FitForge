@@ -1,11 +1,13 @@
 package com.dev.backend.service.impl;
 
+import com.dev.backend.config.CacheNames;
 import com.dev.backend.exception.ResourceNotFoundException;
 import com.dev.backend.model.dto.response.ExerciseRecommendationResponse;
 import com.dev.backend.model.entity.*;
 import com.dev.backend.repository.*;
 import com.dev.backend.service.RecommendationService;
-import org.springframework.data.domain.PageRequest;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +15,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 @Transactional(readOnly = true)
 public class RecommendationServiceImpl implements RecommendationService {
 
@@ -33,7 +36,12 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     @Override
+    @Cacheable(value = CacheNames.USER_RECOMMENDATIONS,
+               key = "'rec:' + #userId + ':' + #sessionId + ':' + #limit",
+               unless = "#result == null || #result.isEmpty()")
     public List<ExerciseRecommendationResponse> getExerciseRecommendations(Long userId, Long sessionId, int limit) {
+        log.info("Computing exercise recommendations for user={}, session={}, limit={}", userId, sessionId, limit);
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
@@ -53,11 +61,18 @@ public class RecommendationServiceImpl implements RecommendationService {
             });
         }
 
-        // Get exercises and score them
-        List<Exercise> allExercises = exerciseRepository.findAll();
+        // Use filtered query instead of findAll() — pushes filtering to SQL
+        // and eagerly loads muscle group relationships for scoring
+        List<Exercise> candidates = exerciseRepository.findRecommendationCandidates(
+                fitnessLevel,
+                targetedMuscleGroupIds.isEmpty() ? null : targetedMuscleGroupIds
+        );
+
+        log.debug("Found {} candidate exercises (filtered from DB)", candidates.size());
+
         List<ExerciseRecommendationResponse> recommendations = new ArrayList<>();
 
-        for (Exercise exercise : allExercises) {
+        for (Exercise exercise : candidates) {
             int score = calculateRelevanceScore(exercise, primaryGoal, fitnessLevel,
                     targetedMuscleGroupIds);
             

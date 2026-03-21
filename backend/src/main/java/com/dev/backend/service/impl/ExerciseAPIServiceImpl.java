@@ -67,11 +67,20 @@ public class ExerciseAPIServiceImpl implements ExerciseAPIService {
     public List<Exercise> searchByMuscleGroup(String muscleGroup, int limit) {
         log.info("Searching exercises for muscle group: {}, limit: {}", muscleGroup, limit);
 
+        // Local-first: check local DB (populated by sync worker)
+        String category = inferMuscleCategory(muscleGroup);
+        List<Exercise> localResults = exerciseRepository.findByMuscleGroupCategory(category);
+        if (localResults.size() >= limit) {
+            log.info("Found {} local exercises for '{}', using local data", localResults.size(), category);
+            return localResults.stream().limit(limit).collect(Collectors.toList());
+        }
+
+        // If insufficient local data, try API (handles cold start / sparse categories)
         try {
             List<ExerciseDBResponse> apiResponses = exerciseAPIClient.searchByTarget(muscleGroup, limit);
 
             if (apiResponses == null || apiResponses.isEmpty()) {
-                log.info("No results from ExerciseDB v2 API, falling back to local database");
+                log.info("No results from ExerciseDB v2 API, using local database");
                 return fallbackToLocalDatabaseByMuscle(muscleGroup, limit);
             }
 
@@ -92,11 +101,19 @@ public class ExerciseAPIServiceImpl implements ExerciseAPIService {
     public List<Exercise> searchByEquipment(String equipment, int limit) {
         log.info("Searching exercises for equipment: {}, limit: {}", equipment, limit);
 
+        // Local-first: check local DB
+        List<Exercise> localResults = exerciseRepository.findByEquipmentCategoryIgnoreCase(equipment);
+        if (localResults.size() >= limit) {
+            log.info("Found {} local exercises for equipment '{}', using local data", localResults.size(), equipment);
+            return localResults.stream().limit(limit).collect(Collectors.toList());
+        }
+
+        // If insufficient local data, try API
         try {
             List<ExerciseDBResponse> apiResponses = exerciseAPIClient.searchByEquipment(equipment, limit);
 
             if (apiResponses == null || apiResponses.isEmpty()) {
-                log.info("No results from ExerciseDB v2 API, falling back to local database");
+                log.info("No results from ExerciseDB v2 API, using local database");
                 return fallbackToLocalDatabaseByEquipment(equipment, limit);
             }
 
@@ -316,12 +333,25 @@ public class ExerciseAPIServiceImpl implements ExerciseAPIService {
 
     private List<Exercise> fallbackToLocalDatabaseByMuscle(String muscleGroup, int limit) {
         log.info("Falling back to local database for muscle group: {}", muscleGroup);
-        return exerciseRepository.findAll(PageRequest.of(0, limit)).getContent();
+        // Use category-based lookup instead of unfiltered findAll
+        String category = inferMuscleCategory(muscleGroup);
+        List<Exercise> exercises = exerciseRepository.findByMuscleGroupCategory(category);
+        if (exercises.isEmpty()) {
+            log.debug("No local exercises for category '{}', falling back to paginated findAll", category);
+            exercises = exerciseRepository.findAll(PageRequest.of(0, limit)).getContent();
+        }
+        return exercises.stream().limit(limit).collect(Collectors.toList());
     }
 
     private List<Exercise> fallbackToLocalDatabaseByEquipment(String equipment, int limit) {
         log.info("Falling back to local database for equipment: {}", equipment);
-        return exerciseRepository.findAll(PageRequest.of(0, limit)).getContent();
+        // Use equipment category filter instead of unfiltered findAll
+        List<Exercise> exercises = exerciseRepository.findByEquipmentCategoryIgnoreCase(equipment);
+        if (exercises.isEmpty()) {
+            log.debug("No local exercises for equipment '{}', falling back to paginated findAll", equipment);
+            exercises = exerciseRepository.findAll(PageRequest.of(0, limit)).getContent();
+        }
+        return exercises.stream().limit(limit).collect(Collectors.toList());
     }
 
     // ============= Mapping Helpers =============

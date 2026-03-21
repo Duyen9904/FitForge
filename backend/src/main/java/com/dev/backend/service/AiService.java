@@ -7,6 +7,8 @@ import com.dev.backend.model.dto.ai.AiPlanGenerationContext;
 import com.dev.backend.model.dto.ai.AiStructureResult;
 import com.dev.backend.model.dto.ai.AiWorkoutPlanResult;
 
+import java.util.concurrent.CompletableFuture;
+
 /**
  * Abstraction for AI-powered plan generation and adjustment.
  * Implementations can use any LLM provider (OpenRouter, OpenAI, etc.).
@@ -50,4 +52,23 @@ public interface AiService {
      * @return adjusted nutrition plan result
      */
     AiNutritionPlanResult adjustNutritionPlan(AiNutritionPlanContext context);
+
+    // ==================== Async Variants ====================
+
+    /**
+     * Async version of generateWorkoutStructure.
+     * Executes on a dedicated AI thread pool to avoid blocking Tomcat threads.
+     */
+    default CompletableFuture<AiStructureResult> generateWorkoutStructureAsync(
+            AiPlanGenerationContext context) {
+        return CompletableFuture.completedFuture(generateWorkoutStructure(context));
+    }
+
+    /**
+     * Async version of generateNutritionPlan.
+     */
+    default CompletableFuture<AiNutritionPlanResult> generateNutritionPlanAsync(
+            AiNutritionPlanContext context) {
+        return CompletableFuture.completedFuture(generateNutritionPlan(context));
+    }
 }

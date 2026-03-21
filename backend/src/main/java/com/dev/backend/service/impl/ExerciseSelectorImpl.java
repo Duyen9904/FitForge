@@ -201,4 +201,111 @@ public class ExerciseSelectorImpl implements ExerciseSelector {
                 })
                 .collect(Collectors.toList());
     }
+
+    // ==================== Batch Selection ====================
+
+    /**
+     * Batch-select exercises for multiple slots using pre-loaded data.
+     * Loads all exercises per muscle group category once, then selects from
+     * in-memory map per slot. Reduces N+1 queries (~35) to ~8 (one per category).
+     */
+    @Override
+    public List<Exercise> selectExercisesForSlots(
+            List<AiExerciseSlot> slots,
+            List<String> availableEquipment,
+            String difficultyLevel) {
+
+        // Collect all unique muscle group categories needed
+        Set<String> neededCategories = slots.stream()
+                .filter(s -> s != null && s.getMuscleGroup() != null)
+                .map(s -> s.getMuscleGroup().toUpperCase().trim())
+                .collect(Collectors.toSet());
+
+        log.info("[ExerciseSelector] Batch-loading exercises for {} categories: {}",
+                neededCategories.size(), neededCategories);
+
+        // Single batch load: 1 query per unique muscle group category
+        Map<String, List<Exercise>> exercisesByCategory = new HashMap<>();
+        for (String category : neededCategories) {
+            exercisesByCategory.put(category,
+                    exerciseRepository.findByMuscleGroupCategory(category));
+        }
+
+        // Select from in-memory map per slot
+        Set<String> usedIds = new HashSet<>();
+        List<Exercise> results = new ArrayList<>();
+
+        for (AiExerciseSlot slot : slots) {
+            if (slot == null || slot.getMuscleGroup() == null) {
+                log.warn("[ExerciseSelector-Batch] Null slot or muscle group, skipping");
+                continue;
+            }
+
+            String category = slot.getMuscleGroup().toUpperCase().trim();
+            List<Exercise> categoryCandidates = exercisesByCategory.getOrDefault(category, List.of());
+
+            Exercise selected = selectFromCandidates(
+                    new ArrayList<>(categoryCandidates), slot,
+                    availableEquipment, difficultyLevel, usedIds);
+
+            if (selected != null) {
+                results.add(selected);
+                usedIds.add(selected.getExerciseId());
+            }
+        }
+
+        log.info("[ExerciseSelector] Batch selection complete: filled {}/{} slots", results.size(), slots.size());
+        return results;
+    }
+
+    /**
+     * Core selection logic: filter candidates by equipment, difficulty, pattern,
+     * then pick a random exercise. Shared by both single and batch methods.
+     */
+    private Exercise selectFromCandidates(List<Exercise> candidates,
+                                           AiExerciseSlot slot,
+                                           List<String> availableEquipment,
+                                           String difficultyLevel,
+                                           Set<String> usedIds) {
+        if (candidates == null || candidates.isEmpty()) {
+            log.warn("[ExerciseSelector] No candidates for slot: {}", slot.getMuscleGroup());
+            return null;
+        }
+
+        // Filter out already-used exercises
+        if (usedIds != null && !usedIds.isEmpty()) {
+            List<Exercise> filtered = candidates.stream()
+                    .filter(ex -> !usedIds.contains(ex.getExerciseId()))
+                    .collect(Collectors.toList());
+            if (!filtered.isEmpty()) {
+                candidates = filtered;
+            }
+            // If all used, allow duplicates rather than skipping
+        }
+
+        // Filter by equipment
+        List<Exercise> equipmentFiltered = filterByEquipment(candidates, availableEquipment);
+        if (!equipmentFiltered.isEmpty()) {
+            candidates = equipmentFiltered;
+        }
+
+        // Filter by difficulty
+        List<Exercise> difficultyFiltered = filterByDifficulty(candidates, difficultyLevel);
+        if (!difficultyFiltered.isEmpty()) {
+            candidates = difficultyFiltered;
+        }
+
+        // Filter by movement pattern
+        List<Exercise> patternFiltered = filterByMovementPattern(candidates, slot.getMovementPattern());
+        if (!patternFiltered.isEmpty()) {
+            candidates = patternFiltered;
+        }
+
+        // Pick random for variety
+        Exercise selected = candidates.get(RANDOM.nextInt(candidates.size()));
+        log.debug("[ExerciseSelector] Selected: '{}' (ID: {}) for {} {}",
+                selected.getExerciseName(), selected.getExerciseId(),
+                slot.getMuscleGroup(), slot.getMovementPattern() != null ? slot.getMovementPattern() : "");
+        return selected;
+    }
 }

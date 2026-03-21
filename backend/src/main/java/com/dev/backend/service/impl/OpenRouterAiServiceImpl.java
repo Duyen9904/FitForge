@@ -1,5 +1,6 @@
 package com.dev.backend.service.impl;
 
+import com.dev.backend.config.CacheNames;
 import com.dev.backend.model.dto.ai.*;
 import com.dev.backend.service.AiService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -10,10 +11,13 @@ import com.openai.models.chat.completions.ChatCompletionCreateParams;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * AI service implementation using OpenRouter (OpenAI-compatible API).
@@ -69,6 +73,9 @@ public class OpenRouterAiServiceImpl implements AiService {
     // ==================== STRUCTURE-ONLY PLAN GENERATION ====================
 
     @Override
+    @Cacheable(value = CacheNames.AI_PLANS,
+               key = "'workout:' + #context.profile.userId + ':' + #context.goalName + ':' + #context.frequencyPerWeek",
+               unless = "#result == null")
     public AiStructureResult generateWorkoutStructure(AiPlanGenerationContext context) {
         if (client == null) {
             throw new IllegalStateException("OpenRouter API key not configured. Set OPENROUTER_API_KEY environment variable.");
@@ -107,6 +114,9 @@ public class OpenRouterAiServiceImpl implements AiService {
     // ==================== PLAN ADJUSTMENT ====================
 
     @Override
+    @Cacheable(value = CacheNames.AI_PLANS,
+               key = "'adjust:' + #context.profile.userId + ':' + #context.currentPlanName",
+               unless = "#result == null")
     public AiWorkoutPlanResult adjustWorkoutPlan(AiPlanAdjustmentContext context) {
         if (client == null) {
             throw new IllegalStateException("OpenRouter API key not configured. Set OPENROUTER_API_KEY environment variable.");
@@ -413,6 +423,9 @@ public class OpenRouterAiServiceImpl implements AiService {
     // ==================== NUTRITION PLAN GENERATION ====================
 
     @Override
+    @Cacheable(value = CacheNames.AI_PLANS,
+               key = "'nutrition:' + #context.profile.userId + ':' + #context.goalName",
+               unless = "#result == null")
     public AiNutritionPlanResult generateNutritionPlan(AiNutritionPlanContext context) {
         if (client == null) {
             throw new IllegalStateException("OpenRouter API key not configured. Set OPENROUTER_API_KEY environment variable.");
@@ -438,6 +451,9 @@ public class OpenRouterAiServiceImpl implements AiService {
     }
 
     @Override
+    @Cacheable(value = CacheNames.AI_PLANS,
+               key = "'nutrition-adjust:' + #context.profile.userId + ':' + #context.currentPlanName",
+               unless = "#result == null")
     public AiNutritionPlanResult adjustNutritionPlan(AiNutritionPlanContext context) {
         if (client == null) {
             throw new IllegalStateException("OpenRouter API key not configured. Set OPENROUTER_API_KEY environment variable.");
@@ -667,5 +683,20 @@ public class OpenRouterAiServiceImpl implements AiService {
         sb.append("\nGenerate the adjusted nutrition plan JSON.");
         return sb.toString();
     }
-}
 
+    // ==================== ASYNC VARIANTS ====================
+
+    @Override
+    @Async("aiTaskExecutor")
+    public CompletableFuture<AiStructureResult> generateWorkoutStructureAsync(
+            AiPlanGenerationContext context) {
+        return CompletableFuture.completedFuture(generateWorkoutStructure(context));
+    }
+
+    @Override
+    @Async("aiTaskExecutor")
+    public CompletableFuture<AiNutritionPlanResult> generateNutritionPlanAsync(
+            AiNutritionPlanContext context) {
+        return CompletableFuture.completedFuture(generateNutritionPlan(context));
+    }
+}

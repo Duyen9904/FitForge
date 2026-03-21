@@ -95,11 +95,17 @@ public class RedisConfig {
         cacheConfigs.put(CacheNames.USER_ACHIEVEMENTS, userDataConfig);
         cacheConfigs.put(CacheNames.USER_WORKOUT_PLANS, userDataConfig);
         
+        // AI-generated plans - long TTL (24 hours, same profile = same plan)
+        cacheConfigs.put(CacheNames.AI_PLANS, staticDataConfig);
+        
         // Dynamic data - short TTL (15 minutes)
         RedisCacheConfiguration dynamicDataConfig = defaultConfig.entryTtl(Duration.ofMinutes(15));
         cacheConfigs.put(CacheNames.DASHBOARD, dynamicDataConfig);
         cacheConfigs.put(CacheNames.STATISTICS, dynamicDataConfig);
         cacheConfigs.put(CacheNames.REPORTS, dynamicDataConfig);
+        
+        // User recommendations - short TTL (15 minutes, refreshes on profile change)
+        cacheConfigs.put(CacheNames.USER_RECOMMENDATIONS, dynamicDataConfig);
         
         // Session data - long TTL (7 days for refresh tokens)
         cacheConfigs.put(CacheNames.REFRESH_TOKENS, defaultConfig.entryTtl(Duration.ofDays(7)));

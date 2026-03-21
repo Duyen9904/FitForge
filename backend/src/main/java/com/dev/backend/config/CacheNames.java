@@ -42,6 +42,12 @@ public final class CacheNames {
     /** User workout plans - TTL: 1 hour */
     public static final String USER_WORKOUT_PLANS = "user-workout-plans";
     
+    /** User exercise recommendations - TTL: 15 minutes */
+    public static final String USER_RECOMMENDATIONS = "user-recommendations";
+    
+    /** AI-generated plan structures (workout/nutrition) - TTL: 24 hours */
+    public static final String AI_PLANS = "ai-plans";
+    
     // ==================== Dashboard & Analytics ====================
     /** Generic dashboard data - TTL: 15 minutes */
     public static final String DASHBOARD = "dashboard";

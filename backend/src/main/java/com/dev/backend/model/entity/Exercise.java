@@ -15,6 +15,11 @@ import java.util.List;
     name = "exercise",
     uniqueConstraints = {
         @UniqueConstraint(name = "uk_exercise_name", columnNames = "exercise_name")
+    },
+    indexes = {
+        @Index(name = "idx_exercise_difficulty", columnList = "difficulty_level"),
+        @Index(name = "idx_exercise_type", columnList = "exercise_type"),
+        @Index(name = "idx_exercise_equipment_cat", columnList = "equipment_category")
     }
 )
 @Getter

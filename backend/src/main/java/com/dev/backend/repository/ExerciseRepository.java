@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface ExerciseRepository extends JpaRepository<Exercise, String>, JpaSpecificationExecutor<Exercise> {
@@ -74,4 +75,26 @@ public interface ExerciseRepository extends JpaRepository<Exercise, String>, Jpa
      */
     @Query("SELECT CASE WHEN COUNT(se) > 0 THEN true ELSE false END FROM SessionExercise se WHERE se.exercise.exerciseId = :exerciseId")
     boolean isExerciseInUse(@Param("exerciseId") String exerciseId);
+
+    /**
+     * Find candidate exercises for recommendations, optionally filtered by
+     * difficulty level and excluding exercises that ONLY target already-used muscle groups.
+     * Eagerly loads muscle group relationships needed for scoring.
+     */
+    @Query("SELECT DISTINCT e FROM Exercise e " +
+           "LEFT JOIN FETCH e.exerciseMuscleGroups emg " +
+           "LEFT JOIN FETCH emg.muscleGroup " +
+           "WHERE (:difficulty IS NULL OR UPPER(e.difficultyLevel) = UPPER(:difficulty)) " +
+           "AND (:excludeIds IS NULL OR e.exerciseId NOT IN " +
+           "  (SELECT e2.exerciseId FROM Exercise e2 " +
+           "   JOIN e2.exerciseMuscleGroups emg2 " +
+           "   WHERE emg2.muscleGroup.muscleGroupId IN :excludeIds " +
+           "   GROUP BY e2.exerciseId " +
+           "   HAVING COUNT(emg2) = " +
+           "     (SELECT COUNT(emg3) FROM ExerciseMuscleGroup emg3 " +
+           "      WHERE emg3.exercise = e2 " +
+           "      AND emg3.muscleGroup.muscleGroupId IN :excludeIds)))")
+    List<Exercise> findRecommendationCandidates(
+            @Param("difficulty") String difficulty,
+            @Param("excludeIds") Set<Long> excludeIds);
 }

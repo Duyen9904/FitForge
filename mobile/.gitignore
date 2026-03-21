@@ -77,3 +77,7 @@ ios/firebase_app_id_file.json
 # Service account files
 *service-account*.json
 *credentials*.json
+
+# Generated files (build_runner)
+*.g.dart
+*.freezed.dart
