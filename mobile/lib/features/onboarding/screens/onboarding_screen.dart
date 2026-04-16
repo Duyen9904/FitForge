@@ -8,7 +8,10 @@ import '../viewmodels/onboarding_viewmodel.dart';
 import '../widgets/onboarding_progress_bar.dart';
 import '../widgets/onboarding_step_content.dart';
 
-/// Main onboarding screen with step navigation
+/// Main onboarding screen with step navigation.
+///
+/// This screen is purely reactive — it reads state from the ViewModel
+/// and delegates all logic (data, validation, submission) to it.
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -22,7 +25,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   @override
   void initState() {
     super.initState();
-    // Load the onboarding flow
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(onboardingViewModelProvider.notifier).loadFlow();
     });
@@ -34,56 +36,28 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     super.dispose();
   }
 
-  void _handleStepSubmit(int stepId, Map<String, dynamic> data) {
-    ref.read(onboardingViewModelProvider.notifier).submitStep(stepId, data);
-  }
-
-  void _handleSkip(int stepId) {
-    ref.read(onboardingViewModelProvider.notifier).skipStep(stepId);
-  }
-
-  void _goBack() {
-    final state = ref.read(onboardingViewModelProvider);
-    state.maybeWhen(
-      loaded: (flow, currentIndex) {
-        if (currentIndex > 0) {
-          ref.read(onboardingViewModelProvider.notifier).goToStep(currentIndex - 1);
-          _pageController.previousPage(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-          );
-        }
-      },
-      orElse: () {},
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(onboardingViewModelProvider);
 
-    // Listen for state changes to navigate
+    // Listen for state changes to navigate pages
     ref.listen<OnboardingState>(onboardingViewModelProvider, (previous, next) {
       next.maybeWhen(
-        complete: () {
-          context.go(Routes.recordMeasurement);
-        },
-        loaded: (flow, index) {
+        complete: () => context.go(Routes.recordMeasurement),
+        loaded: (flow, index, _, __) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            if (_pageController.hasClients) {
-              final fromLoadingOrInitial = previous == null ||
-                  previous is OnboardingLoading ||
-                  previous is OnboardingInitial;
-              if (fromLoadingOrInitial) {
-                _pageController.jumpToPage(index);
-              } else {
-                _pageController.animateToPage(
-                  index,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              }
+            if (!mounted || !_pageController.hasClients) return;
+            final fromLoadingOrInitial = previous == null ||
+                previous is OnboardingLoading ||
+                previous is OnboardingInitial;
+            if (fromLoadingOrInitial) {
+              _pageController.jumpToPage(index);
+            } else {
+              _pageController.animateToPage(
+                index,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
             }
           });
         },
@@ -91,95 +65,145 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       );
     });
 
+    // Extract canGoBack and vm for the appBar
+    final bool canGoBack = state.maybeWhen(
+      loaded: (_, currentIndex, __, ___) => currentIndex > 0,
+      submitting: (_, currentIndex, __, ___) => currentIndex > 0,
+      orElse: () => false,
+    );
+
     return Scaffold(
-      body: SafeArea(
-        child: state.when(
-          initial: () => const Center(child: CircularProgressIndicator()),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          loaded: (flow, currentIndex) => _buildLoadedContent(flow, currentIndex),
-          submitting: (flow, currentIndex, stepId) => Stack(
-            children: [
-              _buildLoadedContent(flow, currentIndex),
-              Container(
-                color: Colors.black26,
-                child: const Center(child: CircularProgressIndicator()),
-              ),
-            ],
-          ),
-          complete: () => _buildCompleteContent(),
-          error: (message) => _buildErrorContent(message),
-        ),
+      appBar: AppBar(
+        leading: canGoBack
+            ? IconButton(
+                onPressed: () {
+                  final vm = ref.read(onboardingViewModelProvider.notifier);
+                  state.maybeWhen(
+                    loaded: (_, currentIndex, __, ___) {
+                      vm.goToStep(currentIndex - 1);
+                      _pageController.previousPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    },
+                    orElse: () {},
+                  );
+                },
+                icon: const Icon(Icons.arrow_back),
+                tooltip: 'Back',
+              )
+            : null,
+        title: const Text('Set Up Your Profile'),
+        centerTitle: true,
+        titleTextStyle: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+      ),
+      body: state.when(
+        initial: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        loaded: (flow, currentIndex, _, isValid) =>
+            _buildLoadedContent(flow, currentIndex, isValid, isSubmitting: false),
+        submitting: (flow, currentIndex, stepId, _) =>
+            _buildLoadedContent(flow, currentIndex, false, isSubmitting: true),
+        complete: () => _buildCompleteContent(),
+        error: (message) => _buildErrorContent(message),
       ),
     );
   }
 
-  Widget _buildLoadedContent(flow, int currentIndex) {
+  Widget _buildLoadedContent(
+    flow,
+    int currentIndex,
+    bool isCurrentStepValid, {
+    bool isSubmitting = false,
+  }) {
     final theme = Theme.of(context);
     final steps = flow.steps;
-    final canGoBack = currentIndex > 0;
+    final currentStep = steps[currentIndex] as OnboardingStepResponse;
+    final isOptional = currentStep.isRequired != true;
+    final vm = ref.read(onboardingViewModelProvider.notifier);
 
-    return Column(
+    return Stack(
       children: [
-        // App bar with back button and progress
+        Column(
+      children: [
+        // Progress bar
         Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  if (canGoBack)
-                    IconButton(
-                      onPressed: _goBack,
-                      icon: const Icon(Icons.arrow_back),
-                      tooltip: 'Back',
-                    )
-                  else
-                    const SizedBox(width: 48),
-                  Expanded(
-                    child: Text(
-                      'Set Up Your Profile',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 48),
-                ],
-              ),
-              const SizedBox(height: 16),
-              OnboardingProgressBar(
-                totalSteps: flow.totalSteps ?? steps.length,
-                currentStep: currentIndex,
-                completedSteps: flow.completedSteps ?? 0,
-              ),
-            ],
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: OnboardingProgressBar(
+            totalSteps: flow.totalSteps ?? steps.length,
+            currentStep: currentIndex,
+            completedSteps: flow.completedSteps ?? 0,
           ),
         ),
 
-        // Step content
+        // Step content (scrollable)
         Expanded(
           child: PageView.builder(
             controller: _pageController,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: steps.length,
             itemBuilder: (context, index) {
-              final step = steps[index];
-              return _buildStepContent(step);
+              return OnboardingStepContent(step: steps[index]);
             },
           ),
         ),
-      ],
-    );
-  }
 
-  Widget _buildStepContent(OnboardingStepResponse step) {
-    final stepId = step.stepId ?? 0;
-    return OnboardingStepContent(
-      step: step,
-      onSubmit: (data) => _handleStepSubmit(stepId, data),
-      onSkip: step.isRequired != true ? () => _handleSkip(stepId) : null,
-    );
+        // Bottom-pinned Continue & Skip buttons
+        Container(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            border: Border(
+              top: BorderSide(
+                color: theme.colorScheme.outline.withValues(alpha: 0.1),
+              ),
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: isCurrentStepValid
+                      ? () => vm.submitCurrentStep()
+                      : null,
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Continue'),
+                ),
+              ),
+              if (isOptional) ...[
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => vm.skipCurrentStep(),
+                    child: const Text('Skip'),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    ), // end Column
+    // Loading overlay — shown only during submission
+    if (isSubmitting)
+      Positioned.fill(
+        child: Container(
+          color: Colors.black26,
+          child: const Center(child: CircularProgressIndicator()),
+        ),
+      ),
+      ], // end Stack children
+    ); // end Stack
   }
 
   Widget _buildCompleteContent() {

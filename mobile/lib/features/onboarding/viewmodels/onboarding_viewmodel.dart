@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer' as developer;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../shared/enums/onboarding_input_type.dart';
 import '../models/onboarding_response.dart';
 import '../repositories/onboarding_repository.dart';
 import 'onboarding_state.dart';
@@ -13,13 +14,88 @@ final onboardingViewModelProvider =
   return OnboardingViewModel(repository: repository);
 });
 
-/// ViewModel for managing onboarding state
+/// ViewModel for managing onboarding state.
+///
+/// Acts as the single source of truth for:
+/// - Flow navigation (current step, back/forward)
+/// - Step form data (what the user has entered/selected)
+/// - Form validity (whether Continue should be enabled)
+/// - Submission (validate + send to backend)
 class OnboardingViewModel extends StateNotifier<OnboardingState> {
   final OnboardingRepository _repository;
 
   OnboardingViewModel({required OnboardingRepository repository})
       : _repository = repository,
         super(const OnboardingState.initial());
+
+  // ─── Form Data Management ─────────────────────────────────────────
+
+  /// Called by step widgets on every user interaction.
+  /// Stores the data and computes validity for the current step.
+  void updateStepData(Map<String, dynamic>? data) {
+    final currentState = state;
+    if (currentState is! OnboardingLoaded) return;
+
+    final currentStep = currentState.flow.steps[currentState.currentStepIndex];
+    final isValid = _validateStepData(currentStep, data);
+
+    state = OnboardingLoaded(
+      flow: currentState.flow,
+      currentStepIndex: currentState.currentStepIndex,
+      currentStepData: data,
+      isCurrentStepValid: isValid,
+    );
+  }
+
+  /// Called by the Continue button. Submits the current step's data.
+  Future<void> submitCurrentStep() async {
+    final currentState = state;
+    if (currentState is! OnboardingLoaded) return;
+    if (!currentState.isCurrentStepValid || currentState.currentStepData == null) return;
+
+    final step = currentState.flow.steps[currentState.currentStepIndex];
+    final stepId = step.stepId ?? 0;
+    await submitStep(stepId, currentState.currentStepData!);
+  }
+
+  /// Called by the Skip button. Skips the current step.
+  Future<void> skipCurrentStep() async {
+    final currentState = state;
+    if (currentState is! OnboardingLoaded) return;
+
+    final step = currentState.flow.steps[currentState.currentStepIndex];
+    final stepId = step.stepId ?? 0;
+    await skipStep(stepId);
+  }
+
+  /// Determine if step data is valid based on the step's input type.
+  bool _validateStepData(OnboardingStepResponse step, Map<String, dynamic>? data) {
+    if (data == null) return false;
+
+    final inputType = step.inputType ?? OnboardingInputType.text;
+    switch (inputType) {
+      case OnboardingInputType.singleChoice:
+        return data['optionId'] != null;
+      case OnboardingInputType.multipleChoice:
+        // Multiple choice allows empty selection
+        return true;
+      case OnboardingInputType.toggle:
+        // Toggles always have valid state
+        return true;
+      case OnboardingInputType.text:
+        // All values must be non-empty strings
+        if (data.isEmpty) return false;
+        return data.values.every(
+          (v) => v is String && v.trim().isNotEmpty,
+        );
+      case OnboardingInputType.number:
+        // All values must be valid numbers
+        if (data.isEmpty) return false;
+        return data.values.every((v) => v is num);
+    }
+  }
+
+  // ─── Flow Navigation ──────────────────────────────────────────────
 
   /// Load the onboarding flow from the backend
   Future<void> loadFlow() async {
@@ -70,6 +146,7 @@ class OnboardingViewModel extends StateNotifier<OnboardingState> {
       flow: flow,
       currentStepIndex: currentIndex,
       submittingStepId: stepId,
+      currentStepData: responseData,
     );
 
     try {
@@ -96,6 +173,7 @@ class OnboardingViewModel extends StateNotifier<OnboardingState> {
       }
 
       final (patchedFlow, nextIndex) = _advanceToNextStep(flow, currentIndex, progress);
+      // Reset step data when moving to next step
       state = OnboardingState.loaded(flow: patchedFlow, currentStepIndex: nextIndex);
     } catch (e, stackTrace) {
       developer.log(
@@ -145,6 +223,7 @@ class OnboardingViewModel extends StateNotifier<OnboardingState> {
         currentStepIndex,
         progress,
       );
+      // Reset step data when moving to next step
       state = OnboardingState.loaded(flow: patchedFlow, currentStepIndex: nextIndex);
     } catch (e, stackTrace) {
       developer.log(
@@ -163,6 +242,7 @@ class OnboardingViewModel extends StateNotifier<OnboardingState> {
     if (currentState is! OnboardingLoaded) return;
 
     if (index >= 0 && index < (currentState.flow.steps.length)) {
+      // Reset step data when navigating
       state = OnboardingState.loaded(
         flow: currentState.flow,
         currentStepIndex: index,
@@ -213,6 +293,8 @@ class OnboardingViewModel extends StateNotifier<OnboardingState> {
       state = OnboardingState.error(e.toString());
     }
   }
+
+  // ─── Helpers ──────────────────────────────────────────────────────
 
   /// Find the index of the first incomplete step
   int _findFirstIncompleteStep(OnboardingFlowResponse flow) {

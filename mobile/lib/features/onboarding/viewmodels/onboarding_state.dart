@@ -16,6 +16,10 @@ class OnboardingState with _$OnboardingState {
   const factory OnboardingState.loaded({
     required OnboardingFlowResponse flow,
     required int currentStepIndex,
+    /// Current step's form data reported by the active step widget
+    Map<String, dynamic>? currentStepData,
+    /// Whether the current step has valid data to submit
+    @Default(false) bool isCurrentStepValid,
   }) = OnboardingLoaded;
 
   /// Submitting a step response
@@ -23,6 +27,8 @@ class OnboardingState with _$OnboardingState {
     required OnboardingFlowResponse flow,
     required int currentStepIndex,
     required int submittingStepId,
+    /// Preserve step data during submission
+    Map<String, dynamic>? currentStepData,
   }) = OnboardingSubmitting;
 
   /// Onboarding completed successfully

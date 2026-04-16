@@ -2,28 +2,27 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/onboarding_response.dart';
+import '../../../viewmodels/onboarding_viewmodel.dart';
 
 /// Generic NUMBER input step - numeric fields driven by step.options or defaults.
-class NumberInputStep extends StatefulWidget {
+/// Calls the ViewModel directly via Riverpod on user interaction.
+class NumberInputStep extends ConsumerStatefulWidget {
   final OnboardingStepResponse step;
-  final Function(Map<String, dynamic>) onSubmit;
-  final VoidCallback? onSkip;
   final String? existingData;
 
   const NumberInputStep({
     super.key,
     required this.step,
-    required this.onSubmit,
-    this.onSkip,
     this.existingData,
   });
 
   @override
-  State<NumberInputStep> createState() => _NumberInputStepState();
+  ConsumerState<NumberInputStep> createState() => _NumberInputStepState();
 }
 
-class _NumberInputStepState extends State<NumberInputStep> {
+class _NumberInputStepState extends ConsumerState<NumberInputStep> {
   final _formKey = GlobalKey<FormState>();
   final Map<String, TextEditingController> _controllers = {};
 
@@ -32,6 +31,15 @@ class _NumberInputStepState extends State<NumberInputStep> {
     super.initState();
     _initFields();
     _loadExistingData();
+    // Add listeners AFTER loading existing data to avoid triggering
+    // provider updates during the build phase.
+    for (final c in _controllers.values) {
+      c.addListener(_reportData);
+    }
+    // Defer initial report to after the widget tree is done building.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _reportData();
+    });
   }
 
   /// Key used when the step has no options – derived from stepKey or title.
@@ -48,7 +56,6 @@ class _NumberInputStepState extends State<NumberInputStep> {
         _controllers[key] = TextEditingController();
       }
     } else {
-      // Single number field keyed by the step's own key (e.g. "age", "weight")
       _controllers[_fallbackKey] = TextEditingController();
     }
   }
@@ -71,19 +78,30 @@ class _NumberInputStepState extends State<NumberInputStep> {
   @override
   void dispose() {
     for (final c in _controllers.values) {
+      c.removeListener(_reportData);
       c.dispose();
     }
     super.dispose();
   }
 
-  void _submit() {
-    if (!_formKey.currentState!.validate()) return;
+  void _reportData() {
     final Map<String, dynamic> data = {};
+    bool allValid = true;
     for (final entry in _controllers.entries) {
-      final numValue = num.tryParse(entry.value.text.trim());
+      final text = entry.value.text.trim();
+      if (text.isEmpty) {
+        allValid = false;
+        break;
+      }
+      final numValue = num.tryParse(text);
+      if (numValue == null) {
+        allValid = false;
+        break;
+      }
       data[entry.key] = numValue;
     }
-    widget.onSubmit(data);
+    ref.read(onboardingViewModelProvider.notifier)
+        .updateStepData(allValid ? data : null);
   }
 
   @override
@@ -95,10 +113,11 @@ class _NumberInputStepState extends State<NumberInputStep> {
     return Form(
       key: _formKey,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const SizedBox(height: 24),
             Text(
               widget.step.title ?? 'Enter numbers',
               style: theme.textTheme.headlineMedium?.copyWith(
@@ -163,57 +182,9 @@ class _NumberInputStepState extends State<NumberInputStep> {
             ],
             if (widget.step.helpText != null) ...[
               const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      size: 20,
-                      color: theme.colorScheme.primary,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        widget.step.helpText!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              _buildHelpText(theme, widget.step.helpText!),
             ],
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _submit,
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text('Continue'),
-              ),
-            ),
-            if (widget.onSkip != null) ...[
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: widget.onSkip,
-                  child: const Text('Skip'),
-                ),
-              ),
-            ],
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -244,6 +215,31 @@ class _NumberInputStepState extends State<NumberInputStep> {
         ),
       ),
       validator: validator,
+    );
+  }
+
+  Widget _buildHelpText(ThemeData theme, String text) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, size: 20, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

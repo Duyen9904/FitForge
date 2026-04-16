@@ -98,37 +98,8 @@ INSERT IGNORE INTO goal (goal_name, description, recommended_rep_range, recommen
 ('Athletic Performance', 'Sport-specific training combining strength, power, speed, and agility. Includes plyometrics and functional movements.', '6-8 reps', '90-120 seconds', '5 days/week', 250);
 
 -- =====================================================
--- 4. ACHIEVEMENTS (Gamification)
+-- 4. ACHIEVEMENTS (Gamification) — Removed: no Achievement entity exists
 -- =====================================================
-INSERT IGNORE INTO achievement (achievement_name, description, badge_icon_url, criteria, points, category) VALUES
--- Consistency Achievements
-('First Workout', 'Complete your first workout session', '/badges/first-workout.png', 'Complete 1 workout', 10, 'CONSISTENCY'),
-('Week Warrior', 'Complete 7 workouts in a week', '/badges/week-warrior.png', 'Complete 7 workouts within 7 days', 50, 'CONSISTENCY'),
-('Monthly Dedication', 'Complete 20 workouts in a month', '/badges/monthly-dedication.png', 'Complete 20 workouts within 30 days', 100, 'CONSISTENCY'),
-('Iron Regular', 'Work out for 30 consecutive days', '/badges/iron-regular.png', 'Log workouts for 30 consecutive days', 500, 'CONSISTENCY'),
-('Gym Rat', 'Complete 100 total workouts', '/badges/gym-rat.png', 'Complete 100 total workout sessions', 200, 'CONSISTENCY'),
-('Fitness Lifestyle', 'Work out for 365 consecutive days', '/badges/fitness-lifestyle.png', 'Log workouts for 365 consecutive days', 2000, 'CONSISTENCY'),
--- Strength Achievements
-('First PR', 'Set your first personal record', '/badges/first-pr.png', 'Lift more weight than your previous best on any exercise', 25, 'STRENGTH'),
-('Plate Club', 'Bench press 135 lbs (1 plate per side)', '/badges/plate-club.png', 'Complete bench press with 135 lbs', 100, 'STRENGTH'),
-('Two Plate Club', 'Bench press 225 lbs (2 plates per side)', '/badges/two-plate-club.png', 'Complete bench press with 225 lbs', 250, 'STRENGTH'),
-('Squat Master', 'Squat your body weight', '/badges/squat-master.png', 'Complete a squat with weight equal to body weight', 150, 'STRENGTH'),
-('Deadlift King', 'Deadlift 1.5x your body weight', '/badges/deadlift-king.png', 'Complete a deadlift with 1.5x body weight', 200, 'STRENGTH'),
-('1000 lb Club', 'Combined total of 1000 lbs for squat, bench, and deadlift', '/badges/1000-club.png', 'SQ + BP + DL >= 1000 lbs', 1000, 'STRENGTH'),
--- Volume Achievements
-('Rep Champion', 'Complete 1000 total reps', '/badges/rep-champion.png', 'Log 1000 total repetitions', 75, 'VOLUME'),
-('Set Setter', 'Complete 500 total sets', '/badges/set-setter.png', 'Log 500 total sets', 100, 'VOLUME'),
-('Heavy Lifter', 'Lift 100,000 lbs total volume', '/badges/heavy-lifter.png', 'Total volume lifted >= 100,000 lbs', 300, 'VOLUME'),
--- Exploration Achievements
-('Exercise Explorer', 'Try 20 different exercises', '/badges/exercise-explorer.png', 'Log 20 unique exercises', 50, 'EXPLORATION'),
-('Full Body Focus', 'Train all major muscle groups in one week', '/badges/full-body.png', 'Log exercises for chest, back, shoulders, arms, legs, and core within 7 days', 75, 'EXPLORATION'),
-('Equipment Master', 'Use 10 different types of equipment', '/badges/equipment-master.png', 'Log exercises using 10 different equipment types', 60, 'EXPLORATION'),
--- Nutrition Achievements
-('Nutrition Tracker', 'Log meals for 7 consecutive days', '/badges/nutrition-tracker.png', 'Log nutrition for 7 days straight', 40, 'NUTRITION'),
-('Protein Pro', 'Hit your protein goal for 30 days', '/badges/protein-pro.png', 'Meet daily protein target for 30 days', 150, 'NUTRITION'),
--- Body Composition
-('First Weigh-In', 'Log your first body measurement', '/badges/first-weighin.png', 'Log one body measurement', 10, 'BODY'),
-('Transformation', 'Lose or gain 10 lbs towards your goal', '/badges/transformation.png', 'Change body weight by 10 lbs in goal direction', 250, 'BODY');
 
 -- =====================================================
 -- 5. EXERCISES — Now sourced from external API

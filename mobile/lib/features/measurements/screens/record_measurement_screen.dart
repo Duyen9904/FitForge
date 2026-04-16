@@ -25,10 +25,16 @@ class RecordMeasurementScreen extends ConsumerStatefulWidget {
 class _RecordMeasurementScreenState extends ConsumerState<RecordMeasurementScreen> {
   bool _loading = false;
 
+  /// First measurement = no existing measurement yet (weight/height from onboarding).
+  bool get _isFirstMeasurement =>
+      ref.read(appFlowStateProvider)?.measurementComplete != true;
+
   void _onEnterManually() {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => const ManualMeasurementFormScreen(),
+        builder: (context) => ManualMeasurementFormScreen(
+          isFirstMeasurement: _isFirstMeasurement,
+        ),
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,11 +9,17 @@ import '../../../core/state/app_flow_state.dart';
 import '../models/measurement_models.dart';
 import '../repositories/measurement_repository.dart';
 import '../widgets/measurement_date_card.dart';
-import '../widgets/measurement_metric_card.dart';
 
 /// Manual entry form for body measurement.
 class ManualMeasurementFormScreen extends ConsumerStatefulWidget {
-  const ManualMeasurementFormScreen({super.key});
+  /// When true (first measurement after onboarding), weight/height fields are
+  /// hidden since they were already captured during onboarding.
+  final bool isFirstMeasurement;
+
+  const ManualMeasurementFormScreen({
+    super.key,
+    this.isFirstMeasurement = false,
+  });
 
   @override
   ConsumerState<ManualMeasurementFormScreen> createState() =>
@@ -24,6 +31,7 @@ class _ManualMeasurementFormScreenState
   final _formKey = GlobalKey<FormState>();
   DateTime _measurementDate = DateTime.now();
   final _weightController = TextEditingController();
+  final _heightController = TextEditingController();
   final _bodyFatController = TextEditingController();
   final _chestController = TextEditingController();
   final _waistController = TextEditingController();
@@ -37,6 +45,7 @@ class _ManualMeasurementFormScreenState
   @override
   void dispose() {
     _weightController.dispose();
+    _heightController.dispose();
     _bodyFatController.dispose();
     _chestController.dispose();
     _waistController.dispose();
@@ -61,14 +70,13 @@ class _ManualMeasurementFormScreenState
     _error = null;
     if (!_formKey.currentState!.validate()) return;
 
-    final weight = double.tryParse(_weightController.text);
-    if (weight == null || weight <= 0) return;
-
     setState(() => _loading = true);
     try {
       final request = RecordMeasurementRequest(
         measurementDate: _measurementDate,
-        weightKg: weight,
+        weightKg: widget.isFirstMeasurement
+            ? null
+            : _parseOptDouble(_weightController.text),
         bodyFatPercentage: _parseOptDouble(_bodyFatController.text),
         chestCm: _parseOptDouble(_chestController.text),
         waistCm: _parseOptDouble(_waistController.text),
@@ -111,6 +119,27 @@ class _ManualMeasurementFormScreenState
     return double.tryParse(s);
   }
 
+  /// Builds a simple underline-style numeric input field.
+  Widget _buildMetricField({
+    required TextEditingController controller,
+    required String label,
+    required String helperText,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      inputFormatters: [
+        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+      ],
+      decoration: InputDecoration(
+        labelText: label,
+        helperText: helperText,
+      ),
+      validator: validator,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -131,31 +160,27 @@ class _ManualMeasurementFormScreenState
                       date: _measurementDate,
                       onTap: _pickDate,
                     ),
-                    const SizedBox(height: AppDimensions.spacing16),
-                    MeasurementMetricCard(
-                      icon: Icons.monitor_weight_outlined,
-                      title: 'Weight',
-                      controller: _weightController,
-                      suffix: 'kg',
-                      hint: '70',
-                      required: true,
-                      validator: (v) {
-                        if (v == null || v.isEmpty) return 'Required';
-                        final n = double.tryParse(v);
-                        if (n == null || n < 20 || n > 300) {
-                          return 'Enter 20–300 kg';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: AppDimensions.spacing16),
-                    MeasurementMetricCard(
-                      icon: Icons.pie_chart_outline,
-                      title: 'Body fat %',
+                    const SizedBox(height: AppDimensions.spacing24),
+                    // Weight & Height: shown only for subsequent measurements
+                    // (first measurement gets weight/height from onboarding)
+                    if (!widget.isFirstMeasurement) ...[
+                      _buildMetricField(
+                        controller: _weightController,
+                        label: 'Weight',
+                        helperText: 'In kilograms (kg)',
+                      ),
+                      const SizedBox(height: AppDimensions.spacing16),
+                      _buildMetricField(
+                        controller: _heightController,
+                        label: 'Height',
+                        helperText: 'In centimeters (cm)',
+                      ),
+                      const SizedBox(height: AppDimensions.spacing16),
+                    ],
+                    _buildMetricField(
                       controller: _bodyFatController,
-                      suffix: '%',
-                      hint: '20',
-                      required: false,
+                      label: 'Body fat',
+                      helperText: 'Percentage (0–100)',
                       validator: (v) {
                         if (v != null && v.isNotEmpty) {
                           final n = double.tryParse(v);
@@ -167,56 +192,41 @@ class _ManualMeasurementFormScreenState
                       },
                     ),
                     const SizedBox(height: AppDimensions.spacing16),
-                    MeasurementMetricCard(
-                      icon: Icons.straighten,
-                      title: 'Chest (cm)',
+                    _buildMetricField(
                       controller: _chestController,
-                      suffix: 'cm',
-                      hint: '100',
-                      required: false,
+                      label: 'Chest',
+                      helperText: 'In centimeters (cm)',
                     ),
                     const SizedBox(height: AppDimensions.spacing16),
-                    MeasurementMetricCard(
-                      icon: Icons.straighten,
-                      title: 'Waist (cm)',
+                    _buildMetricField(
                       controller: _waistController,
-                      suffix: 'cm',
-                      hint: '80',
-                      required: false,
+                      label: 'Waist',
+                      helperText: 'In centimeters (cm)',
                     ),
                     const SizedBox(height: AppDimensions.spacing16),
-                    MeasurementMetricCard(
-                      icon: Icons.straighten,
-                      title: 'Hips (cm)',
+                    _buildMetricField(
                       controller: _hipsController,
-                      suffix: 'cm',
-                      hint: '95',
-                      required: false,
+                      label: 'Hips',
+                      helperText: 'In centimeters (cm)',
                     ),
                     const SizedBox(height: AppDimensions.spacing16),
-                    MeasurementMetricCard(
-                      icon: Icons.straighten,
-                      title: 'Biceps (cm)',
+                    _buildMetricField(
                       controller: _bicepsController,
-                      suffix: 'cm',
-                      hint: '35',
-                      required: false,
+                      label: 'Biceps',
+                      helperText: 'In centimeters (cm)',
                     ),
                     const SizedBox(height: AppDimensions.spacing16),
-                    MeasurementMetricCard(
-                      icon: Icons.straighten,
-                      title: 'Thighs (cm)',
+                    _buildMetricField(
                       controller: _thighsController,
-                      suffix: 'cm',
-                      hint: '55',
-                      required: false,
+                      label: 'Thighs',
+                      helperText: 'In centimeters (cm)',
                     ),
                     const SizedBox(height: AppDimensions.spacing16),
                     TextFormField(
                       controller: _notesController,
                       decoration: const InputDecoration(
-                        labelText: 'Notes (optional)',
-                        border: OutlineInputBorder(),
+                        labelText: 'Notes',
+                        helperText: 'Optional',
                       ),
                       maxLines: 2,
                     ),

@@ -1,28 +1,27 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../models/onboarding_response.dart';
+import '../../../viewmodels/onboarding_viewmodel.dart';
 
 /// Generic TOGGLE step - one boolean per option from step.options.
-class ToggleStep extends StatefulWidget {
+/// Calls the ViewModel directly via Riverpod on user interaction.
+class ToggleStep extends ConsumerStatefulWidget {
   final OnboardingStepResponse step;
-  final Function(Map<String, dynamic>) onSubmit;
-  final VoidCallback? onSkip;
   final String? existingData;
 
   const ToggleStep({
     super.key,
     required this.step,
-    required this.onSubmit,
-    this.onSkip,
     this.existingData,
   });
 
   @override
-  State<ToggleStep> createState() => _ToggleStepState();
+  ConsumerState<ToggleStep> createState() => _ToggleStepState();
 }
 
-class _ToggleStepState extends State<ToggleStep> {
+class _ToggleStepState extends ConsumerState<ToggleStep> {
   final Map<String, bool> _values = {};
 
   @override
@@ -30,6 +29,10 @@ class _ToggleStepState extends State<ToggleStep> {
     super.initState();
     _initFromOptions();
     _loadExistingData();
+    // Toggle data is always valid — report immediately
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _reportData();
+    });
   }
 
   void _initFromOptions() {
@@ -53,8 +56,9 @@ class _ToggleStepState extends State<ToggleStep> {
     } catch (_) {}
   }
 
-  void _submit() {
-    widget.onSubmit(Map<String, dynamic>.from(_values));
+  void _reportData() {
+    ref.read(onboardingViewModelProvider.notifier)
+        .updateStepData(Map<String, dynamic>.from(_values));
   }
 
   @override
@@ -63,10 +67,11 @@ class _ToggleStepState extends State<ToggleStep> {
     final options = widget.step.options;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const SizedBox(height: 24),
           Text(
             widget.step.title ?? 'Preferences',
             style: theme.textTheme.headlineMedium?.copyWith(
@@ -96,63 +101,16 @@ class _ToggleStepState extends State<ToggleStep> {
                 value: value,
                 onChanged: (v) {
                   setState(() => _values[key] = v);
+                  _reportData();
                 },
               ),
             );
           }),
           if (widget.step.helpText != null) ...[
             const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 20,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      widget.step.helpText!,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildHelpText(theme, widget.step.helpText!),
           ],
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: _submit,
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text('Continue'),
-            ),
-          ),
-          if (widget.onSkip != null) ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: TextButton(
-                onPressed: widget.onSkip,
-                child: const Text('Skip'),
-              ),
-            ),
-          ],
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -219,6 +177,31 @@ class _ToggleStepState extends State<ToggleStep> {
           Switch(
             value: value,
             onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHelpText(ThemeData theme, String text) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, size: 20, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
           ),
         ],
       ),

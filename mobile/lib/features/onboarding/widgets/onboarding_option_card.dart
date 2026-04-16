@@ -20,32 +20,24 @@ class OnboardingOptionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final primaryColor = theme.colorScheme.primary;
 
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected
-              ? theme.colorScheme.primaryContainer
-              : theme.colorScheme.surface,
+          // Same white/surface background for both states
+          color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected
-                ? theme.colorScheme.primary
-                : theme.colorScheme.outline.withValues(alpha: 0.3),
+                ? primaryColor
+                : theme.colorScheme.outline.withValues(alpha: 0.15),
             width: isSelected ? 2 : 1,
           ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.2),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
         ),
         child: Row(
           children: [
@@ -54,9 +46,8 @@ class OnboardingOptionCard extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: isSelected
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.surfaceContainerHighest,
+                color: theme.colorScheme.surfaceContainerHighest
+                    .withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: iconUrl != null && iconUrl!.isNotEmpty
@@ -81,9 +72,7 @@ class OnboardingOptionCard extends StatelessWidget {
                     label,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: isSelected
-                          ? theme.colorScheme.onPrimaryContainer
-                          : theme.colorScheme.onSurface,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                   if (description != null && description!.isNotEmpty) ...[
@@ -91,10 +80,7 @@ class OnboardingOptionCard extends StatelessWidget {
                     Text(
                       description!,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: isSelected
-                            ? theme.colorScheme.onPrimaryContainer
-                                .withValues(alpha: 0.8)
-                            : theme.colorScheme.onSurfaceVariant,
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -110,13 +96,11 @@ class OnboardingOptionCard extends StatelessWidget {
               height: 24,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected
-                    ? theme.colorScheme.primary
-                    : Colors.transparent,
+                color: isSelected ? primaryColor : Colors.transparent,
                 border: Border.all(
                   color: isSelected
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.outline,
+                      ? primaryColor
+                      : theme.colorScheme.outline.withValues(alpha: 0.3),
                   width: 2,
                 ),
               ),
@@ -137,9 +121,7 @@ class OnboardingOptionCard extends StatelessWidget {
   Widget _buildDefaultIcon(ThemeData theme) {
     return Icon(
       Icons.fitness_center,
-      color: isSelected
-          ? theme.colorScheme.onPrimary
-          : theme.colorScheme.onSurfaceVariant,
+      color: theme.colorScheme.onSurfaceVariant,
     );
   }
 }
