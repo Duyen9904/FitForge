@@ -47,6 +47,10 @@ class AppColors {
   static const Color surfaceLight = Color(0xFFFFFFFF);
   static const Color surfaceDark = Color(0xFF1E293B);
 
+  // ================= ATHLETIC / FITNESS ACCENTS
+  static const Color neonLime = Color(0xFFA6F523);
+  static const Color darkHero = Color(0xFF1B1E1C);
+
   // ================= GRADIENTS (Fitness App Style)
   static const LinearGradient primaryGradient = LinearGradient(
     colors: [Color(0xFF7C5CFF), Color(0xFF9F86FF)],

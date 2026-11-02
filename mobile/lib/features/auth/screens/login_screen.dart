@@ -97,6 +97,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   textAlign: TextAlign.center,
                 ),
+                const SizedBox(height: AppDimensions.spacing8),
+                Text(
+                  'No pressure. Your dumbbells have not started gossiping... yet.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.grey400,
+                    fontStyle: FontStyle.italic,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
 
                 const SizedBox(height: AppDimensions.spacing48),
 

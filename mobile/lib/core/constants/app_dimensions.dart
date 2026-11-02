@@ -8,7 +8,9 @@ class AppDimensions {
   // Common 6px spacing used in badges and chips
   static const double spacing6 = 6.0;
   static const double spacing8 = 8.0;
+  static const double spacing10 = 10.0;
   static const double spacing12 = 12.0;
+  static const double spacing14 = 14.0;
   static const double spacing16 = 16.0;
   static const double spacing20 = 20.0;
   static const double spacing24 = 24.0;
@@ -25,6 +27,9 @@ class AppDimensions {
   static const double radiusXLarge = 16.0;
   static const double radiusRound = 24.0;
   static const double radiusCircle = 100.0;
+  static const double radiusFull = 999.0;
+  static const double radius20 = 20.0;
+  static const double radius24 = 24.0;
 
   // Semantic aliases for border radii used throughout the UI
   // Keep these mapped to the base radius values above for consistency.
@@ -32,6 +37,7 @@ class AppDimensions {
   static const double borderRadius12 = radiusLarge;
   static const double borderRadius16 = radiusXLarge;
   static const double borderRadius20 = 20.0;
+  static const double borderRadius24 = 24.0;
 
   // Icon Sizes
   static const double iconSmall = 16.0;

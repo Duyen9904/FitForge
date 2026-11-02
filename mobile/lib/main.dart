@@ -1,10 +1,12 @@
 import 'dart:developer' as developer;
+import 'package:device_preview/device_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'app.dart';
 import 'firebase_options.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -32,9 +34,14 @@ void main() async {
     FlutterError.presentError(details);
   };
   
+  const enablePreview = bool.fromEnvironment('DEVICE_PREVIEW', defaultValue: false);
+
   runApp(
-    const ProviderScope(
-      child: GymPlanApp(),
+    DevicePreview(
+      enabled: enablePreview,
+      builder: (context) => const ProviderScope(
+        child: GymPlanApp(),
+      ),
     ),
   );
 }
