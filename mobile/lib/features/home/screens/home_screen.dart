@@ -10,8 +10,8 @@ import '../../auth/viewmodels/auth_viewmodel.dart';
 import '../../recommendation/viewmodels/workout_plan_viewmodel.dart';
 import '../../workouts/viewmodels/workout_plans_viewmodel.dart';
 import '../viewmodels/home_viewmodel.dart';
-import '../viewmodels/home_state.dart';
 import '../models/home_dashboard_models.dart';
+import '../models/muscle_cycle_models.dart';
 import '../models/plan_generation_option.dart';
 import '../widgets/home_top_bar.dart';
 import '../widgets/today_activities_hero_card.dart';
@@ -23,9 +23,9 @@ import '../widgets/plan_generation_options_sheet.dart';
 /// - Resource system colors (AppColors.primary, secondary, etc.)
 /// - AI-generated icon in top-right app bar for plan generation
 /// - Top-left profile avatar
-/// - Dark hero card for "Today's Activities" with target muscle focus (Back, Full Body, etc.)
+/// - Dark hero card for "Today's Activities" with target muscle focus and Radial Muscle Cycle extension
 /// - Expandable calendar that reveals the 7-day strip when clicking the calendar icon
-/// - Vertical timeline for daily exercises with muscle group metadata
+/// - Vertical timeline for daily exercises (clock time removed) with muscle group metadata
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -35,11 +35,15 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   late DateTime _selectedDate;
+  late int _selectedCycleIndex;
+  MuscleCycleScope _cycleScope = MuscleCycleScope.week;
+  int _selectedWeek = 2;
 
   @override
   void initState() {
     super.initState();
     _selectedDate = DateTime.now();
+    _selectedCycleIndex = (_selectedDate.weekday - 1).clamp(0, 6);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(homeViewModelProvider.notifier).loadDashboard();
       ref.read(workoutPlansViewModelProvider.notifier).loadPlans();
@@ -47,7 +51,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   /// Formats the target focus muscle group for display
-  String _getTargetMuscleFocus(TodaySessionInfo? session) {
+  String _getTargetMuscleFocus(
+    TodaySessionInfo? session,
+    MuscleCycleDay? selectedCycleDay,
+  ) {
+    if (selectedCycleDay != null) {
+      return selectedCycleDay.muscleGroup;
+    }
     if (session?.targetMuscleGroups.isNotEmpty ?? false) {
       return session!.targetMuscleGroups
           .map((m) => m[0].toUpperCase() + m.substring(1).toLowerCase())
@@ -74,13 +84,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       orElse: () => null,
     );
 
-    final focusMuscle = _getTargetMuscleFocus(dashboard?.todaySession);
+    final activePlan = (dashboard?.activePlans.isNotEmpty ?? false)
+        ? dashboard!.activePlans.first
+        : null;
+    final totalWeeks = activePlan?.durationWeeks != null &&
+            activePlan!.durationWeeks! > 0
+        ? activePlan.durationWeeks!.clamp(1, 6)
+        : 4;
+
+    final cycleDays = MuscleCycleDay.buildCycle(
+      todaySession: dashboard?.todaySession,
+      currentWeekday: DateTime.now().weekday,
+      selectedWeek: _selectedWeek,
+    );
+    final selectedCycleDay =
+        cycleDays[_selectedCycleIndex.clamp(0, cycleDays.length - 1)];
+
+    final focusMuscle =
+        _getTargetMuscleFocus(dashboard?.todaySession, selectedCycleDay);
 
     // Compute scheduled workout dates for the calendar indicators
     final scheduledDates = _getScheduledDates(dashboard);
 
     // Build timeline items for the selected date
-    final timelineItems = _buildTimelineItems(dashboard, _selectedDate, focusMuscle);
+    final timelineItems =
+        _buildTimelineItems(dashboard, _selectedDate, focusMuscle);
 
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
@@ -111,11 +139,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                 const SizedBox(height: AppDimensions.spacing20),
 
-                // 2. Today's Activities Hero Card with Focus Muscle (Back, Body, etc.)
+                // 2. Original Today's Activities Hero Card extended with Radial Muscle Cycle
                 TodayActivitiesHeroCard(
                   session: dashboard?.todaySession,
                   weeklyStats: dashboard?.weeklyStats,
                   focusMuscleGroup: focusMuscle,
+                  cycleDays: cycleDays,
+                  selectedCycleIndex: _selectedCycleIndex,
+                  cycleScope: _cycleScope,
+                  selectedWeek: _selectedWeek.clamp(1, totalWeeks),
+                  totalWeeks: totalWeeks,
+                  onCycleDaySelected: (index) {
+                    final now = DateTime.now();
+                    final monday = now.subtract(Duration(days: now.weekday - 1));
+                    setState(() {
+                      _selectedCycleIndex = index.clamp(0, 6);
+                      _selectedDate =
+                          monday.add(Duration(days: _selectedCycleIndex));
+                    });
+                  },
+                  onCycleScopeChanged: (scope) {
+                    setState(() {
+                      _cycleScope = scope;
+                    });
+                  },
+                  onWeekSelected: (week) {
+                    setState(() {
+                      _selectedWeek = week;
+                    });
+                  },
                   onTap: () {
                     final session = dashboard?.todaySession;
                     if (session != null && session.planId != null) {
@@ -134,6 +186,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   onDateSelected: (date) {
                     setState(() {
                       _selectedDate = date;
+                      _selectedCycleIndex = (date.weekday - 1).clamp(0, 6);
                     });
                   },
                   workoutDates: scheduledDates,
@@ -142,7 +195,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                 const SizedBox(height: AppDimensions.spacing20),
 
-                // 4. Daily Exercises Timeline Section
+                // 4. Daily Exercises Timeline Section (Clock time removed)
                 TodayExercisesTimeline(
                   items: timelineItems,
                   focusMuscleGroup: focusMuscle,
@@ -186,7 +239,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return dates;
   }
 
-  /// Builds exercise timeline items for the selected date
+  /// Builds exercise timeline items for the selected date (without clock times)
   List<TimelineExerciseItem> _buildTimelineItems(
     HomeDashboardResponse? dashboard,
     DateTime selectedDate,
@@ -203,8 +256,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
       return [
         TimelineExerciseItem(
-          startTime: '11:35',
-          endTime: '13:05',
           title: 'Cardio',
           category: 'cardio',
           targetMuscle: 'Cardiovascular & Endurance',
@@ -222,8 +273,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           },
         ),
         TimelineExerciseItem(
-          startTime: '11:35',
-          endTime: '14:45',
           title: session?.sessionName ?? 'Muscle',
           category: 'muscle',
           targetMuscle: focusMuscle,
@@ -241,8 +290,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           },
         ),
         TimelineExerciseItem(
-          startTime: '14:50',
-          endTime: '15:15',
           title: 'Weight',
           category: 'weight',
           targetMuscle: 'Back & Core Strength',

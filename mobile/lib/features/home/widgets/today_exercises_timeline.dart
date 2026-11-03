@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
+import '../../../ui/core/cards/app_cards.dart';
+import '../../../ui/core/chips/app_chips.dart';
 
 /// Model representing an exercise display item on the daily timeline
 class TimelineExerciseItem {
-  final String startTime;
-  final String endTime;
+  final String? startTime;
+  final String? endTime;
   final String title;
   final String category; // 'cardio', 'muscle', 'weight', or custom
   final String? targetMuscle; // e.g. 'Back', 'Chest', 'Legs', 'Full Body'
@@ -17,8 +19,8 @@ class TimelineExerciseItem {
   final VoidCallback? onTap;
 
   const TimelineExerciseItem({
-    required this.startTime,
-    required this.endTime,
+    this.startTime,
+    this.endTime,
     required this.title,
     required this.category,
     this.targetMuscle,
@@ -32,9 +34,9 @@ class TimelineExerciseItem {
 }
 
 /// Today's exercises timeline using app resource system colors:
-/// - Timeline indicators in AppColors.primary
-/// - Progress bars in AppColors.primary with system light backgrounds
-/// - Muscle focus badges and metadata
+/// - Keeps the original exercise cards and timeline dot/connector line
+/// - Clock time column (`startTime` / `endTime` and `'Time'` header) removed
+/// - Uses reusable `AppSurfaceCard` and `AppBadgeChip` components
 class TodayExercisesTimeline extends StatelessWidget {
   final List<TimelineExerciseItem> items;
   final String? focusMuscleGroup;
@@ -56,22 +58,12 @@ class TodayExercisesTimeline extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Column Header: "Time" | "Exercise" + Muscle Focus badge | Sort Icon
+        // Column Header: "Exercise" + Muscle Focus badge | Sort Icon (Clock "Time" header removed)
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppDimensions.spacing4),
+          padding:
+              const EdgeInsets.symmetric(horizontal: AppDimensions.spacing4),
           child: Row(
             children: [
-              SizedBox(
-                width: 60,
-                child: Text(
-                  'Time',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.grey500,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppDimensions.spacing16),
               Text(
                 'Exercise',
                 style: theme.textTheme.bodyMedium?.copyWith(
@@ -81,22 +73,16 @@ class TodayExercisesTimeline extends StatelessWidget {
               ),
               if (focusMuscleGroup != null && focusMuscleGroup!.isNotEmpty) ...[
                 const SizedBox(width: AppDimensions.spacing8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimensions.spacing8,
-                    vertical: AppDimensions.spacing2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryLight.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusSmall),
-                  ),
-                  child: Text(
-                    focusMuscleGroup!,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 10,
+                Flexible(
+                  child: AppBadgeChip(
+                    label: focusMuscleGroup!,
+                    foregroundColor: AppColors.primary,
+                    backgroundColor: AppColors.primaryLight.withOpacity(0.15),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimensions.spacing8,
+                      vertical: AppDimensions.spacing2,
                     ),
+                    borderRadius: AppDimensions.radiusSmall,
                   ),
                 ),
               ],
@@ -145,62 +131,35 @@ class TodayExercisesTimeline extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. Left Time Column with Dot & Connector Line in AppColors.primary
+          // 1. Left Timeline Dot & Connector Line in AppColors.primary (Clock times removed)
           SizedBox(
-            width: 60,
+            width: 20,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item.startTime,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: AppColors.grey900,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
+                const SizedBox(height: AppDimensions.spacing16),
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.primary,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  item.endTime,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: AppColors.grey400,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 11,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                // Timeline dot + line in system primary color
-                Expanded(
-                  child: Center(
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        if (!isLast)
-                          Expanded(
-                            child: Container(
-                              width: 1.5,
-                              margin: const EdgeInsets.symmetric(vertical: 4),
-                              color: AppColors.primaryLight.withOpacity(0.3),
-                            ),
-                          ),
-                      ],
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      width: 1.5,
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      color: AppColors.primaryLight.withOpacity(0.3),
                     ),
                   ),
-                ),
               ],
             ),
           ),
 
-          const SizedBox(width: AppDimensions.spacing12),
+          const SizedBox(width: AppDimensions.spacing8),
 
-          // 2. Right Exercise Card
+          // 2. Right Original Exercise Card
           Expanded(
             child: _buildExerciseCard(context, theme, item),
           ),
@@ -218,139 +177,116 @@ class TodayExercisesTimeline extends StatelessWidget {
         ? (item.currentStep / item.totalSteps).clamp(0.0, 1.0)
         : 0.0;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(AppDimensions.radius20),
-        border: Border.all(
-          color: AppColors.grey200.withOpacity(0.8),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryDark.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppDimensions.radius20),
-          onTap: item.onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(AppDimensions.spacing16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top Row: Category Icon, Title + Target Muscle, and 3-dots Menu
-                Row(
-                  children: [
-                    _buildCategoryIcon(item.category),
-                    const SizedBox(width: AppDimensions.spacing10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.title,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.grey900,
-                              fontSize: 16,
-                            ),
-                          ),
-                          if (item.targetMuscle != null && item.targetMuscle!.isNotEmpty)
-                            Text(
-                              'Target: ${item.targetMuscle}',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w500,
-                                fontSize: 11,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    PopupMenuButton<String>(
-                      icon: const Icon(
-                        Icons.more_vert_rounded,
-                        color: AppColors.grey500,
-                        size: 20,
-                      ),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'details',
-                          child: Text('View Details'),
-                        ),
-                        const PopupMenuItem(
-                          value: 'start',
-                          child: Text('Start Workout'),
-                        ),
-                      ],
-                      onSelected: (val) {
-                        if (val == 'details' || val == 'start') {
-                          item.onTap?.call();
-                        }
-                      },
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: AppDimensions.spacing12),
-
-                // Progress Bar: "Exercise 4 of 6" using AppColors.primary
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return AppSurfaceCard(
+      onTap: item.onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top Row: Category Icon, Title + Target Muscle, and 3-dots Menu
+          Row(
+            children: [
+              _buildCategoryIcon(item.category),
+              const SizedBox(width: AppDimensions.spacing10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Exercise',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: AppColors.grey500,
-                        fontSize: 11,
+                      item.title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.grey900,
+                        fontSize: 16,
                       ),
                     ),
-                    Text(
-                      '${item.currentStep} of ${item.totalSteps}',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: AppColors.primary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                    if (item.targetMuscle != null &&
+                        item.targetMuscle!.isNotEmpty)
+                      Text(
+                        'Target: ${item.targetMuscle}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 11,
+                        ),
                       ),
-                    ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 5,
-                    backgroundColor: AppColors.grey200,
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      AppColors.primary,
-                    ),
+              ),
+              PopupMenuButton<String>(
+                icon: const Icon(
+                  Icons.more_vert_rounded,
+                  color: AppColors.grey500,
+                  size: 20,
+                ),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: 'details',
+                    child: Text('View Details'),
                   ),
-                ),
+                  PopupMenuItem(
+                    value: 'start',
+                    child: Text('Start Workout'),
+                  ),
+                ],
+                onSelected: (val) {
+                  if (val == 'details' || val == 'start') {
+                    item.onTap?.call();
+                  }
+                },
+              ),
+            ],
+          ),
 
-                const SizedBox(height: AppDimensions.spacing14),
+          const SizedBox(height: AppDimensions.spacing12),
 
-                // Metrics Row: Calories Burn | Heart Rate | Time
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildStatCol(theme, item.calories, 'Calories Burn'),
-                    _buildStatCol(theme, item.heartRate, 'Heart Rate'),
-                    _buildStatCol(theme, item.duration, 'Time'),
-                  ],
+          // Progress Bar: "Exercise 4 of 6" using AppColors.primary
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Exercise',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: AppColors.grey500,
+                  fontSize: 11,
                 ),
-              ],
+              ),
+              Text(
+                '${item.currentStep} of ${item.totalSteps}',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: AppColors.primary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 5,
+              backgroundColor: AppColors.grey200,
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                AppColors.primary,
+              ),
             ),
           ),
-        ),
+
+          const SizedBox(height: AppDimensions.spacing14),
+
+          // Metrics Row: Calories Burn | Heart Rate | Time
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildStatCol(theme, item.calories, 'Calories Burn'),
+              _buildStatCol(theme, item.heartRate, 'Heart Rate'),
+              _buildStatCol(theme, item.duration, 'Time'),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -420,17 +356,11 @@ class TodayExercisesTimeline extends StatelessWidget {
   }
 
   Widget _buildEmptyState(BuildContext context, ThemeData theme) {
-    return Container(
-      width: double.infinity,
+    return AppSurfaceCard(
       padding: const EdgeInsets.all(AppDimensions.spacing24),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(AppDimensions.radius20),
-        border: Border.all(color: AppColors.grey200),
-      ),
       child: Column(
         children: [
-          Icon(
+          const Icon(
             Icons.event_available_rounded,
             size: 48,
             color: AppColors.primaryLight,

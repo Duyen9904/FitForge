@@ -1,19 +1,31 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
+import '../../../ui/core/cards/app_cards.dart';
+import '../../../ui/core/chips/app_chips.dart';
 import '../models/home_dashboard_models.dart';
+import '../models/muscle_cycle_models.dart';
+import 'radial_muscle_cycle_card.dart';
 
 /// Hero summary card using system resource colors:
-/// - Dark slate container from AppColors.surfaceDark
-/// - "Today's Activities" title
-/// - Prominent target muscle group display (e.g. "Back", "Full Body", "Chest & Triceps")
-/// - Circular progress ring in AppColors.primary ("7/9 Workout")
-/// - Metrics row: "1200 kcal Calories Burned" | "90 bpm Heart Rate" | "03:00 hr Time"
-class TodayActivitiesHeroCard extends StatelessWidget {
+/// - Keeps the original "Today's Activities" card (Title, Focus badge, 7/9 Workout ring, and bottom metrics row)
+/// - Extends the card with an expandable Radial Node Muscle Cycle section (Week / Month muscle group focus cycle)
+class TodayActivitiesHeroCard extends StatefulWidget {
   final TodaySessionInfo? session;
   final WeeklyQuickStats? weeklyStats;
   final String? focusMuscleGroup;
   final VoidCallback? onTap;
+
+  // Extension properties for the Radial Muscle Focus Cycle
+  final List<MuscleCycleDay>? cycleDays;
+  final int selectedCycleIndex;
+  final MuscleCycleScope cycleScope;
+  final int selectedWeek;
+  final int totalWeeks;
+  final ValueChanged<int>? onCycleDaySelected;
+  final ValueChanged<MuscleCycleScope>? onCycleScopeChanged;
+  final ValueChanged<int>? onWeekSelected;
+  final bool initialCycleExpanded;
 
   const TodayActivitiesHeroCard({
     super.key,
@@ -21,20 +33,45 @@ class TodayActivitiesHeroCard extends StatelessWidget {
     this.weeklyStats,
     this.focusMuscleGroup,
     this.onTap,
+    this.cycleDays,
+    this.selectedCycleIndex = 0,
+    this.cycleScope = MuscleCycleScope.week,
+    this.selectedWeek = 2,
+    this.totalWeeks = 4,
+    this.onCycleDaySelected,
+    this.onCycleScopeChanged,
+    this.onWeekSelected,
+    this.initialCycleExpanded = true,
   });
+
+  @override
+  State<TodayActivitiesHeroCard> createState() =>
+      _TodayActivitiesHeroCardState();
+}
+
+class _TodayActivitiesHeroCardState extends State<TodayActivitiesHeroCard> {
+  late bool _isCycleExpanded;
+
+  @override
+  void initState() {
+    super.initState();
+    _isCycleExpanded = widget.initialCycleExpanded;
+  }
 
   /// Formats the targeted muscle display string
   String _formatTargetMuscle() {
-    if (focusMuscleGroup != null && focusMuscleGroup!.isNotEmpty) {
-      return focusMuscleGroup!;
+    if (widget.focusMuscleGroup != null &&
+        widget.focusMuscleGroup!.isNotEmpty) {
+      return widget.focusMuscleGroup!;
     }
-    if (session?.targetMuscleGroups.isNotEmpty ?? false) {
-      return session!.targetMuscleGroups
+    if (widget.session?.targetMuscleGroups.isNotEmpty ?? false) {
+      return widget.session!.targetMuscleGroups
           .map((m) => m[0].toUpperCase() + m.substring(1).toLowerCase())
           .join(' & ');
     }
-    if (session?.sessionName != null && session!.sessionName!.isNotEmpty) {
-      return session!.sessionName!;
+    if (widget.session?.sessionName != null &&
+        widget.session!.sessionName!.isNotEmpty) {
+      return widget.session!.sessionName!;
     }
     return 'Back & Full Body';
   }
@@ -44,188 +81,232 @@ class TodayActivitiesHeroCard extends StatelessWidget {
     final theme = Theme.of(context);
     final targetMuscle = _formatTargetMuscle();
 
-    final caloriesText = weeklyStats != null && weeklyStats!.caloriesBurned > 0
-        ? '${weeklyStats!.caloriesBurned} kcal'
-        : '1200 kcal';
+    final caloriesText =
+        widget.weeklyStats != null && widget.weeklyStats!.caloriesBurned > 0
+            ? '${widget.weeklyStats!.caloriesBurned} kcal'
+            : '1200 kcal';
 
-    final workoutsCompleted = weeklyStats?.workoutsCompleted ?? 7;
-    final workoutsPlanned = weeklyStats?.workoutsPlanned ?? 9;
+    final workoutsCompleted = widget.weeklyStats?.workoutsCompleted ?? 7;
+    final workoutsPlanned = widget.weeklyStats?.workoutsPlanned ?? 9;
     final totalWorkouts = workoutsPlanned > 0 ? workoutsPlanned : 9;
     final progressValue = (workoutsCompleted / totalWorkouts).clamp(0.0, 1.0);
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppDimensions.radius24),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(AppDimensions.spacing20),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceDark,
-          borderRadius: BorderRadius.circular(AppDimensions.radius24),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primaryDark.withOpacity(0.18),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top Section: Title & Focus Muscle on left, Circular Progress on right
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Today's\nActivities",
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          color: AppColors.white,
-                          fontWeight: FontWeight.bold,
-                          height: 1.15,
-                        ),
+    final days = widget.cycleDays ??
+        MuscleCycleDay.buildCycle(
+          todaySession: widget.session,
+          currentWeekday: DateTime.now().weekday,
+          selectedWeek: widget.selectedWeek,
+        );
+
+    return AppDarkHeroCard(
+      onTap: widget.onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 1. Original Top Section: Title & Focus Muscle on left, Circular Progress on right
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Today's\nActivities",
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.bold,
+                        height: 1.15,
                       ),
-                      const SizedBox(height: AppDimensions.spacing10),
-                      // Prominent Target Muscle Focus Badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppDimensions.spacing10,
-                          vertical: AppDimensions.spacing4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(AppDimensions.radiusMedium),
-                          border: Border.all(
-                            color: AppColors.primaryLight.withOpacity(0.35),
-                            width: 1,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.fitness_center_rounded,
-                              size: 14,
-                              color: AppColors.primaryLight,
-                            ),
-                            const SizedBox(width: AppDimensions.spacing6),
-                            Flexible(
-                              child: Text(
-                                'Focus: $targetMuscle',
-                                style: theme.textTheme.labelMedium?.copyWith(
-                                  color: AppColors.primaryLight,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: AppDimensions.spacing10),
+                    // Prominent Target Muscle Focus Badge (Using Reusable AppBadgeChip)
+                    AppBadgeChip(
+                      label: 'Focus: $targetMuscle',
+                      icon: Icons.fitness_center_rounded,
+                      foregroundColor: AppColors.primaryLight,
+                      backgroundColor: AppColors.primary.withOpacity(0.2),
+                      borderColor: AppColors.primaryLight.withOpacity(0.35),
+                      onTap: () {
+                        setState(() {
+                          _isCycleExpanded = !_isCycleExpanded;
+                        });
+                      },
+                    ),
+                  ],
                 ),
+              ),
 
-                const SizedBox(width: AppDimensions.spacing12),
+              const SizedBox(width: AppDimensions.spacing12),
 
-                // Circular Progress Indicator ("7/9 Workout") using AppColors.primary
-                SizedBox(
-                  width: 76,
-                  height: 76,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      // Background Track
-                      SizedBox(
-                        width: 76,
-                        height: 76,
-                        child: CircularProgressIndicator(
-                          value: 1.0,
-                          strokeWidth: 6,
-                          strokeCap: StrokeCap.round,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            AppColors.white.withOpacity(0.12),
-                          ),
+              // Original Circular Progress Indicator ("7/9 Workout") using AppColors.primary
+              SizedBox(
+                width: 76,
+                height: 76,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Background Track
+                    SizedBox(
+                      width: 76,
+                      height: 76,
+                      child: CircularProgressIndicator(
+                        value: 1.0,
+                        strokeWidth: 6,
+                        strokeCap: StrokeCap.round,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppColors.white.withOpacity(0.12),
                         ),
                       ),
-                      // Progress Arc in System Primary Color
-                      SizedBox(
-                        width: 76,
-                        height: 76,
-                        child: CircularProgressIndicator(
-                          value: progressValue,
-                          strokeWidth: 6,
-                          strokeCap: StrokeCap.round,
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            AppColors.primary,
-                          ),
+                    ),
+                    // Progress Arc in System Primary Color
+                    SizedBox(
+                      width: 76,
+                      height: 76,
+                      child: CircularProgressIndicator(
+                        value: progressValue,
+                        strokeWidth: 6,
+                        strokeCap: StrokeCap.round,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          AppColors.primary,
                         ),
                       ),
-                      // Inner Text: "7/9 Workout"
-                      Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            '$workoutsCompleted/$totalWorkouts',
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              color: AppColors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
+                    ),
+                    // Inner Text: "7/9 Workout"
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '$workoutsCompleted/$totalWorkouts',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: AppColors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
                           ),
-                          Text(
-                            'Workout',
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: AppColors.grey400,
-                              fontSize: 10,
-                            ),
+                        ),
+                        Text(
+                          'Workout',
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: AppColors.grey400,
+                            fontSize: 10,
                           ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
+          ),
 
-            const SizedBox(height: AppDimensions.spacing20),
+          const SizedBox(height: AppDimensions.spacing20),
 
-            // Subtle divider line
-            Container(
-              height: 1,
-              color: Colors.white.withOpacity(0.08),
-            ),
+          // Subtle divider line
+          Container(
+            height: 1,
+            color: Colors.white.withOpacity(0.08),
+          ),
 
-            const SizedBox(height: AppDimensions.spacing16),
+          const SizedBox(height: AppDimensions.spacing16),
 
-            // Bottom Metrics Row: Calories Burned | Heart Rate | Time
-            Row(
+          // 2. Original Bottom Metrics Row: Calories Burned | Heart Rate | Time
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildMetricItem(
+                theme: theme,
+                value: caloriesText,
+                label: 'Calories Burned',
+              ),
+              _buildMetricItem(
+                theme: theme,
+                value: '90 bpm',
+                label: 'Heart Rate',
+              ),
+              _buildMetricItem(
+                theme: theme,
+                value: '03:00 hr',
+                label: 'Time',
+              ),
+            ],
+          ),
+
+          const SizedBox(height: AppDimensions.spacing16),
+          Container(
+            height: 1,
+            color: Colors.white.withOpacity(0.08),
+          ),
+          const SizedBox(height: AppDimensions.spacing12),
+
+          // 3. Extension Toggle Row for the Radial Muscle Focus Cycle
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              setState(() {
+                _isCycleExpanded = !_isCycleExpanded;
+              });
+            },
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildMetricItem(
-                  theme: theme,
-                  value: caloriesText,
-                  label: 'Calories Burned',
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(AppDimensions.spacing6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.2),
+                        borderRadius:
+                            BorderRadius.circular(AppDimensions.radiusSmall),
+                      ),
+                      child: const Icon(
+                        Icons.donut_large_rounded,
+                        size: 14,
+                        color: AppColors.primaryLight,
+                      ),
+                    ),
+                    const SizedBox(width: AppDimensions.spacing8),
+                    Text(
+                      'Muscle Focus Cycle (Week / Month)',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: AppColors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-                _buildMetricItem(
-                  theme: theme,
-                  value: '90 bpm',
-                  label: 'Heart Rate',
-                ),
-                _buildMetricItem(
-                  theme: theme,
-                  value: '03:00 hr',
-                  label: 'Time',
+                Icon(
+                  _isCycleExpanded
+                      ? Icons.keyboard_arrow_up_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  color: AppColors.grey400,
+                  size: 20,
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+
+          // 4. Expandable Radial Node Muscle Cycle Extension Content
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.only(top: AppDimensions.spacing14),
+              child: RadialMuscleCycleSection(
+                days: days,
+                selectedDayIndex: widget.selectedCycleIndex,
+                scope: widget.cycleScope,
+                selectedWeek: widget.selectedWeek,
+                totalWeeks: widget.totalWeeks,
+                onDaySelected: widget.onCycleDaySelected ?? (_) {},
+                onScopeChanged: widget.onCycleScopeChanged ?? (_) {},
+                onWeekSelected: widget.onWeekSelected ?? (_) {},
+              ),
+            ),
+            crossFadeState: _isCycleExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 250),
+          ),
+        ],
       ),
     );
   }
