@@ -31,20 +31,8 @@ public class UserPreferenceServiceImpl implements UserPreferenceService {
     public UserPreferenceResponse updateUserPreferences(Long userId, UpdateUserPreferenceRequest request) {
         UserPreference preference = getOrCreatePreference(userId);
 
-        if (request.getPreferredWorkoutDuration() != null) {
-            preference.setPreferredWorkoutDuration(request.getPreferredWorkoutDuration());
-        }
-        if (request.getPreferredWorkoutTime() != null) {
-            preference.setPreferredWorkoutTime(request.getPreferredWorkoutTime());
-        }
-        if (request.getAllowAiSuggestions() != null) {
-            preference.setAllowAiSuggestions(request.getAllowAiSuggestions());
-        }
         if (request.getNotificationEnabled() != null) {
             preference.setNotificationEnabled(request.getNotificationEnabled());
-        }
-        if (request.getMeasurementUnit() != null) {
-            preference.setMeasurementUnit(request.getMeasurementUnit());
         }
         if (request.getWorkoutReminderDays() != null) {
             preference.setWorkoutReminderDays(request.getWorkoutReminderDays());
@@ -80,11 +68,7 @@ public class UserPreferenceServiceImpl implements UserPreferenceService {
     private UserPreferenceResponse toResponse(UserPreference preference) {
         return UserPreferenceResponse.builder()
                 .preferenceId(preference.getPreferenceId())
-                .preferredWorkoutDuration(preference.getPreferredWorkoutDuration())
-                .preferredWorkoutTime(preference.getPreferredWorkoutTime())
-                .allowAiSuggestions(preference.getAllowAiSuggestions())
                 .notificationEnabled(preference.getNotificationEnabled())
-                .measurementUnit(preference.getMeasurementUnit())
                 .workoutReminderDays(preference.getWorkoutReminderDays())
                 .dailyCalorieTarget(preference.getDailyCalorieTarget())
                 .dailyProteinTargetG(preference.getDailyProteinTargetG())

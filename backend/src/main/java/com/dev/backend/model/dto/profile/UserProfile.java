@@ -28,8 +28,8 @@ public class UserProfile {
 
     // Training preferences and constraints
     String fitnessLevel;              // BEGINNER / INTERMEDIATE / ADVANCED
-    String primaryGoalName;           // e.g. "Build Muscle", "Lose Fat"
-    List<String> goalKeys;            // e.g. ["BUILD_MUSCLE", "LOSE_FAT"]
+    String primaryGoalName;           // e.g. "Slimfit", "Athletic", "Bodybuilding"
+    List<String> goalKeys;            // e.g. ["SLIMFIT", "ATHLETIC", "BODYBUILDING"]
     List<String> equipmentKeys;       // equipment option keys from onboarding
     List<String> scheduleDays;        // MON, WED, FRI
     Integer preferredSessionDuration; // minutes
@@ -45,6 +45,4 @@ public class UserProfile {
 
     // Notification / engagement preferences
     Boolean workoutRemindersEnabled;
-    Boolean allowAiSuggestions;
 }
-

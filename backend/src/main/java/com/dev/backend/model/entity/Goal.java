@@ -35,17 +35,6 @@ public class Goal {
     @Column(length = 500)
     private String description;
 
-    @Column(length = 50)
-    private String recommendedRepRange;
-
-    @Column(length = 50)
-    private String recommendedRestTime;
-
-    @Column(length = 50)
-    private String recommendedFrequency;
-
-    private Integer targetCalorieAdjustment;
-
     @OneToMany(mappedBy = "goal", cascade = CascadeType.ALL)
     private List<WorkoutPlan> workoutPlans = new ArrayList<>();
 

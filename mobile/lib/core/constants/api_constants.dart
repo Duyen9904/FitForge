@@ -185,6 +185,6 @@ class ApiConstants {
   static const String gcpDelete = '/gcp';
 
   // Timeouts
-  static const Duration connectTimeout = Duration(seconds: 120);
-  static const Duration receiveTimeout = Duration(seconds: 120);
+  static const Duration connectTimeout = Duration(seconds: 5);
+  static const Duration receiveTimeout = Duration(seconds: 15);
 }

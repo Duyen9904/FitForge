@@ -30,19 +30,8 @@ public class UserPreference {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    private Integer preferredWorkoutDuration;
-
-    @Column(length = 50)
-    private String preferredWorkoutTime;
-
-    @Column(nullable = false)
-    private Boolean allowAiSuggestions = true;
-
     @Column(nullable = false)
     private Boolean notificationEnabled = true;
-
-    @Column(length = 20)
-    private String measurementUnit;
 
     @Column(length = 100)
     private String workoutReminderDays;

@@ -102,7 +102,6 @@ public class UserProfileServiceImpl implements UserProfileService {
                 .dailyCarbsTargetGPreference(user.getUserPreference() != null ? user.getUserPreference().getDailyCarbsTargetG() : null)
                 .dailyFatsTargetGPreference(user.getUserPreference() != null ? user.getUserPreference().getDailyFatsTargetG() : null)
                 .workoutRemindersEnabled(workoutRemindersEnabled != null ? workoutRemindersEnabled : (user.getUserPreference() != null && user.getUserPreference().getNotificationEnabled()))
-                .allowAiSuggestions(user.getUserPreference() != null ? user.getUserPreference().getAllowAiSuggestions() : Boolean.TRUE)
                 .build();
     }
 
@@ -151,4 +150,3 @@ public class UserProfileServiceImpl implements UserProfileService {
         return node != null && !node.isNull() ? node.asText() : null;
     }
 }
-

@@ -28,9 +28,7 @@ public class UserMapper {
                 .heightCm(user.getHeightCm())
                 .currentWeightKg(user.getCurrentWeightKg())
                 .targetWeightKg(user.getTargetWeightKg())
-                .dateJoined(user.getDateJoined())
                 .fitnessLevel(user.getFitnessLevel())
-                .profileImageUrl(user.getProfileImageUrl())
                 .primaryGoal(user.getPrimaryGoal() != null 
                         ? goalMapper.toGoalResponse(user.getPrimaryGoal()) 
                         : null)
@@ -44,11 +42,7 @@ public class UserMapper {
         }
         return UserPreferenceResponse.builder()
                 .preferenceId(pref.getPreferenceId())
-                .preferredWorkoutDuration(pref.getPreferredWorkoutDuration())
-                .preferredWorkoutTime(pref.getPreferredWorkoutTime())
-                .allowAiSuggestions(pref.getAllowAiSuggestions())
                 .notificationEnabled(pref.getNotificationEnabled())
-                .measurementUnit(pref.getMeasurementUnit())
                 .workoutReminderDays(pref.getWorkoutReminderDays())
                 .dailyCalorieTarget(pref.getDailyCalorieTarget())
                 .dailyProteinTargetG(pref.getDailyProteinTargetG())

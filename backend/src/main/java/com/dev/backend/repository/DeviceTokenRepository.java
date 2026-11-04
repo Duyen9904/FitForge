@@ -42,13 +42,6 @@ public interface DeviceTokenRepository extends JpaRepository<DeviceToken, Long> 
      * Delete inactive tokens older than specified time
      */
     @Modifying
-    @Query("DELETE FROM DeviceToken dt WHERE dt.isActive = false AND dt.lastUsedAt < :olderThan")
+    @Query("DELETE FROM DeviceToken dt WHERE dt.isActive = false AND dt.updatedAt < :olderThan")
     int deleteInactiveTokens(@Param("olderThan") java.time.Instant olderThan);
-
-    /**
-     * Update last used time for a token
-     */
-    @Modifying
-    @Query("UPDATE DeviceToken dt SET dt.lastUsedAt = :lastUsedAt WHERE dt.token = :token")
-    int updateLastUsedAt(@Param("token") String token, @Param("lastUsedAt") java.time.Instant lastUsedAt);
 }

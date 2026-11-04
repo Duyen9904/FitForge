@@ -148,7 +148,6 @@ class NotificationControllerTest {
             RegisterDeviceTokenRequest request = RegisterDeviceTokenRequest.builder()
                     .deviceToken("fcm-token-123")
                     .deviceType("ANDROID")
-                    .deviceName("Pixel 7")
                     .build();
 
             doNothing().when(notificationService).registerDeviceToken(anyLong(), any());

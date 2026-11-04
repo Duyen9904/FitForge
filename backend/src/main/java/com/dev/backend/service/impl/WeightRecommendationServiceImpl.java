@@ -97,17 +97,20 @@ public class WeightRecommendationServiceImpl implements WeightRecommendationServ
         float percentage;
         
         // Determine percentage based on goal type and target reps
-        if (goalType != null && goalType.toUpperCase().contains("STRENGTH")) {
-            // Strength training: 85-90% of max
+        if (goalType != null && (goalType.toUpperCase().contains("STRENGTH") ||
+                                 goalType.toUpperCase().contains("ATHLETIC"))) {
+            // Strength / Athletic training: 85-90% of max
             percentage = 0.875f;
-        } else if (goalType != null && (goalType.toUpperCase().contains("MUSCLE") || 
+        } else if (goalType != null && (goalType.toUpperCase().contains("BODYBUILDING") ||
+                                        goalType.toUpperCase().contains("MUSCLE") || 
                                         goalType.toUpperCase().contains("HYPERTROPHY") ||
                                         goalType.toUpperCase().contains("GAIN"))) {
-            // Hypertrophy: 70-80% of max
+            // Hypertrophy / Bodybuilding: 70-80% of max
             percentage = 0.75f;
-        } else if (goalType != null && (goalType.toUpperCase().contains("ENDURANCE") || 
+        } else if (goalType != null && (goalType.toUpperCase().contains("SLIMFIT") ||
+                                        goalType.toUpperCase().contains("ENDURANCE") || 
                                         goalType.toUpperCase().contains("FAT"))) {
-            // Endurance/Fat loss: 50-60% of max
+            // Endurance/Fat loss/Slimfit: 50-60% of max
             percentage = 0.55f;
         } else {
             // Default: moderate weight

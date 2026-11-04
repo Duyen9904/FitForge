@@ -22,15 +22,4 @@ public class CreateGoalRequest {
 
     @Size(max = 500, message = "Description must be at most 500 characters")
     private String description;
-
-    @Size(max = 50, message = "Recommended rep range must be at most 50 characters")
-    private String recommendedRepRange;
-
-    @Size(max = 50, message = "Recommended rest time must be at most 50 characters")
-    private String recommendedRestTime;
-
-    @Size(max = 50, message = "Recommended frequency must be at most 50 characters")
-    private String recommendedFrequency;
-
-    private Integer targetCalorieAdjustment;
 }

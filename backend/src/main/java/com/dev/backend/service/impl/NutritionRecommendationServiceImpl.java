@@ -81,10 +81,10 @@ public class NutritionRecommendationServiceImpl implements NutritionRecommendati
 
         if (profile.getPrimaryGoalName() != null) {
             String goalName = profile.getPrimaryGoalName().toUpperCase();
-            if (goalName.contains("LOSE") || goalName.contains("FAT_LOSS") || goalName.contains("WEIGHT_LOSS")) {
+            if (goalName.contains("SLIMFIT") || goalName.contains("LOSE") || goalName.contains("FAT_LOSS") || goalName.contains("WEIGHT_LOSS")) {
                 targetCalories = (int) (maintenanceCalories * 0.85); // -15%
                 adjustmentReason += "Fat loss goal: reducing by 15%. ";
-            } else if (goalName.contains("GAIN") || goalName.contains("MUSCLE") || goalName.contains("BULK")) {
+            } else if (goalName.contains("BODYBUILDING") || goalName.contains("GAIN") || goalName.contains("MUSCLE") || goalName.contains("BULK")) {
                 targetCalories = (int) (maintenanceCalories * 1.10); // +10%
                 adjustmentReason += "Muscle gain goal: increasing by 10%. ";
             }
@@ -95,11 +95,13 @@ public class NutritionRecommendationServiceImpl implements NutritionRecommendati
         float carbsPercentage = 40f;
         float fatsPercentage = 30f;
 
-        if (profile.getPrimaryGoalName() != null && profile.getPrimaryGoalName().toUpperCase().contains("MUSCLE")) {
+        if (profile.getPrimaryGoalName() != null && (profile.getPrimaryGoalName().toUpperCase().contains("MUSCLE")
+                || profile.getPrimaryGoalName().toUpperCase().contains("BODYBUILDING"))) {
             proteinPercentage = 35f;
             carbsPercentage = 40f;
             fatsPercentage = 25f;
-        } else if (profile.getPrimaryGoalName() != null && profile.getPrimaryGoalName().toUpperCase().contains("FAT")) {
+        } else if (profile.getPrimaryGoalName() != null && (profile.getPrimaryGoalName().toUpperCase().contains("FAT")
+                || profile.getPrimaryGoalName().toUpperCase().contains("SLIMFIT"))) {
             proteinPercentage = 35f;
             carbsPercentage = 30f;
             fatsPercentage = 35f;
@@ -553,9 +555,10 @@ public class NutritionRecommendationServiceImpl implements NutritionRecommendati
         
         // Level 3: Try default goal
         log.warn("No goal found in onboarding for user {}. Checking for default goal...", user.getUserId());
-        Optional<Goal> defaultGoal = goalRepository.findByGoalName("General Fitness");
+        Optional<Goal> defaultGoal = goalRepository.findByGoalName("Slimfit")
+                .or(() -> goalRepository.findByGoalName("General Fitness"));
         if (defaultGoal.isPresent()) {
-            log.warn("Using default goal 'General Fitness' for user {}", user.getUserId());
+            log.warn("Using default goal '{}' for user {}", defaultGoal.get().getGoalName(), user.getUserId());
             return defaultGoal.get();
         }
         

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:mobile/core/network/api_exceptions.dart';
 import 'package:mobile/core/state/app_flow_state.dart';
 import 'package:mobile/features/auth/models/auth_response.dart';
 import 'package:mobile/features/auth/models/user_model.dart';
@@ -12,22 +13,38 @@ import 'package:mobile/features/auth/viewmodels/auth_viewmodel.dart';
 class MockAuthRepository extends Mock implements AuthRepository {}
 class MockRef extends Mock implements Ref {}
 class MockAppFlowStateNotifier extends Mock implements AppFlowStateNotifier {}
+class MockStateController extends Mock implements StateController<String?> {}
 
 void main() {
   late AuthViewModel viewModel;
   late MockAuthRepository mockAuthRepository;
   late MockRef mockRef;
   late MockAppFlowStateNotifier mockFlowStateNotifier;
+  late MockStateController mockEmailController;
+
+  const testUserModel = UserModel(
+    userId: 1,
+    username: 'testuser',
+    email: 'test@example.com',
+  );
 
   setUp(() {
     mockAuthRepository = MockAuthRepository();
     mockRef = MockRef();
     mockFlowStateNotifier = MockAppFlowStateNotifier();
-    
+    mockEmailController = MockStateController();
+
     // Mock the appFlowStateProvider
     when(() => mockRef.read(appFlowStateProvider.notifier))
         .thenReturn(mockFlowStateNotifier);
-    
+    when(() => mockFlowStateNotifier.checkFlowStatus(forceRefresh: any(named: 'forceRefresh')))
+        .thenAnswer((_) async {});
+    when(() => mockFlowStateNotifier.clear()).thenReturn(null);
+
+    // Mock currentUserEmailProvider
+    when(() => mockRef.read(currentUserEmailProvider.notifier))
+        .thenReturn(mockEmailController);
+
     viewModel = AuthViewModel(mockAuthRepository, mockRef);
   });
 
@@ -39,14 +56,16 @@ void main() {
     group('login', () {
       test('sets authenticated state on successful login', () async {
         // Arrange
-        const user = AccountSummary(
+        const userSummary = AccountSummary(
           id: 1,
           username: 'testuser',
           email: 'test@example.com',
         );
 
         when(() => mockAuthRepository.login('test@example.com', 'password123'))
-            .thenAnswer((_) async => user);
+            .thenAnswer((_) async => userSummary);
+        when(() => mockAuthRepository.getCurrentUser())
+            .thenAnswer((_) async => testUserModel);
 
         // Act
         await viewModel.login('test@example.com', 'password123');
@@ -123,18 +142,12 @@ void main() {
     group('checkAuthStatus', () {
       test('sets authenticated when token is valid', () async {
         // Arrange
-        const user = UserModel(
-          userId: 1,
-          username: 'testuser',
-          email: 'test@example.com',
-        );
-
         when(() => mockAuthRepository.isAuthenticated())
             .thenAnswer((_) async => true);
         when(() => mockAuthRepository.isTokenExpired())
             .thenAnswer((_) async => false);
         when(() => mockAuthRepository.getCurrentUser())
-            .thenAnswer((_) async => user);
+            .thenAnswer((_) async => testUserModel);
 
         // Act
         await viewModel.checkAuthStatus();
@@ -181,6 +194,48 @@ void main() {
           orElse: () => fail('Expected unauthenticated state'),
         );
       });
+
+      test('sets error state when network exception occurs', () async {
+        // Arrange
+        when(() => mockAuthRepository.isAuthenticated())
+            .thenAnswer((_) async => true);
+        when(() => mockAuthRepository.isTokenExpired())
+            .thenAnswer((_) async => false);
+        when(() => mockAuthRepository.getCurrentUser())
+            .thenThrow(NetworkException(message: 'Connection failed'));
+
+        // Act
+        await viewModel.checkAuthStatus();
+
+        // Assert
+        viewModel.state.maybeWhen(
+          error: (message, _) {
+            expect(message, contains('Unable to reach server'));
+          },
+          orElse: () => fail('Expected error state on network error'),
+        );
+      });
+
+      test('sets error state when timeout exception occurs', () async {
+        // Arrange
+        when(() => mockAuthRepository.isAuthenticated())
+            .thenAnswer((_) async => true);
+        when(() => mockAuthRepository.isTokenExpired())
+            .thenAnswer((_) async => false);
+        when(() => mockAuthRepository.getCurrentUser())
+            .thenThrow(TimeoutException(message: 'Connection timed out'));
+
+        // Act
+        await viewModel.checkAuthStatus();
+
+        // Assert
+        viewModel.state.maybeWhen(
+          error: (message, _) {
+            expect(message, contains('Connection timed out'));
+          },
+          orElse: () => fail('Expected error state on timeout'),
+        );
+      });
     });
 
     group('clearError', () {
@@ -207,14 +262,16 @@ void main() {
       });
 
       test('returns user when authenticated', () async {
-        const user = AccountSummary(
+        const userSummary = AccountSummary(
           id: 1,
           username: 'testuser',
           email: 'test@example.com',
         );
 
         when(() => mockAuthRepository.login(any(), any()))
-            .thenAnswer((_) async => user);
+            .thenAnswer((_) async => userSummary);
+        when(() => mockAuthRepository.getCurrentUser())
+            .thenAnswer((_) async => testUserModel);
 
         await viewModel.login('test@example.com', 'password');
 

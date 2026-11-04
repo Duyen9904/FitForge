@@ -166,10 +166,13 @@ public class RuleBasedWorkoutTemplateRanker implements WorkoutTemplateRanker {
 
     private boolean areRelatedGoals(String goal1, String goal2) {
         Map<String, Set<String>> relatedGoals = Map.of(
-                "MUSCLE_GAIN", Set.of("STRENGTH", "BUILD_MUSCLE"),
-                "STRENGTH", Set.of("MUSCLE_GAIN", "BUILD_MUSCLE"),
-                "FAT_LOSS", Set.of("WEIGHT_LOSS", "LOSE_FAT", "ENDURANCE"),
-                "ENDURANCE", Set.of("FAT_LOSS", "CARDIO")
+                "SLIMFIT", Set.of("FAT_LOSS", "WEIGHT_LOSS", "LOSE_FAT", "ENDURANCE", "GENERAL_FITNESS"),
+                "ATHLETIC", Set.of("ATHLETIC_PERFORMANCE", "STRENGTH", "ENDURANCE", "GENERAL_FITNESS"),
+                "BODYBUILDING", Set.of("MUSCLE_GAIN", "BUILD_MUSCLE", "STRENGTH"),
+                "MUSCLE_GAIN", Set.of("STRENGTH", "BUILD_MUSCLE", "BODYBUILDING"),
+                "STRENGTH", Set.of("MUSCLE_GAIN", "BUILD_MUSCLE", "BODYBUILDING", "ATHLETIC"),
+                "FAT_LOSS", Set.of("WEIGHT_LOSS", "LOSE_FAT", "ENDURANCE", "SLIMFIT"),
+                "ENDURANCE", Set.of("FAT_LOSS", "CARDIO", "SLIMFIT", "ATHLETIC")
         );
 
         return relatedGoals.getOrDefault(goal1, Collections.emptySet()).contains(goal2) ||

@@ -132,13 +132,13 @@ public class RecommendationServiceImpl implements RecommendationService {
         String goalName = goal.getGoalName().toLowerCase();
         String exerciseType = exercise.getExerciseType() != null ? exercise.getExerciseType().toLowerCase() : "";
 
-        if (goalName.contains("strength") && exerciseType.contains("compound")) {
+        if ((goalName.contains("strength") || goalName.contains("athletic")) && exerciseType.contains("compound")) {
             return 15;
-        } else if (goalName.contains("muscle") && (exerciseType.contains("compound") || exerciseType.contains("isolation"))) {
+        } else if ((goalName.contains("muscle") || goalName.contains("bodybuilding")) && (exerciseType.contains("compound") || exerciseType.contains("isolation"))) {
             return 10;
         } else if (goalName.contains("endurance") && exerciseType.contains("cardio")) {
             return 15;
-        } else if (goalName.contains("fat loss") && exerciseType.contains("cardio")) {
+        } else if ((goalName.contains("fat loss") || goalName.contains("slimfit")) && exerciseType.contains("cardio")) {
             return 10;
         }
         return 0;
@@ -154,10 +154,10 @@ public class RecommendationServiceImpl implements RecommendationService {
         
         if (targetsNewMuscle && !targetedMuscleGroupIds.isEmpty()) {
             String newMuscle = exercise.getExerciseMuscleGroups().stream()
-                    .filter(emg -> !targetedMuscleGroupIds.contains(emg.getMuscleGroup().getMuscleGroupId()))
-                    .findFirst()
-                    .map(emg -> emg.getMuscleGroup().getGroupName())
-                    .orElse("new muscle group");
+                     .filter(emg -> !targetedMuscleGroupIds.contains(emg.getMuscleGroup().getMuscleGroupId()))
+                     .findFirst()
+                     .map(emg -> emg.getMuscleGroup().getGroupName())
+                     .orElse("new muscle group");
             reasons.add("Targets " + newMuscle + " for balanced development");
         }
 

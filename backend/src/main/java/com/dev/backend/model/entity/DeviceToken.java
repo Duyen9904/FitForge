@@ -45,16 +45,11 @@ public class DeviceToken extends BaseEntity {
     @Column(length = 50)
     private String deviceType; // "ANDROID", "IOS", "WEB"
 
-    @Column(length = 100)
-    private String deviceName;
-
     @Column(nullable = false)
     private Boolean isActive = true;
 
     @Column(nullable = false)
     private Instant createdAt;
-
-    private Instant lastUsedAt;
 
     @PrePersist
     protected void onCreate() {

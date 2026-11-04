@@ -88,14 +88,10 @@ INSERT IGNORE INTO equipment (equipment_name, equipment_type, description) VALUE
 -- =====================================================
 -- 3. GOALS (Reference data)
 -- =====================================================
-INSERT IGNORE INTO goal (goal_name, description, recommended_rep_range, recommended_rest_time, recommended_frequency, target_calorie_adjustment) VALUES
-('Build Muscle', 'Hypertrophy-focused training to increase muscle size and definition. Emphasizes progressive overload and time under tension.', '8-12 reps', '60-90 seconds', '4-5 days/week', 300),
-('Lose Fat', 'Fat loss program combining resistance training with higher volume and cardio. Maintains muscle while creating caloric deficit.', '12-15 reps', '30-45 seconds', '5-6 days/week', -500),
-('Increase Strength', 'Strength training program focused on compound movements and progressive overload. Emphasizes lower reps with heavier weights.', '3-6 reps', '2-3 minutes', '3-4 days/week', 200),
-('Build Endurance', 'Muscular endurance training with higher repetitions and shorter rest periods. Improves stamina and work capacity.', '15-20 reps', '30 seconds', '4-5 days/week', 0),
-('General Fitness', 'Balanced approach to overall fitness combining strength, cardio, and flexibility. Perfect for beginners or maintenance.', '10-15 reps', '60 seconds', '3-4 days/week', 0),
-('Powerlifting', 'Competition-focused training for squat, bench press, and deadlift. Periodized program for maximum strength development.', '1-5 reps', '3-5 minutes', '4 days/week', 500),
-('Athletic Performance', 'Sport-specific training combining strength, power, speed, and agility. Includes plyometrics and functional movements.', '6-8 reps', '90-120 seconds', '5 days/week', 250);
+INSERT IGNORE INTO goal (goal_name, description) VALUES
+('Slimfit', 'Fat loss and muscle toning program combining resistance training with higher volume and metabolic conditioning to achieve a lean, defined physique.'),
+('Athletic', 'Sport-specific training combining functional strength, power, speed, agility, and endurance for peak athletic performance.'),
+('Bodybuilding', 'Hypertrophy-focused training to maximize muscle size, symmetry, and definition through progressive overload and time under tension.');
 
 -- =====================================================
 -- 4. ACHIEVEMENTS (Gamification) — Removed: no Achievement entity exists
@@ -347,24 +343,16 @@ SELECT step_id, 'advanced', 'Advanced', '3+ years of structured training', 3, 1 
 
 -- Onboarding options: FITNESS_GOAL (with goal_id FK)
 INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active, goal_id)
-SELECT step_id, 'build_muscle', 'Build Muscle', 'Hypertrophy-focused training', 1, 1, 
-    (SELECT goal_id FROM goal WHERE goal_name = 'Build Muscle' LIMIT 1)
+SELECT step_id, 'slimfit', 'Slimfit', 'Fat loss and muscle toning for a lean physique', 1, 1,
+    (SELECT goal_id FROM goal WHERE goal_name = 'Slimfit' LIMIT 1)
 FROM onboarding_step WHERE step_key = 'fitness_goal' LIMIT 1;
 INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active, goal_id)
-SELECT step_id, 'lose_fat', 'Lose Fat', 'Fat loss with resistance training', 2, 1,
-    (SELECT goal_id FROM goal WHERE goal_name = 'Lose Fat' LIMIT 1)
+SELECT step_id, 'athletic', 'Athletic', 'Functional strength, power, speed, and agility', 2, 1,
+    (SELECT goal_id FROM goal WHERE goal_name = 'Athletic' LIMIT 1)
 FROM onboarding_step WHERE step_key = 'fitness_goal' LIMIT 1;
 INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active, goal_id)
-SELECT step_id, 'increase_strength', 'Increase Strength', 'Heavy compound lifts', 3, 1,
-    (SELECT goal_id FROM goal WHERE goal_name = 'Increase Strength' LIMIT 1)
-FROM onboarding_step WHERE step_key = 'fitness_goal' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active, goal_id)
-SELECT step_id, 'build_endurance', 'Build Endurance', 'Higher reps and stamina', 4, 1,
-    (SELECT goal_id FROM goal WHERE goal_name = 'Build Endurance' LIMIT 1)
-FROM onboarding_step WHERE step_key = 'fitness_goal' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active, goal_id)
-SELECT step_id, 'general_fitness', 'General Fitness', 'Balanced approach', 5, 1,
-    (SELECT goal_id FROM goal WHERE goal_name = 'General Fitness' LIMIT 1)
+SELECT step_id, 'bodybuilding', 'Bodybuilding', 'Hypertrophy-focused training for maximum muscle size', 3, 1,
+    (SELECT goal_id FROM goal WHERE goal_name = 'Bodybuilding' LIMIT 1)
 FROM onboarding_step WHERE step_key = 'fitness_goal' LIMIT 1;
 
 -- Onboarding options: EQUIPMENT

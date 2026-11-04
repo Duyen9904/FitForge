@@ -234,10 +234,6 @@ public class WorkoutPlanMapper {
                 .goalId(goal.getGoalId())
                 .goalName(goal.getGoalName())
                 .description(goal.getDescription())
-                .recommendedRepRange(goal.getRecommendedRepRange())
-                .recommendedRestTime(goal.getRecommendedRestTime())
-                .recommendedFrequency(goal.getRecommendedFrequency())
-                .targetCalorieAdjustment(goal.getTargetCalorieAdjustment())
                 .build();
     }
 

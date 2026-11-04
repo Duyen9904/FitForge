@@ -42,21 +42,13 @@ class GoalServiceImplTest {
     void setUp() {
         mockGoal = new Goal();
         mockGoal.setGoalId(1L);
-        mockGoal.setGoalName("Fat Loss");
+        mockGoal.setGoalName("Slimfit");
         mockGoal.setDescription("Reduce body fat");
-        mockGoal.setRecommendedRepRange("12-15");
-        mockGoal.setRecommendedRestTime("60 seconds");
-        mockGoal.setRecommendedFrequency("4-5 days/week");
-        mockGoal.setTargetCalorieAdjustment(-500);
 
         mockGoalResponse = GoalResponse.builder()
                 .goalId(1L)
-                .goalName("Fat Loss")
+                .goalName("Slimfit")
                 .description("Reduce body fat")
-                .recommendedRepRange("12-15")
-                .recommendedRestTime("60 seconds")
-                .recommendedFrequency("4-5 days/week")
-                .targetCalorieAdjustment(-500)
                 .build();
     }
 
@@ -70,11 +62,11 @@ class GoalServiceImplTest {
             // Given
             Goal goal2 = new Goal();
             goal2.setGoalId(2L);
-            goal2.setGoalName("Muscle Gain");
+            goal2.setGoalName("Bodybuilding");
 
             GoalResponse response2 = GoalResponse.builder()
                     .goalId(2L)
-                    .goalName("Muscle Gain")
+                    .goalName("Bodybuilding")
                     .build();
 
             when(goalRepository.findAll()).thenReturn(Arrays.asList(mockGoal, goal2));
@@ -86,8 +78,8 @@ class GoalServiceImplTest {
 
             // Then
             assertThat(result).hasSize(2);
-            assertThat(result.get(0).getGoalName()).isEqualTo("Fat Loss");
-            assertThat(result.get(1).getGoalName()).isEqualTo("Muscle Gain");
+            assertThat(result.get(0).getGoalName()).isEqualTo("Slimfit");
+            assertThat(result.get(1).getGoalName()).isEqualTo("Bodybuilding");
             verify(goalRepository, times(1)).findAll();
         }
 
@@ -122,7 +114,7 @@ class GoalServiceImplTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getGoalId()).isEqualTo(1L);
-            assertThat(result.getGoalName()).isEqualTo("Fat Loss");
+            assertThat(result.getGoalName()).isEqualTo("Slimfit");
             verify(goalRepository, times(1)).findById(1L);
         }
 

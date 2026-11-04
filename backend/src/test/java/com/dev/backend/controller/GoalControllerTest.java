@@ -36,22 +36,14 @@ class GoalControllerTest {
     void setUp() {
         mockGoal = GoalResponse.builder()
                 .goalId(1L)
-                .goalName("Fat Loss")
+                .goalName("Slimfit")
                 .description("Reduce body fat percentage")
-                .recommendedRepRange("12-15")
-                .recommendedRestTime("60 seconds")
-                .recommendedFrequency("4-5 days/week")
-                .targetCalorieAdjustment(-500)
                 .build();
 
         GoalResponse mockGoal2 = GoalResponse.builder()
                 .goalId(2L)
-                .goalName("Muscle Gain")
+                .goalName("Bodybuilding")
                 .description("Build lean muscle mass")
-                .recommendedRepRange("8-12")
-                .recommendedRestTime("90 seconds")
-                .recommendedFrequency("5-6 days/week")
-                .targetCalorieAdjustment(300)
                 .build();
 
         mockGoals = Arrays.asList(mockGoal, mockGoal2);

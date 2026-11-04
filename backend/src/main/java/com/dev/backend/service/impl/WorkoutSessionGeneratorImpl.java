@@ -162,10 +162,10 @@ public class WorkoutSessionGeneratorImpl implements WorkoutSessionGenerator {
         
         if (goalUpper.contains("STRENGTH")) {
             return 4; // Fewer exercises, more focus on heavy compound movements
-        } else if (goalUpper.contains("MUSCLE") || goalUpper.contains("GAIN")) {
+        } else if (goalUpper.contains("BODYBUILDING") || goalUpper.contains("MUSCLE") || goalUpper.contains("GAIN")) {
             return 6; // More volume for hypertrophy
-        } else if (goalUpper.contains("FAT") || goalUpper.contains("LOSS") || goalUpper.contains("ENDURANCE")) {
-            return 5; // Circuit style, moderate volume
+        } else if (goalUpper.contains("SLIMFIT") || goalUpper.contains("ATHLETIC") || goalUpper.contains("FAT") || goalUpper.contains("LOSS") || goalUpper.contains("ENDURANCE")) {
+            return 5; // Circuit/athletic style, moderate volume
         }
         
         // Default based on difficulty
@@ -216,18 +216,24 @@ public class WorkoutSessionGeneratorImpl implements WorkoutSessionGenerator {
             se.setRepetitions(5);
             se.setRestTimeSeconds(180); // 3 minutes
             se.setNotes("Focus on heavy weight and proper form. Rest fully between sets.");
-        } else if (goalUpper.contains("MUSCLE") || goalUpper.contains("GAIN")) {
+        } else if (goalUpper.contains("BODYBUILDING") || goalUpper.contains("MUSCLE") || goalUpper.contains("GAIN")) {
             // Hypertrophy: Moderate reps, moderate rest
             se.setSets(4);
             se.setRepetitions(10);
             se.setRestTimeSeconds(90); // 90 seconds
             se.setNotes("Focus on time under tension. Control the eccentric phase.");
-        } else if (goalUpper.contains("FAT") || goalUpper.contains("LOSS")) {
-            // Fat loss: Higher reps, shorter rest (circuit style)
+        } else if (goalUpper.contains("SLIMFIT") || goalUpper.contains("FAT") || goalUpper.contains("LOSS")) {
+            // Fat loss / Slimfit: Higher reps, shorter rest (circuit style)
             se.setSets(3);
             se.setRepetitions(15);
             se.setRestTimeSeconds(45); // 45 seconds
             se.setNotes("Keep intensity high. Minimize rest between exercises.");
+        } else if (goalUpper.contains("ATHLETIC")) {
+            // Athletic: Power & functional strength
+            se.setSets(4);
+            se.setRepetitions(8);
+            se.setRestTimeSeconds(90); // 90 seconds
+            se.setNotes("Focus on explosive power, speed, and functional movement control.");
         } else if (goalUpper.contains("ENDURANCE")) {
             // Endurance: High reps, light weight, short rest
             se.setSets(3);

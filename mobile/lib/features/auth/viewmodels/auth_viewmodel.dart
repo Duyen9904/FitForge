@@ -60,6 +60,34 @@ class AuthViewModel extends StateNotifier<AuthState> {
       } else {
         state = const AuthState.unauthenticated();
       }
+    } on NetworkException catch (e, stackTrace) {
+      developer.log(
+        'Check auth network error',
+        name: 'AuthViewModel',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      state = const AuthState.error(
+        'Unable to reach server. Please check your network connection.',
+      );
+    } on TimeoutException catch (e, stackTrace) {
+      developer.log(
+        'Check auth timeout error',
+        name: 'AuthViewModel',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      state = const AuthState.error(
+        'Connection timed out. The server might be offline.',
+      );
+    } on UnauthorizedException catch (e, stackTrace) {
+      developer.log(
+        'Check auth unauthorized',
+        name: 'AuthViewModel',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      state = const AuthState.unauthenticated();
     } catch (e, stackTrace) {
       developer.log(
         'Failed to check auth',
@@ -67,7 +95,17 @@ class AuthViewModel extends StateNotifier<AuthState> {
         error: e,
         stackTrace: stackTrace,
       );
-      state = const AuthState.unauthenticated();
+      final errorStr = e.toString().toLowerCase();
+      if (errorStr.contains('socket') ||
+          errorStr.contains('network') ||
+          errorStr.contains('connect') ||
+          errorStr.contains('host')) {
+        state = const AuthState.error(
+          'Unable to reach server. Please check your network connection.',
+        );
+      } else {
+        state = AuthState.error(e.toString());
+      }
     }
   }
 

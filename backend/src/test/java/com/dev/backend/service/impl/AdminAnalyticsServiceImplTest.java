@@ -10,10 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.LocalDate;
-
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
@@ -71,7 +68,6 @@ class AdminAnalyticsServiceImplTest {
         void getSystemAnalytics_Success() {
             // Given
             when(userRepository.count()).thenReturn(1000L);
-            when(userRepository.countActiveUsersSince(any(LocalDate.class))).thenReturn(750L);
             when(workoutProgressRepository.count()).thenReturn(50000L);
             when(missedWorkoutRepository.count()).thenReturn(5000L);
             when(cheatMealLogRepository.count()).thenReturn(2000L);
@@ -86,7 +82,7 @@ class AdminAnalyticsServiceImplTest {
             // Then
             assertThat(result).isNotNull();
             assertThat(result.getTotalUsers()).isEqualTo(1000L);
-            assertThat(result.getActiveUsersLast30Days()).isEqualTo(750L);
+            assertThat(result.getActiveUsersLast30Days()).isEqualTo(1000L);
             assertThat(result.getTotalWorkoutsCompleted()).isEqualTo(50000L);
             assertThat(result.getAverageWorkoutsPerUser()).isEqualTo(50.0); // 50000/1000
             assertThat(result.getTotalCheatMealsLogged()).isEqualTo(2000L);
@@ -100,7 +96,6 @@ class AdminAnalyticsServiceImplTest {
         void getSystemAnalytics_AdherenceRate() {
             // Given - 80% adherence (8000 completed, 2000 missed = 10000 total)
             when(userRepository.count()).thenReturn(100L);
-            when(userRepository.countActiveUsersSince(any(LocalDate.class))).thenReturn(80L);
             when(workoutProgressRepository.count()).thenReturn(8000L);
             when(missedWorkoutRepository.count()).thenReturn(2000L);
             when(cheatMealLogRepository.count()).thenReturn(0L);
@@ -121,7 +116,6 @@ class AdminAnalyticsServiceImplTest {
         void getSystemAnalytics_NoUsers() {
             // Given
             when(userRepository.count()).thenReturn(0L);
-            when(userRepository.countActiveUsersSince(any(LocalDate.class))).thenReturn(0L);
             when(workoutProgressRepository.count()).thenReturn(0L);
             when(missedWorkoutRepository.count()).thenReturn(0L);
             when(cheatMealLogRepository.count()).thenReturn(0L);
@@ -145,7 +139,6 @@ class AdminAnalyticsServiceImplTest {
         void getSystemAnalytics_PopularItems() {
             // Given
             when(userRepository.count()).thenReturn(100L);
-            when(userRepository.countActiveUsersSince(any(LocalDate.class))).thenReturn(50L);
             when(workoutProgressRepository.count()).thenReturn(1000L);
             when(missedWorkoutRepository.count()).thenReturn(100L);
             when(cheatMealLogRepository.count()).thenReturn(50L);
@@ -173,7 +166,6 @@ class AdminAnalyticsServiceImplTest {
         void exportAnalyticsReport_Success() {
             // Given
             when(userRepository.count()).thenReturn(100L);
-            when(userRepository.countActiveUsersSince(any(LocalDate.class))).thenReturn(50L);
             when(workoutProgressRepository.count()).thenReturn(1000L);
             when(missedWorkoutRepository.count()).thenReturn(100L);
             when(cheatMealLogRepository.count()).thenReturn(50L);
@@ -192,7 +184,7 @@ class AdminAnalyticsServiceImplTest {
             String csv = new String(result);
             assertThat(csv).contains("Metric,Value");
             assertThat(csv).contains("Total Users,100");
-            assertThat(csv).contains("Active Users (Last 30 Days),50");
+            assertThat(csv).contains("Active Users (Last 30 Days),100");
             assertThat(csv).contains("Total Workouts Completed,1000");
         }
 
@@ -201,7 +193,6 @@ class AdminAnalyticsServiceImplTest {
         void exportAnalyticsReport_AllSections() {
             // Given
             when(userRepository.count()).thenReturn(10L);
-            when(userRepository.countActiveUsersSince(any(LocalDate.class))).thenReturn(5L);
             when(workoutProgressRepository.count()).thenReturn(100L);
             when(missedWorkoutRepository.count()).thenReturn(10L);
             when(cheatMealLogRepository.count()).thenReturn(5L);

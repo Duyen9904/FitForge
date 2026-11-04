@@ -27,9 +27,5 @@ public class AccountSummaryDto {
 
     private String fitnessLevel;
 
-    private String profileImageUrl;
-
     private String role;
-
-    private LocalDate dateJoined;
 }

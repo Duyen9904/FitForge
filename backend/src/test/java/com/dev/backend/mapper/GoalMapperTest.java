@@ -23,12 +23,8 @@ class GoalMapperTest {
         // Given
         Goal goal = new Goal();
         goal.setGoalId(1L);
-        goal.setGoalName("Fat Loss");
+        goal.setGoalName("Slimfit");
         goal.setDescription("Reduce body fat percentage");
-        goal.setRecommendedRepRange("12-15");
-        goal.setRecommendedRestTime("60 seconds");
-        goal.setRecommendedFrequency("4-5 days/week");
-        goal.setTargetCalorieAdjustment(-500);
 
         // When
         GoalResponse response = goalMapper.toGoalResponse(goal);
@@ -36,12 +32,8 @@ class GoalMapperTest {
         // Then
         assertThat(response).isNotNull();
         assertThat(response.getGoalId()).isEqualTo(1L);
-        assertThat(response.getGoalName()).isEqualTo("Fat Loss");
+        assertThat(response.getGoalName()).isEqualTo("Slimfit");
         assertThat(response.getDescription()).isEqualTo("Reduce body fat percentage");
-        assertThat(response.getRecommendedRepRange()).isEqualTo("12-15");
-        assertThat(response.getRecommendedRestTime()).isEqualTo("60 seconds");
-        assertThat(response.getRecommendedFrequency()).isEqualTo("4-5 days/week");
-        assertThat(response.getTargetCalorieAdjustment()).isEqualTo(-500);
     }
 
     @Test
@@ -50,7 +42,7 @@ class GoalMapperTest {
         // Given
         Goal goal = new Goal();
         goal.setGoalId(2L);
-        goal.setGoalName("Muscle Gain");
+        goal.setGoalName("Bodybuilding");
 
         // When
         GoalResponse response = goalMapper.toGoalResponse(goal);
@@ -58,8 +50,7 @@ class GoalMapperTest {
         // Then
         assertThat(response).isNotNull();
         assertThat(response.getGoalId()).isEqualTo(2L);
-        assertThat(response.getGoalName()).isEqualTo("Muscle Gain");
+        assertThat(response.getGoalName()).isEqualTo("Bodybuilding");
         assertThat(response.getDescription()).isNull();
-        assertThat(response.getRecommendedRepRange()).isNull();
     }
 }

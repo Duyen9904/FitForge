@@ -27,7 +27,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -231,7 +230,6 @@ class NotificationServiceImplTest {
             RegisterDeviceTokenRequest request = RegisterDeviceTokenRequest.builder()
                     .deviceToken("new-fcm-token")
                     .deviceType("ANDROID")
-                    .deviceName("Pixel 7")
                     .build();
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
@@ -247,7 +245,6 @@ class NotificationServiceImplTest {
             DeviceToken savedToken = tokenCaptor.getValue();
             assertThat(savedToken.getToken()).isEqualTo("new-fcm-token");
             assertThat(savedToken.getDeviceType()).isEqualTo("ANDROID");
-            assertThat(savedToken.getDeviceName()).isEqualTo("Pixel 7");
         }
 
         @Test
@@ -257,7 +254,6 @@ class NotificationServiceImplTest {
             RegisterDeviceTokenRequest request = RegisterDeviceTokenRequest.builder()
                     .deviceToken("test-fcm-token")
                     .deviceType("IOS")
-                    .deviceName("iPhone 15")
                     .build();
 
             when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
@@ -269,7 +265,6 @@ class NotificationServiceImplTest {
             // Then
             verify(deviceTokenRepository, times(1)).save(mockDeviceToken);
             assertThat(mockDeviceToken.getDeviceType()).isEqualTo("IOS");
-            assertThat(mockDeviceToken.getDeviceName()).isEqualTo("iPhone 15");
         }
     }
 
@@ -352,7 +347,7 @@ class NotificationServiceImplTest {
             when(deviceTokenRepository.findByUserUserIdAndIsActiveTrue(1L)).thenReturn(List.of());
 
             // When
-            notificationService.createGoalProgressNotification(1L, "Fat Loss", 50, 10L);
+            notificationService.createGoalProgressNotification(1L, "Slimfit", 50, 10L);
 
             // Then
             ArgumentCaptor<Notification> notificationCaptor = ArgumentCaptor.forClass(Notification.class);

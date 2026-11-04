@@ -60,10 +60,6 @@ public class GoalServiceImpl implements GoalService {
         Goal goal = new Goal();
         goal.setGoalName(request.getGoalName());
         goal.setDescription(request.getDescription());
-        goal.setRecommendedRepRange(request.getRecommendedRepRange());
-        goal.setRecommendedRestTime(request.getRecommendedRestTime());
-        goal.setRecommendedFrequency(request.getRecommendedFrequency());
-        goal.setTargetCalorieAdjustment(request.getTargetCalorieAdjustment());
 
         Goal savedGoal = goalRepository.save(goal);
         return goalMapper.toGoalResponse(savedGoal);
@@ -86,18 +82,6 @@ public class GoalServiceImpl implements GoalService {
         }
         if (request.getDescription() != null) {
             goal.setDescription(request.getDescription());
-        }
-        if (request.getRecommendedRepRange() != null) {
-            goal.setRecommendedRepRange(request.getRecommendedRepRange());
-        }
-        if (request.getRecommendedRestTime() != null) {
-            goal.setRecommendedRestTime(request.getRecommendedRestTime());
-        }
-        if (request.getRecommendedFrequency() != null) {
-            goal.setRecommendedFrequency(request.getRecommendedFrequency());
-        }
-        if (request.getTargetCalorieAdjustment() != null) {
-            goal.setTargetCalorieAdjustment(request.getTargetCalorieAdjustment());
         }
 
         Goal savedGoal = goalRepository.save(goal);

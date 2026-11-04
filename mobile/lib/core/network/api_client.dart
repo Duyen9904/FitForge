@@ -23,8 +23,8 @@ class ApiClient {
     _dio = Dio(
       BaseOptions(
         baseUrl: ApiConstants.baseUrl,
-        // connectTimeout: ApiConstants.connectTimeout,
-        // receiveTimeout: ApiConstants.receiveTimeout,
+        connectTimeout: ApiConstants.connectTimeout,
+        receiveTimeout: ApiConstants.receiveTimeout,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -144,6 +144,14 @@ class ApiClient {
         return TimeoutException();
       case DioExceptionType.connectionError:
         return NetworkException();
+      case DioExceptionType.unknown:
+        if (e.error != null &&
+            (e.error.toString().toLowerCase().contains('socket') ||
+             e.error.toString().toLowerCase().contains('network') ||
+             e.error.toString().toLowerCase().contains('connection'))) {
+          return NetworkException();
+        }
+        return ApiException(message: e.message ?? 'Unknown error occurred');
       case DioExceptionType.badResponse:
         return _handleBadResponse(e.response);
       default:

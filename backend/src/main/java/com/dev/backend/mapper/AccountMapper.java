@@ -29,9 +29,7 @@ public class AccountMapper implements BaseMapper<User, RegisterRequestDto, Accou
                 .currentWeightKg(entity.getCurrentWeightKg())
                 .targetWeightKg(entity.getTargetWeightKg())
                 .fitnessLevel(entity.getFitnessLevel())
-                .profileImageUrl(entity.getProfileImageUrl())
                 .role(entity.getRole() != null ? entity.getRole().name() : null)
-                .dateJoined(entity.getDateJoined())
                 .build();
     }
 

@@ -23,9 +23,7 @@ public class UserProfileResponse {
     private Float heightCm;
     private Float currentWeightKg;
     private Float targetWeightKg;
-    private LocalDate dateJoined;
     private String fitnessLevel;
-    private String profileImageUrl;
     private GoalResponse primaryGoal;
     private UserPreferenceResponse userPreference;
 }

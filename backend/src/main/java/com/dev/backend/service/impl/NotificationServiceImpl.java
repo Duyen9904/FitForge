@@ -133,9 +133,7 @@ public class NotificationServiceImpl implements NotificationService {
             // Update existing token
             existingToken.setUser(user);
             existingToken.setDeviceType(request.getDeviceType());
-            existingToken.setDeviceName(request.getDeviceName());
             existingToken.setIsActive(true);
-            existingToken.setLastUsedAt(Instant.now());
             deviceTokenRepository.save(existingToken);
         } else {
             // Create new token
@@ -143,9 +141,7 @@ public class NotificationServiceImpl implements NotificationService {
             newToken.setUser(user);
             newToken.setToken(request.getDeviceToken());
             newToken.setDeviceType(request.getDeviceType());
-            newToken.setDeviceName(request.getDeviceName());
             newToken.setIsActive(true);
-            newToken.setLastUsedAt(Instant.now());
             deviceTokenRepository.save(newToken);
         }
     }
@@ -274,9 +270,6 @@ public class NotificationServiceImpl implements NotificationService {
 
                 String response = firebaseMessaging.send(message);
                 logger.debug("Successfully sent push notification: {}", response);
-
-                // Update last used time
-                deviceTokenRepository.updateLastUsedAt(deviceToken.getToken(), Instant.now());
             } catch (FirebaseMessagingException e) {
                 logger.error("Failed to send push notification to token {}: {}", 
                         deviceToken.getToken(), e.getMessage());

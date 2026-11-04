@@ -88,9 +88,9 @@ public class MealTemplateGeneratorImpl implements MealTemplateGenerator {
         String goalName = plan.getGoal() != null ? plan.getGoal().getGoalName() : "";
         String goalUpper = goalName.toUpperCase();
 
-        if (goalUpper.contains("MUSCLE") || goalUpper.contains("GAIN")) {
+        if (goalUpper.contains("BODYBUILDING") || goalUpper.contains("MUSCLE") || goalUpper.contains("GAIN")) {
             return "high-protein";
-        } else if (goalUpper.contains("FAT") || goalUpper.contains("LOSS")) {
+        } else if (goalUpper.contains("SLIMFIT") || goalUpper.contains("FAT") || goalUpper.contains("LOSS")) {
             if (carbsPercent < 35) {
                 return "low-carb";
             }

@@ -54,21 +54,13 @@ class GoalServiceImplAdminTest {
 
         mockGoal = new Goal();
         mockGoal.setGoalId(1L);
-        mockGoal.setGoalName("Fat Loss");
+        mockGoal.setGoalName("Slimfit");
         mockGoal.setDescription("Reduce body fat");
-        mockGoal.setRecommendedRepRange("12-15");
-        mockGoal.setRecommendedRestTime("60 seconds");
-        mockGoal.setRecommendedFrequency("4-5 days/week");
-        mockGoal.setTargetCalorieAdjustment(-500);
 
         mockGoalResponse = GoalResponse.builder()
                 .goalId(1L)
-                .goalName("Fat Loss")
+                .goalName("Slimfit")
                 .description("Reduce body fat")
-                .recommendedRepRange("12-15")
-                .recommendedRestTime("60 seconds")
-                .recommendedFrequency("4-5 days/week")
-                .targetCalorieAdjustment(-500)
                 .build();
     }
 
@@ -81,15 +73,11 @@ class GoalServiceImplAdminTest {
         void createGoal_Success() {
             // Given
             CreateGoalRequest request = CreateGoalRequest.builder()
-                    .goalName("Strength Building")
+                    .goalName("Athletic")
                     .description("Increase strength and power")
-                    .recommendedRepRange("3-5")
-                    .recommendedRestTime("3-5 minutes")
-                    .recommendedFrequency("3-4 days/week")
-                    .targetCalorieAdjustment(200)
                     .build();
 
-            when(goalRepository.existsByGoalName("Strength Building")).thenReturn(false);
+            when(goalRepository.existsByGoalName("Athletic")).thenReturn(false);
             when(goalRepository.save(any(Goal.class))).thenAnswer(invocation -> {
                 Goal saved = invocation.getArgument(0);
                 saved.setGoalId(2L);
@@ -98,21 +86,21 @@ class GoalServiceImplAdminTest {
             when(goalMapper.toGoalResponse(any(Goal.class))).thenReturn(
                     GoalResponse.builder()
                             .goalId(2L)
-                            .goalName("Strength Building")
+                            .goalName("Athletic")
                             .build());
 
             // When
             GoalResponse result = goalService.createGoal(request);
 
             // Then
-            assertThat(result.getGoalName()).isEqualTo("Strength Building");
+            assertThat(result.getGoalName()).isEqualTo("Athletic");
             
             ArgumentCaptor<Goal> goalCaptor = ArgumentCaptor.forClass(Goal.class);
             verify(goalRepository, times(1)).save(goalCaptor.capture());
             
             Goal savedGoal = goalCaptor.getValue();
-            assertThat(savedGoal.getGoalName()).isEqualTo("Strength Building");
-            assertThat(savedGoal.getRecommendedRepRange()).isEqualTo("3-5");
+            assertThat(savedGoal.getGoalName()).isEqualTo("Athletic");
+            assertThat(savedGoal.getDescription()).isEqualTo("Increase strength and power");
         }
 
         @Test
@@ -120,10 +108,10 @@ class GoalServiceImplAdminTest {
         void createGoal_DuplicateName() {
             // Given
             CreateGoalRequest request = CreateGoalRequest.builder()
-                    .goalName("Fat Loss")
+                    .goalName("Slimfit")
                     .build();
 
-            when(goalRepository.existsByGoalName("Fat Loss")).thenReturn(true);
+            when(goalRepository.existsByGoalName("Slimfit")).thenReturn(true);
 
             // When/Then
             assertThatThrownBy(() -> goalService.createGoal(request))
@@ -141,9 +129,7 @@ class GoalServiceImplAdminTest {
         void updateGoal_Success() {
             // Given
             UpdateGoalRequest request = UpdateGoalRequest.builder()
-                    .description("Updated description for fat loss")
-                    .recommendedRepRange("15-20")
-                    .targetCalorieAdjustment(-600)
+                    .description("Updated description for slimfit")
                     .build();
 
             when(goalRepository.findById(1L)).thenReturn(Optional.of(mockGoal));
@@ -156,9 +142,7 @@ class GoalServiceImplAdminTest {
             // Then
             assertThat(result).isNotNull();
             verify(goalRepository, times(1)).save(any(Goal.class));
-            assertThat(mockGoal.getDescription()).isEqualTo("Updated description for fat loss");
-            assertThat(mockGoal.getRecommendedRepRange()).isEqualTo("15-20");
-            assertThat(mockGoal.getTargetCalorieAdjustment()).isEqualTo(-600);
+            assertThat(mockGoal.getDescription()).isEqualTo("Updated description for slimfit");
         }
 
         @Test
@@ -166,11 +150,11 @@ class GoalServiceImplAdminTest {
         void updateGoal_NameChange_Success() {
             // Given
             UpdateGoalRequest request = UpdateGoalRequest.builder()
-                    .goalName("Weight Loss Pro")
+                    .goalName("Slimfit Pro")
                     .build();
 
             when(goalRepository.findById(1L)).thenReturn(Optional.of(mockGoal));
-            when(goalRepository.existsByGoalName("Weight Loss Pro")).thenReturn(false);
+            when(goalRepository.existsByGoalName("Slimfit Pro")).thenReturn(false);
             when(goalRepository.save(any(Goal.class))).thenReturn(mockGoal);
             when(goalMapper.toGoalResponse(any(Goal.class))).thenReturn(mockGoalResponse);
 
@@ -178,7 +162,7 @@ class GoalServiceImplAdminTest {
             goalService.updateGoal(1L, request);
 
             // Then
-            assertThat(mockGoal.getGoalName()).isEqualTo("Weight Loss Pro");
+            assertThat(mockGoal.getGoalName()).isEqualTo("Slimfit Pro");
         }
 
         @Test
@@ -197,11 +181,11 @@ class GoalServiceImplAdminTest {
         void updateGoal_DuplicateName() {
             // Given
             UpdateGoalRequest request = UpdateGoalRequest.builder()
-                    .goalName("Muscle Gain")
+                    .goalName("Bodybuilding")
                     .build();
 
             when(goalRepository.findById(1L)).thenReturn(Optional.of(mockGoal));
-            when(goalRepository.existsByGoalName("Muscle Gain")).thenReturn(true);
+            when(goalRepository.existsByGoalName("Bodybuilding")).thenReturn(true);
 
             // When/Then
             assertThatThrownBy(() -> goalService.updateGoal(1L, request))

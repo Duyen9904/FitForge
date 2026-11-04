@@ -51,13 +51,8 @@ public class User {
 
     private Float targetWeightKg;
 
-    @Column(nullable = false)
-    private LocalDate dateJoined;
-
     @Column(length = 50)
     private String fitnessLevel;
-
-    private String profileImageUrl;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -88,8 +83,6 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PlanMeal> planMeals = new ArrayList<>();
 
-
-
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MissedWorkout> missedWorkouts = new ArrayList<>();
 
@@ -99,13 +92,6 @@ public class User {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserOnboardingProgress> onboardingProgress = new ArrayList<>();
-
-    @PrePersist
-    protected void onCreate() {
-        if (dateJoined == null) {
-            dateJoined = LocalDate.now();
-        }
-    }
 
     public enum Role {
         USER,

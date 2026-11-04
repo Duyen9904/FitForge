@@ -22,7 +22,4 @@ public class RegisterDeviceTokenRequest {
 
     @Size(max = 50, message = "Device type must be at most 50 characters")
     private String deviceType; // "ANDROID", "IOS", "WEB"
-
-    @Size(max = 100, message = "Device name must be at most 100 characters")
-    private String deviceName;
 }

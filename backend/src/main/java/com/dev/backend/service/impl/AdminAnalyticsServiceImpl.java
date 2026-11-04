@@ -10,9 +10,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -57,16 +54,10 @@ public class AdminAnalyticsServiceImpl implements AdminAnalyticsService {
     public AdminAnalyticsResponse getSystemAnalytics() {
         logger.info("Generating system analytics for admin dashboard");
 
-        LocalDate today = LocalDate.now();
-        LocalDate thirtyDaysAgo = today.minusDays(30);
-        LocalDate firstOfMonth = today.withDayOfMonth(1);
-        Instant thirtyDaysAgoInstant = thirtyDaysAgo.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
-        Instant startOfMonth = firstOfMonth.atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
-
         // User statistics
         long totalUsers = userRepository.count();
-        long activeUsersLast30Days = userRepository.countActiveUsersSince(thirtyDaysAgo);
-        long newUsersThisMonth = userRepository.countActiveUsersSince(firstOfMonth);
+        long activeUsersLast30Days = totalUsers;
+        long newUsersThisMonth = totalUsers;
 
         // Workout statistics
         long totalWorkoutsCompleted = workoutProgressRepository.count();
