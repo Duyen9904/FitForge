@@ -3,288 +3,200 @@ package com.dev.backend.mapper;
 import com.dev.backend.model.dto.request.CreateNutritionPlanRequest;
 import com.dev.backend.model.dto.request.LogMealRequest;
 import com.dev.backend.model.dto.request.ScheduleMealRequest;
-import com.dev.backend.model.dto.response.*;
-import com.dev.backend.model.entity.*;
-import com.dev.backend.model.enums.*;
-import org.springframework.stereotype.Component;
+import com.dev.backend.model.dto.response.CheatMealLogResponse;
+import com.dev.backend.model.dto.response.CompensationActionResponse;
+import com.dev.backend.model.dto.response.DayMealResponse;
+import com.dev.backend.model.dto.response.MealTemplateResponse;
+import com.dev.backend.model.dto.response.NutritionDayResponse;
+import com.dev.backend.model.dto.response.NutritionPlanResponse;
+import com.dev.backend.model.dto.response.PlanMealResponse;
+import com.dev.backend.model.entity.CheatMealLog;
+import com.dev.backend.model.entity.CompensationAction;
+import com.dev.backend.model.entity.DayMeal;
+import com.dev.backend.model.entity.Goal;
+import com.dev.backend.model.entity.MealTemplate;
+import com.dev.backend.model.entity.NutritionDay;
+import com.dev.backend.model.entity.NutritionPlan;
+import com.dev.backend.model.entity.PlanMeal;
+import com.dev.backend.model.entity.User;
+import com.dev.backend.model.enums.CompensationType;
+import com.dev.backend.model.enums.MealType;
+import com.dev.backend.model.enums.PlanMealSource;
+import com.dev.backend.model.enums.PlanMealStatus;
+import org.mapstruct.BeanMapping;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.mapstruct.ReportingPolicy;
 
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.stream.Collectors;
 
-@Component
-public class NutritionMapper {
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface NutritionMapper extends BaseMapper<NutritionPlan, CreateNutritionPlanRequest, NutritionPlanResponse> {
 
     // ========== Nutrition Plan ==========
 
-    public NutritionPlan toEntity(CreateNutritionPlanRequest request, User user, Goal goal) {
-        NutritionPlan plan = new NutritionPlan();
-        plan.setUser(user);
-        plan.setGoal(goal);
-        plan.setPlanName(request.getPlanName());
-        plan.setDailyCalorieTarget(request.getDailyCalorieTarget());
-        plan.setProteinPercentage(request.getProteinPercentage());
-        plan.setCarbsPercentage(request.getCarbsPercentage());
-        plan.setFatsPercentage(request.getFatsPercentage());
-        plan.setCheatMealsPerWeek(request.getCheatMealsPerWeek() != null ? request.getCheatMealsPerWeek() : 0);
-        plan.setAutoAdjustEnabled(request.getAutoAdjustEnabled() != null ? request.getAutoAdjustEnabled() : false);
-        plan.setIsActive(true);
-        return plan;
-    }
+    @Override
+    @Mapping(target = "cheatMealsPerWeek", expression = "java(request.getCheatMealsPerWeek() != null ? request.getCheatMealsPerWeek() : 0)")
+    @Mapping(target = "autoAdjustEnabled", expression = "java(request.getAutoAdjustEnabled() != null ? request.getAutoAdjustEnabled() : false)")
+    @Mapping(target = "isActive", constant = "true")
+    NutritionPlan toEntity(CreateNutritionPlanRequest request);
 
-    public NutritionPlanResponse toResponse(NutritionPlan entity) {
-        NutritionPlanResponse.NutritionPlanResponseBuilder builder = NutritionPlanResponse.builder()
-                .nutritionPlanId(entity.getNutritionPlanId())
-                .planName(entity.getPlanName())
-                .dailyCalorieTarget(entity.getDailyCalorieTarget())
-                .algorithmVersion(entity.getAlgorithmVersion())
-                .version(entity.getVersion())
-                .recommendationReason(entity.getRecommendationReason())
-                .proteinPercentage(entity.getProteinPercentage())
-                .carbsPercentage(entity.getCarbsPercentage())
-                .fatsPercentage(entity.getFatsPercentage())
-                .cheatMealsPerWeek(entity.getCheatMealsPerWeek())
-                .autoAdjustEnabled(entity.getAutoAdjustEnabled())
-                .isActive(entity.getIsActive());
+    @Override
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    void updateEntityFromRequest(@MappingTarget NutritionPlan entity, CreateNutritionPlanRequest request);
 
-        if (entity.getGoal() != null) {
-            builder.goalId(entity.getGoal().getGoalId());
-            builder.goalName(entity.getGoal().getGoalName());
+    @Mapping(target = "user", source = "user")
+    @Mapping(target = "goal", source = "goal")
+    @Mapping(target = "planName", source = "request.planName")
+    @Mapping(target = "dailyCalorieTarget", source = "request.dailyCalorieTarget")
+    @Mapping(target = "proteinPercentage", source = "request.proteinPercentage")
+    @Mapping(target = "carbsPercentage", source = "request.carbsPercentage")
+    @Mapping(target = "fatsPercentage", source = "request.fatsPercentage")
+    @Mapping(target = "cheatMealsPerWeek", expression = "java(request.getCheatMealsPerWeek() != null ? request.getCheatMealsPerWeek() : 0)")
+    @Mapping(target = "autoAdjustEnabled", expression = "java(request.getAutoAdjustEnabled() != null ? request.getAutoAdjustEnabled() : false)")
+    @Mapping(target = "isActive", constant = "true")
+    NutritionPlan toEntity(CreateNutritionPlanRequest request, User user, Goal goal);
+
+    @Override
+    @Mapping(target = "goalId", source = "goal.goalId")
+    @Mapping(target = "goalName", source = "goal.goalName")
+    @Mapping(target = "proteinGrams", expression = "java(calculateMacroGrams(entity.getDailyCalorieTarget(), entity.getProteinPercentage(), 4))")
+    @Mapping(target = "carbsGrams", expression = "java(calculateMacroGrams(entity.getDailyCalorieTarget(), entity.getCarbsPercentage(), 4))")
+    @Mapping(target = "fatsGrams", expression = "java(calculateMacroGrams(entity.getDailyCalorieTarget(), entity.getFatsPercentage(), 9))")
+    NutritionPlanResponse toResponse(NutritionPlan entity);
+
+    default Float calculateMacroGrams(Integer calories, Float percentage, int calPerGram) {
+        if (calories == null || percentage == null) {
+            return null;
         }
-
-        // Calculate macro grams from percentages
-        // Protein: 4 cal/g, Carbs: 4 cal/g, Fats: 9 cal/g
-        if (entity.getDailyCalorieTarget() != null) {
-            int calories = entity.getDailyCalorieTarget();
-            if (entity.getProteinPercentage() != null) {
-                builder.proteinGrams((calories * entity.getProteinPercentage() / 100) / 4);
-            }
-            if (entity.getCarbsPercentage() != null) {
-                builder.carbsGrams((calories * entity.getCarbsPercentage() / 100) / 4);
-            }
-            if (entity.getFatsPercentage() != null) {
-                builder.fatsGrams((calories * entity.getFatsPercentage() / 100) / 9);
-            }
-        }
-
-
-        return builder.build();
+        return (calories * percentage / 100) / calPerGram;
     }
 
     // ========== Plan Meal (replaces Nutrition Log) ==========
 
-    /**
-     * Convert a free-form LogMealRequest into a PlanMeal entity
-     * with status=COMPLETED and source=MANUAL.
-     */
-    public PlanMeal toPlanMealEntity(LogMealRequest request, User user) {
-        PlanMeal meal = new PlanMeal();
-        meal.setUser(user);
-        meal.setScheduledDate(request.getLogDate() != null ? request.getLogDate() : LocalDate.now());
-        meal.setMealType(request.getMealType());
-        meal.setFoodName(request.getFoodName());
-        meal.setCalories(request.getCalories());
-        meal.setProteinG(request.getProteinG());
-        meal.setCarbsG(request.getCarbsG());
-        meal.setFatsG(request.getFatsG());
-        meal.setMealTime(request.getMealTime());
-        meal.setIsCheatMeal(request.getIsCheatMeal() != null ? request.getIsCheatMeal() : false);
-        meal.setNotes(request.getNotes());
-        meal.setStatus(PlanMealStatus.COMPLETED);
-        meal.setCompletedAt(Instant.now());
-        meal.setSource(PlanMealSource.MANUAL);
-        return meal;
-    }
+    @Mapping(target = "user", source = "user")
+    @Mapping(target = "scheduledDate", expression = "java(request.getLogDate() != null ? request.getLogDate() : java.time.LocalDate.now())")
+    @Mapping(target = "mealType", source = "request.mealType")
+    @Mapping(target = "foodName", source = "request.foodName")
+    @Mapping(target = "calories", source = "request.calories")
+    @Mapping(target = "proteinG", source = "request.proteinG")
+    @Mapping(target = "carbsG", source = "request.carbsG")
+    @Mapping(target = "fatsG", source = "request.fatsG")
+    @Mapping(target = "mealTime", source = "request.mealTime")
+    @Mapping(target = "isCheatMeal", expression = "java(request.getIsCheatMeal() != null ? request.getIsCheatMeal() : false)")
+    @Mapping(target = "notes", source = "request.notes")
+    @Mapping(target = "status", expression = "java(com.dev.backend.model.enums.PlanMealStatus.COMPLETED)")
+    @Mapping(target = "completedAt", expression = "java(java.time.Instant.now())")
+    @Mapping(target = "source", expression = "java(com.dev.backend.model.enums.PlanMealSource.MANUAL)")
+    PlanMeal toPlanMealEntity(LogMealRequest request, User user);
 
-    /**
-     * Convert a ScheduleMealRequest + MealTemplate into a PlanMeal entity
-     * with status=PLANNED and source=TEMPLATE.
-     */
-    public PlanMeal toPlanMealEntity(ScheduleMealRequest request, MealTemplate template,
-                                     NutritionPlan plan, User user) {
-        PlanMeal meal = new PlanMeal();
-        meal.setUser(user);
-        meal.setNutritionPlan(plan);
-        meal.setMealTemplate(template);
-        meal.setScheduledDate(request.getScheduledDate());
-        meal.setMealType(request.getMealType());
-        meal.setMealTime(request.getMealTime());
-        meal.setNotes(request.getNotes());
-        meal.setStatus(PlanMealStatus.PLANNED);
-        meal.setSource(PlanMealSource.TEMPLATE);
-        meal.setIsCheatMeal(false);
-        // Copy denormalized data from template
-        meal.setFoodName(template.getMealName());
-        meal.setCalories(template.getCalories());
-        meal.setProteinG(template.getProteinG());
-        meal.setCarbsG(template.getCarbsG());
-        meal.setFatsG(template.getFatsG());
-        return meal;
-    }
+    @Mapping(target = "user", source = "user")
+    @Mapping(target = "nutritionPlan", source = "plan")
+    @Mapping(target = "mealTemplate", source = "template")
+    @Mapping(target = "scheduledDate", source = "request.scheduledDate")
+    @Mapping(target = "mealType", source = "request.mealType")
+    @Mapping(target = "mealTime", source = "request.mealTime")
+    @Mapping(target = "notes", source = "request.notes")
+    @Mapping(target = "status", expression = "java(com.dev.backend.model.enums.PlanMealStatus.PLANNED)")
+    @Mapping(target = "source", expression = "java(com.dev.backend.model.enums.PlanMealSource.TEMPLATE)")
+    @Mapping(target = "isCheatMeal", constant = "false")
+    @Mapping(target = "foodName", source = "template.mealName")
+    @Mapping(target = "calories", source = "template.calories")
+    @Mapping(target = "proteinG", source = "template.proteinG")
+    @Mapping(target = "carbsG", source = "template.carbsG")
+    @Mapping(target = "fatsG", source = "template.fatsG")
+    @Mapping(target = "completedAt", ignore = true)
+    PlanMeal toPlanMealEntity(ScheduleMealRequest request, MealTemplate template,
+                              NutritionPlan plan, User user);
 
-    /**
-     * Create a PlanMeal from a MealTemplate for generated meals (RCM/AI).
-     */
-    public PlanMeal toPlanMealFromGenerated(MealTemplate template, NutritionPlan plan,
-                                            User user, LocalDate date, PlanMealSource source) {
-        PlanMeal meal = new PlanMeal();
-        meal.setUser(user);
-        meal.setNutritionPlan(plan);
-        meal.setMealTemplate(template);
-        meal.setScheduledDate(date);
-        meal.setMealType(template.getMealType() != null ? MealType.valueOf(template.getMealType()) : null);
-        meal.setStatus(PlanMealStatus.PLANNED);
-        meal.setSource(source);
-        meal.setIsCheatMeal(false);
-        // Copy denormalized data from template
-        meal.setFoodName(template.getMealName());
-        meal.setCalories(template.getCalories());
-        meal.setProteinG(template.getProteinG());
-        meal.setCarbsG(template.getCarbsG());
-        meal.setFatsG(template.getFatsG());
-        return meal;
-    }
+    @Mapping(target = "user", source = "user")
+    @Mapping(target = "nutritionPlan", source = "plan")
+    @Mapping(target = "mealTemplate", source = "template")
+    @Mapping(target = "scheduledDate", source = "date")
+    @Mapping(target = "mealType", expression = "java(template.getMealType() != null ? com.dev.backend.model.enums.MealType.valueOf(template.getMealType()) : null)")
+    @Mapping(target = "status", expression = "java(com.dev.backend.model.enums.PlanMealStatus.PLANNED)")
+    @Mapping(target = "source", source = "source")
+    @Mapping(target = "isCheatMeal", constant = "false")
+    @Mapping(target = "foodName", source = "template.mealName")
+    @Mapping(target = "calories", source = "template.calories")
+    @Mapping(target = "proteinG", source = "template.proteinG")
+    @Mapping(target = "carbsG", source = "template.carbsG")
+    @Mapping(target = "fatsG", source = "template.fatsG")
+    @Mapping(target = "mealTime", ignore = true)
+    @Mapping(target = "completedAt", ignore = true)
+    @Mapping(target = "notes", ignore = true)
+    PlanMeal toPlanMealFromGenerated(MealTemplate template, NutritionPlan plan,
+                                     User user, LocalDate date, PlanMealSource source);
 
-    public PlanMealResponse toResponse(PlanMeal entity) {
-        PlanMealResponse.PlanMealResponseBuilder builder = PlanMealResponse.builder()
-                .planMealId(entity.getPlanMealId())
-                .nutritionPlanId(entity.getNutritionPlan() != null
-                        ? entity.getNutritionPlan().getNutritionPlanId() : null)
-                .mealTemplateId(entity.getMealTemplate() != null
-                        ? entity.getMealTemplate().getMealTemplateId() : null)
-                .scheduledDate(entity.getScheduledDate())
-                .mealType(entity.getMealType())
-                .status(entity.getStatus())
-                .source(entity.getSource())
-                .foodName(entity.getFoodName())
-                .calories(entity.getCalories())
-                .proteinG(entity.getProteinG())
-                .carbsG(entity.getCarbsG())
-                .fatsG(entity.getFatsG())
-                .mealTime(entity.getMealTime())
-                .completedAt(entity.getCompletedAt())
-                .isCheatMeal(entity.getIsCheatMeal())
-                .notes(entity.getNotes());
-
-        // Include full template details if meal is from a template
-        if (entity.getMealTemplate() != null) {
-            builder.mealTemplate(toResponse(entity.getMealTemplate()));
-        }
-
-        return builder.build();
-    }
+    @Mapping(target = "nutritionPlanId", source = "nutritionPlan.nutritionPlanId")
+    @Mapping(target = "mealTemplateId", source = "mealTemplate.mealTemplateId")
+    @Mapping(target = "mealTemplate", source = "mealTemplate")
+    PlanMealResponse toResponse(PlanMeal entity);
 
     // ========== Cheat Meal Log ==========
 
-    public CheatMealLogResponse toResponse(CheatMealLog entity) {
-        CheatMealLogResponse.CheatMealLogResponseBuilder builder = CheatMealLogResponse.builder()
-                .cheatMealLogId(entity.getCheatMealLogId())
-                .cheatDate(entity.getCheatDate())
-                .excessCalories(entity.getExcessCalories())
-                .compensationStrategy(entity.getCompensationStrategy())
-                .isCompensated(entity.getIsCompensated());
-
-        if (entity.getPlanMeal() != null) {
-            builder.planMealId(entity.getPlanMeal().getPlanMealId());
-            builder.mealName(entity.getPlanMeal().getFoodName());
-            builder.mealCalories(entity.getPlanMeal().getCalories());
-        }
-
-        return builder.build();
-    }
+    @Mapping(target = "planMealId", source = "planMeal.planMealId")
+    @Mapping(target = "mealName", source = "planMeal.foodName")
+    @Mapping(target = "mealCalories", source = "planMeal.calories")
+    CheatMealLogResponse toResponse(CheatMealLog entity);
 
     // ========== Compensation Action ==========
 
-    public CompensationActionResponse toResponse(CompensationAction entity) {
-        CompensationActionResponse.CompensationActionResponseBuilder builder = CompensationActionResponse.builder()
-                .compensationId(entity.getCompensationId())
-                .actionType(entity.getActionType())
-                .actionDescription(entity.getActionDescription())
-                .scheduledDate(entity.getScheduledDate())
-                .isCompleted(entity.getIsCompleted())
-                .calorieAdjustment(entity.getCalorieAdjustment())
-                .details(entity.getDetails());
+    @Mapping(target = "compensationType", expression = "java(parseCompensationType(entity.getActionType()))")
+    @Mapping(target = "daysRemaining", expression = "java(calculateDaysRemaining(entity.getScheduledDate()))")
+    @Mapping(target = "progressStatus", expression = "java(calculateProgressStatus(entity.getScheduledDate(), entity.getIsCompleted()))")
+    CompensationActionResponse toResponse(CompensationAction entity);
 
-        // Try to parse compensation type
+    default CompensationType parseCompensationType(String actionType) {
+        if (actionType == null) {
+            return null;
+        }
         try {
-            builder.compensationType(CompensationType.valueOf(entity.getActionType()));
+            return CompensationType.valueOf(actionType);
         } catch (Exception e) {
-            // Ignore if not a valid enum
+            return null;
         }
+    }
 
-        // Calculate days remaining
-        if (entity.getScheduledDate() != null) {
-            long daysRemaining = ChronoUnit.DAYS.between(LocalDate.now(), entity.getScheduledDate());
-            builder.daysRemaining((int) Math.max(0, daysRemaining));
-            builder.progressStatus(entity.getIsCompleted() ? "completed" : 
-                    daysRemaining < 0 ? "overdue" : "pending");
+    default Integer calculateDaysRemaining(LocalDate scheduledDate) {
+        if (scheduledDate == null) {
+            return null;
         }
+        long daysRemaining = ChronoUnit.DAYS.between(LocalDate.now(), scheduledDate);
+        return (int) Math.max(0, daysRemaining);
+    }
 
-        return builder.build();
+    default String calculateProgressStatus(LocalDate scheduledDate, Boolean isCompleted) {
+        if (scheduledDate == null) {
+            return null;
+        }
+        long daysRemaining = ChronoUnit.DAYS.between(LocalDate.now(), scheduledDate);
+        return Boolean.TRUE.equals(isCompleted) ? "completed" : daysRemaining < 0 ? "overdue" : "pending";
     }
 
     // ========== Meal Template ==========
 
-    public MealTemplateResponse toResponse(MealTemplate entity) {
-        return MealTemplateResponse.builder()
-                .mealTemplateId(entity.getMealTemplateId())
-                .mealName(entity.getMealName())
-                .mealType(entity.getMealType() != null ? MealType.valueOf(entity.getMealType()) : null)
-                .source(entity.getSource())
-                .description(entity.getDescription())
-                .calories(entity.getCalories())
-                .proteinG(entity.getProteinG())
-                .carbsG(entity.getCarbsG())
-                .fatsG(entity.getFatsG())
-                .recipeInstructions(entity.getRecipeInstructions())
-                .build();
-    }
+    @Mapping(target = "mealType", expression = "java(entity.getMealType() != null ? com.dev.backend.model.enums.MealType.valueOf(entity.getMealType()) : null)")
+    MealTemplateResponse toResponse(MealTemplate entity);
 
     // ========== Nutrition Day ==========
 
-    public NutritionDayResponse toResponse(NutritionDay entity) {
-        List<DayMealResponse> meals = entity.getDayMeals() != null
-                ? entity.getDayMeals().stream()
-                    .map(this::toResponse)
-                    .collect(Collectors.toList())
-                : List.of();
+    @Mapping(target = "meals", expression = "java(entity.getDayMeals() != null ? toDayMealResponseList(entity.getDayMeals()) : java.util.List.of())")
+    NutritionDayResponse toResponse(NutritionDay entity);
 
-        return NutritionDayResponse.builder()
-                .nutritionDayId(entity.getNutritionDayId())
-                .dayNumber(entity.getDayNumber())
-                .dayName(entity.getDayName())
-                .description(entity.getDescription())
-                .targetCalories(entity.getTargetCalories())
-                .isRestDay(entity.getIsRestDay())
-                .meals(meals)
-                .build();
-    }
+    List<DayMealResponse> toDayMealResponseList(List<DayMeal> entities);
 
     // ========== Day Meal ==========
 
-    public DayMealResponse toResponse(DayMeal entity) {
-        MealTemplate t = entity.getMealTemplate();
-
-        // Use custom overrides if set, otherwise fall back to template values
-        Integer calories = entity.getCustomCalories() != null ? entity.getCustomCalories() : t.getCalories();
-        Float proteinG = entity.getCustomProteinG() != null ? entity.getCustomProteinG() : t.getProteinG();
-        Float carbsG = entity.getCustomCarbsG() != null ? entity.getCustomCarbsG() : t.getCarbsG();
-        Float fatsG = entity.getCustomFatsG() != null ? entity.getCustomFatsG() : t.getFatsG();
-
-        return DayMealResponse.builder()
-                .dayMealId(entity.getDayMealId())
-                .mealType(entity.getMealType())
-                .orderIndex(entity.getOrderIndex())
-                .calories(calories)
-                .proteinG(proteinG)
-                .carbsG(carbsG)
-                .fatsG(fatsG)
-                .notes(entity.getNotes())
-                .completedAt(entity.getCompletedAt())
-                .mealTemplate(toResponse(t))
-                .build();
-    }
+    @Mapping(target = "calories", expression = "java(entity.getCustomCalories() != null ? entity.getCustomCalories() : (entity.getMealTemplate() != null ? entity.getMealTemplate().getCalories() : null))")
+    @Mapping(target = "proteinG", expression = "java(entity.getCustomProteinG() != null ? entity.getCustomProteinG() : (entity.getMealTemplate() != null ? entity.getMealTemplate().getProteinG() : null))")
+    @Mapping(target = "carbsG", expression = "java(entity.getCustomCarbsG() != null ? entity.getCustomCarbsG() : (entity.getMealTemplate() != null ? entity.getMealTemplate().getCarbsG() : null))")
+    @Mapping(target = "fatsG", expression = "java(entity.getCustomFatsG() != null ? entity.getCustomFatsG() : (entity.getMealTemplate() != null ? entity.getMealTemplate().getFatsG() : null))")
+    @Mapping(target = "mealTemplate", source = "mealTemplate")
+    DayMealResponse toResponse(DayMeal entity);
 }
-

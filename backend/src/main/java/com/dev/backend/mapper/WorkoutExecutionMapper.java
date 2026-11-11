@@ -1,59 +1,73 @@
 package com.dev.backend.mapper;
 
+import com.dev.backend.model.dto.request.CompleteWorkoutRequest;
 import com.dev.backend.model.dto.response.ExerciseLogResponse;
 import com.dev.backend.model.dto.response.WorkoutHistoryResponse;
 import com.dev.backend.model.dto.response.WorkoutProgressResponse;
 import com.dev.backend.model.entity.ExerciseLog;
 import com.dev.backend.model.entity.WorkoutProgress;
 import com.dev.backend.service.GcpService;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.mapstruct.BeanMapping;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.mapstruct.ReportingPolicy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Component
-@Slf4j
-public class WorkoutExecutionMapper {
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface WorkoutExecutionMapper extends BaseMapper<WorkoutProgress, CompleteWorkoutRequest, WorkoutProgressResponse> {
 
-    public WorkoutProgressResponse toProgressResponse(WorkoutProgress progress) {
+    Logger log = LoggerFactory.getLogger(WorkoutExecutionMapper.class);
+
+    @Override
+    @Mapping(target = "planId", source = "workoutPlan.planId")
+    @Mapping(target = "planName", source = "workoutPlan.planName")
+    @Mapping(target = "sessionId", source = "workoutSession.sessionId")
+    @Mapping(target = "sessionName", source = "workoutSession.sessionName")
+    @Mapping(target = "proofPhotoUrl", expression = "java(resolveSignedUrl(progress.getProofPhotoUrl(), null))")
+    @Mapping(target = "exerciseLogs", expression = "java(toExerciseLogResponseList(progress.getExerciseLogs()))")
+    WorkoutProgressResponse toResponse(WorkoutProgress progress);
+
+    @Override
+    WorkoutProgress toEntity(CompleteWorkoutRequest request);
+
+    @Override
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    void updateEntityFromRequest(@MappingTarget WorkoutProgress entity, CompleteWorkoutRequest request);
+
+    default WorkoutProgressResponse toProgressResponse(WorkoutProgress progress) {
         return toProgressResponse(progress, null);
     }
 
-    public WorkoutProgressResponse toProgressResponse(WorkoutProgress progress, GcpService gcpService) {
-        return WorkoutProgressResponse.builder()
-                .progressId(progress.getProgressId())
-                .planId(progress.getWorkoutPlan() != null ? progress.getWorkoutPlan().getPlanId() : null)
-                .planName(progress.getWorkoutPlan() != null ? progress.getWorkoutPlan().getPlanName() : null)
-                .sessionId(progress.getWorkoutSession() != null ? progress.getWorkoutSession().getSessionId() : null)
-                .sessionName(progress.getWorkoutSession() != null ? progress.getWorkoutSession().getSessionName() : null)
-                .workoutDate(progress.getWorkoutDate())
-                .startTime(progress.getStartTime())
-                .endTime(progress.getEndTime())
-                .durationMinutes(progress.getDurationMinutes())
-                .completed(progress.getCompleted())
-                .performanceNotes(progress.getPerformanceNotes())
-                .difficultyRating(progress.getDifficultyRating())
-                .caloriesBurned(progress.getCaloriesBurned())
-                .averageHeartRate(progress.getAverageHeartRate())
-                .moodRating(progress.getMoodRating())
-                .proofPhotoUrl(resolveSignedUrl(progress.getProofPhotoUrl(), gcpService))
-                .exerciseLogs(toExerciseLogResponseList(progress.getExerciseLogs()))
-                .build();
+    default WorkoutProgressResponse toProgressResponse(WorkoutProgress progress, GcpService gcpService) {
+        if (progress == null) {
+            return null;
+        }
+        WorkoutProgressResponse response = toResponse(progress);
+        response.setProofPhotoUrl(resolveSignedUrl(progress.getProofPhotoUrl(), gcpService));
+        return response;
     }
 
-    public WorkoutHistoryResponse toHistoryResponse(WorkoutProgress progress) {
+    default WorkoutHistoryResponse toHistoryResponse(WorkoutProgress progress) {
+        if (progress == null) {
+            return null;
+        }
         int completed = 0;
         int skipped = 0;
         float totalVolume = 0f;
 
         if (progress.getExerciseLogs() != null) {
-            for (ExerciseLog log : progress.getExerciseLogs()) {
-                if (Boolean.TRUE.equals(log.getCompleted())) {
+            for (ExerciseLog exerciseLog : progress.getExerciseLogs()) {
+                if (Boolean.TRUE.equals(exerciseLog.getCompleted())) {
                     completed++;
-                    if (log.getRepetitionsCompleted() != null && log.getWeightUsedKg() != null) {
-                        totalVolume += log.getRepetitionsCompleted() * log.getWeightUsedKg();
+                    if (exerciseLog.getRepetitionsCompleted() != null && exerciseLog.getWeightUsedKg() != null) {
+                        totalVolume += exerciseLog.getRepetitionsCompleted() * exerciseLog.getWeightUsedKg();
                     }
                 } else {
                     skipped++;
@@ -78,11 +92,7 @@ public class WorkoutExecutionMapper {
                 .build();
     }
 
-    /**
-     * Resolve a GCS object path to a signed URL.
-     * Returns the raw path as fallback if GcpService is unavailable or signing fails.
-     */
-    private String resolveSignedUrl(String objectPath, GcpService gcpService) {
+    default String resolveSignedUrl(String objectPath, GcpService gcpService) {
         if (objectPath == null || objectPath.isBlank()) {
             return null;
         }
@@ -97,24 +107,14 @@ public class WorkoutExecutionMapper {
         }
     }
 
-    public List<ExerciseLogResponse> toExerciseLogResponseList(List<ExerciseLog> logs) {
+    default List<ExerciseLogResponse> toExerciseLogResponseList(List<ExerciseLog> logs) {
         if (logs == null) return Collections.emptyList();
         return logs.stream()
                 .map(this::toExerciseLogResponse)
                 .collect(Collectors.toList());
     }
 
-    public ExerciseLogResponse toExerciseLogResponse(ExerciseLog log) {
-        return ExerciseLogResponse.builder()
-                .logId(log.getLogId())
-                .exerciseId(log.getExercise() != null ? log.getExercise().getExerciseId() : null)
-                .exerciseName(log.getExercise() != null ? log.getExercise().getExerciseName() : null)
-                .setNumber(log.getSetNumber())
-                .repetitionsCompleted(log.getRepetitionsCompleted())
-                .weightUsedKg(log.getWeightUsedKg())
-                .restTimeSeconds(log.getRestTimeSeconds())
-                .completed(log.getCompleted())
-                .notes(log.getNotes())
-                .build();
-    }
+    @Mapping(target = "exerciseId", source = "exercise.exerciseId")
+    @Mapping(target = "exerciseName", source = "exercise.exerciseName")
+    ExerciseLogResponse toExerciseLogResponse(ExerciseLog log);
 }

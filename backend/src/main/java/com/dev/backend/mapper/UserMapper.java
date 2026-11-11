@@ -1,53 +1,38 @@
 package com.dev.backend.mapper;
 
+import com.dev.backend.model.dto.request.SetPrimaryGoalRequest;
 import com.dev.backend.model.dto.response.UserPreferenceResponse;
 import com.dev.backend.model.dto.response.UserProfileResponse;
 import com.dev.backend.model.entity.User;
 import com.dev.backend.model.entity.UserPreference;
-import org.springframework.stereotype.Component;
+import org.mapstruct.BeanMapping;
+import org.mapstruct.InjectionStrategy;
+import org.mapstruct.Mapper;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.mapstruct.ReportingPolicy;
 
-@Component
-public class UserMapper {
+@Mapper(
+        componentModel = "spring",
+        uses = {GoalMapper.class},
+        injectionStrategy = InjectionStrategy.CONSTRUCTOR,
+        unmappedTargetPolicy = ReportingPolicy.IGNORE
+)
+public interface UserMapper extends BaseMapper<User, SetPrimaryGoalRequest, UserProfileResponse> {
 
-    private final GoalMapper goalMapper;
+    @Override
+    UserProfileResponse toResponse(User user);
 
-    public UserMapper(GoalMapper goalMapper) {
-        this.goalMapper = goalMapper;
+    @Override
+    User toEntity(SetPrimaryGoalRequest request);
+
+    @Override
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    void updateEntityFromRequest(@MappingTarget User entity, SetPrimaryGoalRequest request);
+
+    default UserProfileResponse toUserProfileResponse(User user) {
+        return toResponse(user);
     }
 
-    public UserProfileResponse toUserProfileResponse(User user) {
-        if (user == null) {
-            return null;
-        }
-        return UserProfileResponse.builder()
-                .userId(user.getUserId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .dateOfBirth(user.getDateOfBirth())
-                .gender(user.getGender())
-                .heightCm(user.getHeightCm())
-                .currentWeightKg(user.getCurrentWeightKg())
-                .targetWeightKg(user.getTargetWeightKg())
-                .fitnessLevel(user.getFitnessLevel())
-                .primaryGoal(user.getPrimaryGoal() != null 
-                        ? goalMapper.toGoalResponse(user.getPrimaryGoal()) 
-                        : null)
-                .userPreference(toUserPreferenceResponse(user.getUserPreference()))
-                .build();
-    }
-
-    private UserPreferenceResponse toUserPreferenceResponse(UserPreference pref) {
-        if (pref == null) {
-            return null;
-        }
-        return UserPreferenceResponse.builder()
-                .preferenceId(pref.getPreferenceId())
-                .notificationEnabled(pref.getNotificationEnabled())
-                .workoutReminderDays(pref.getWorkoutReminderDays())
-                .dailyCalorieTarget(pref.getDailyCalorieTarget())
-                .dailyProteinTargetG(pref.getDailyProteinTargetG())
-                .dailyCarbsTargetG(pref.getDailyCarbsTargetG())
-                .dailyFatsTargetG(pref.getDailyFatsTargetG())
-                .build();
-    }
+    UserPreferenceResponse toUserPreferenceResponse(UserPreference pref);
 }

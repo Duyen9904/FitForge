@@ -1,126 +1,89 @@
 package com.dev.backend.mapper;
 
 import com.dev.backend.model.dto.request.CreateExerciseRequest;
-import com.dev.backend.model.dto.response.*;
-import com.dev.backend.model.entity.*;
-import org.springframework.stereotype.Component;
+import com.dev.backend.model.dto.response.EquipmentResponse;
+import com.dev.backend.model.dto.response.ExerciseAlternativeResponse;
+import com.dev.backend.model.dto.response.ExerciseResponse;
+import com.dev.backend.model.dto.response.ExerciseSuggestionResponse;
+import com.dev.backend.model.dto.response.ExerciseSummaryResponse;
+import com.dev.backend.model.dto.response.MuscleGroupResponse;
+import com.dev.backend.model.entity.Equipment;
+import com.dev.backend.model.entity.Exercise;
+import com.dev.backend.model.entity.ExerciseAlternative;
+import com.dev.backend.model.entity.MuscleGroup;
+import org.mapstruct.BeanMapping;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.mapstruct.ReportingPolicy;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-@Component
-public class ExerciseMapper {
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface ExerciseMapper extends BaseMapper<Exercise, CreateExerciseRequest, ExerciseResponse> {
 
-    public ExerciseResponse toResponse(Exercise exercise) {
-        List<MuscleGroupResponse> primaryMuscles = Collections.emptyList();
-        List<MuscleGroupResponse> secondaryMuscles = Collections.emptyList();
+    @Override
+    @Mapping(target = "primaryMuscleGroups", expression = "java(extractPrimaryMuscleGroups(exercise))")
+    @Mapping(target = "secondaryMuscleGroups", expression = "java(extractSecondaryMuscleGroups(exercise))")
+    @Mapping(target = "equipment", expression = "java(extractEquipment(exercise))")
+    ExerciseResponse toResponse(Exercise exercise);
 
-        if (exercise.getExerciseMuscleGroups() != null) {
-            primaryMuscles = exercise.getExerciseMuscleGroups().stream()
-                    .filter(emg -> Boolean.TRUE.equals(emg.getIsPrimary()))
-                    .map(emg -> toMuscleGroupResponse(emg.getMuscleGroup()))
-                    .collect(Collectors.toList());
+    @Override
+    @Mapping(target = "difficultyLevel", expression = "java(request.getDifficultyLevel() != null ? request.getDifficultyLevel().name() : null)")
+    @Mapping(target = "exerciseType", expression = "java(request.getExerciseType() != null ? request.getExerciseType().name() : null)")
+    @Mapping(target = "requiresSpotter", expression = "java(request.getRequiresSpotter() != null ? request.getRequiresSpotter() : false)")
+    Exercise toEntity(CreateExerciseRequest request);
 
-            secondaryMuscles = exercise.getExerciseMuscleGroups().stream()
-                    .filter(emg -> !Boolean.TRUE.equals(emg.getIsPrimary()))
-                    .map(emg -> toMuscleGroupResponse(emg.getMuscleGroup()))
-                    .collect(Collectors.toList());
+    @Override
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "difficultyLevel", expression = "java(request.getDifficultyLevel() != null ? request.getDifficultyLevel().name() : entity.getDifficultyLevel())")
+    @Mapping(target = "exerciseType", expression = "java(request.getExerciseType() != null ? request.getExerciseType().name() : entity.getExerciseType())")
+    void updateEntityFromRequest(@MappingTarget Exercise entity, CreateExerciseRequest request);
+
+    ExerciseSummaryResponse toSummaryResponse(Exercise exercise);
+
+    MuscleGroupResponse toMuscleGroupResponse(MuscleGroup muscleGroup);
+
+    EquipmentResponse toEquipmentResponse(Equipment equipment);
+
+    @Mapping(target = "alternativeExercise", source = "alternativeExercise")
+    ExerciseAlternativeResponse toAlternativeResponse(ExerciseAlternative alternative);
+
+    @Mapping(target = "defaultSets", constant = "3")
+    @Mapping(target = "defaultReps", constant = "10")
+    @Mapping(target = "defaultWeightKg", constant = "20.0")
+    @Mapping(target = "defaultRestSeconds", constant = "60")
+    ExerciseSuggestionResponse toSuggestionResponse(Exercise exercise);
+
+    default List<MuscleGroupResponse> extractPrimaryMuscleGroups(Exercise exercise) {
+        if (exercise == null || exercise.getExerciseMuscleGroups() == null) {
+            return Collections.emptyList();
         }
+        return exercise.getExerciseMuscleGroups().stream()
+                .filter(emg -> Boolean.TRUE.equals(emg.getIsPrimary()))
+                .map(emg -> toMuscleGroupResponse(emg.getMuscleGroup()))
+                .collect(Collectors.toList());
+    }
 
-        List<EquipmentResponse> equipment = Collections.emptyList();
-        if (exercise.getExerciseEquipments() != null) {
-            equipment = exercise.getExerciseEquipments().stream()
-                    .map(ee -> toEquipmentResponse(ee.getEquipment()))
-                    .collect(Collectors.toList());
+    default List<MuscleGroupResponse> extractSecondaryMuscleGroups(Exercise exercise) {
+        if (exercise == null || exercise.getExerciseMuscleGroups() == null) {
+            return Collections.emptyList();
         }
-
-        return ExerciseResponse.builder()
-                .exerciseId(exercise.getExerciseId())
-                .exerciseName(exercise.getExerciseName())
-                .description(exercise.getDescription())
-                .difficultyLevel(exercise.getDifficultyLevel())
-                .exerciseType(exercise.getExerciseType())
-                .instructions(exercise.getInstructions())
-                .videoUrl(exercise.getVideoUrl())
-                .imageUrl(exercise.getImageUrl())
-                .caloriesBurnedPerMin(exercise.getCaloriesBurnedPerMin())
-                .requiresSpotter(exercise.getRequiresSpotter())
-                .equipmentCategory(exercise.getEquipmentCategory())
-                .primaryMuscleGroups(primaryMuscles)
-                .secondaryMuscleGroups(secondaryMuscles)
-                .equipment(equipment)
-                .build();
+        return exercise.getExerciseMuscleGroups().stream()
+                .filter(emg -> !Boolean.TRUE.equals(emg.getIsPrimary()))
+                .map(emg -> toMuscleGroupResponse(emg.getMuscleGroup()))
+                .collect(Collectors.toList());
     }
 
-    public ExerciseSummaryResponse toSummaryResponse(Exercise exercise) {
-        return ExerciseSummaryResponse.builder()
-                .exerciseId(exercise.getExerciseId())
-                .exerciseName(exercise.getExerciseName())
-                .description(exercise.getDescription())
-                .difficultyLevel(exercise.getDifficultyLevel())
-                .exerciseType(exercise.getExerciseType())
-                .imageUrl(exercise.getImageUrl())
-                .caloriesBurnedPerMin(exercise.getCaloriesBurnedPerMin())
-                .build();
-    }
-
-    public MuscleGroupResponse toMuscleGroupResponse(MuscleGroup muscleGroup) {
-        if (muscleGroup == null) return null;
-        return MuscleGroupResponse.builder()
-                .muscleGroupId(muscleGroup.getMuscleGroupId())
-                .groupName(muscleGroup.getGroupName())
-                .category(muscleGroup.getCategory())
-                .description(muscleGroup.getDescription())
-                .recoveryDaysNeeded(muscleGroup.getRecoveryDaysNeeded())
-                .imageUrl(muscleGroup.getImageUrl())
-                .build();
-    }
-
-    public EquipmentResponse toEquipmentResponse(Equipment equipment) {
-        if (equipment == null) return null;
-        return EquipmentResponse.builder()
-                .equipmentId(equipment.getEquipmentId())
-                .equipmentName(equipment.getEquipmentName())
-                .equipmentType(equipment.getEquipmentType())
-                .description(equipment.getDescription())
-                .imageUrl(equipment.getImageUrl())
-                .build();
-    }
-
-    public ExerciseAlternativeResponse toAlternativeResponse(ExerciseAlternative alternative) {
-        return ExerciseAlternativeResponse.builder()
-                .alternativeId(alternative.getAlternativeId())
-                .alternativeExercise(toSummaryResponse(alternative.getAlternativeExercise()))
-                .reason(alternative.getReason())
-                .substitutionType(alternative.getSubstitutionType())
-                .build();
-    }
-
-    public ExerciseSuggestionResponse toSuggestionResponse(Exercise exercise) {
-        return ExerciseSuggestionResponse.builder()
-                .exerciseId(exercise.getExerciseId())
-                .exerciseName(exercise.getExerciseName())
-                .imageUrl(exercise.getImageUrl())
-                .defaultSets(3)
-                .defaultReps(10)
-                .defaultWeightKg(20.0)
-                .defaultRestSeconds(60)
-                .build();
-    }
-
-    public Exercise toEntity(CreateExerciseRequest request) {
-        Exercise exercise = new Exercise();
-        exercise.setExerciseName(request.getExerciseName());
-        exercise.setDescription(request.getDescription());
-        exercise.setDifficultyLevel(request.getDifficultyLevel().name());
-        exercise.setExerciseType(request.getExerciseType().name());
-        exercise.setInstructions(request.getInstructions());
-        exercise.setVideoUrl(request.getVideoUrl());
-        exercise.setImageUrl(request.getImageUrl());
-        exercise.setCaloriesBurnedPerMin(request.getCaloriesBurnedPerMin());
-        exercise.setRequiresSpotter(request.getRequiresSpotter() != null ? request.getRequiresSpotter() : false);
-        exercise.setEquipmentCategory(request.getEquipmentCategory());
-        return exercise;
+    default List<EquipmentResponse> extractEquipment(Exercise exercise) {
+        if (exercise == null || exercise.getExerciseEquipments() == null) {
+            return Collections.emptyList();
+        }
+        return exercise.getExerciseEquipments().stream()
+                .map(ee -> toEquipmentResponse(ee.getEquipment()))
+                .collect(Collectors.toList());
     }
 }

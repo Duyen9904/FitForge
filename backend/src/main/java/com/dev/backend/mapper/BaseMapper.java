@@ -1,4 +1,9 @@
 package com.dev.backend.mapper;
+
+import org.mapstruct.BeanMapping;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.NullValuePropertyMappingStrategy;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -23,7 +28,8 @@ public interface BaseMapper<E, REQ, RES> {
     /**
      * Update existing entity from request DTO
      */
-    void updateEntityFromRequest(E entity, REQ request);
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    void updateEntityFromRequest(@MappingTarget E entity, REQ request);
 
     /**
      * Convert list of entities to list of response DTOs

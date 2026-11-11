@@ -1,47 +1,27 @@
 package com.dev.backend.mapper;
 
+import com.dev.backend.model.dto.request.RegisterDeviceTokenRequest;
 import com.dev.backend.model.dto.response.NotificationResponse;
 import com.dev.backend.model.entity.Notification;
-import org.springframework.stereotype.Component;
-
-import java.util.List;
-import java.util.stream.Collectors;
+import org.mapstruct.BeanMapping;
+import org.mapstruct.Mapper;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.mapstruct.ReportingPolicy;
 
 /**
  * Mapper for Notification entity to DTO conversions (UC-15)
  */
-@Component
-public class NotificationMapper {
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface NotificationMapper extends BaseMapper<Notification, RegisterDeviceTokenRequest, NotificationResponse> {
 
-    /**
-     * Convert Notification entity to NotificationResponse DTO
-     */
-    public NotificationResponse toResponse(Notification notification) {
-        if (notification == null) {
-            return null;
-        }
+    @Override
+    NotificationResponse toResponse(Notification notification);
 
-        return NotificationResponse.builder()
-                .notificationId(notification.getNotificationId())
-                .notificationType(notification.getNotificationType())
-                .title(notification.getTitle())
-                .message(notification.getMessage())
-                .data(notification.getData())
-                .isRead(notification.getIsRead())
-                .isActedUpon(notification.getIsActedUpon())
-                .createdAt(notification.getCreatedAt())
-                .scheduledFor(notification.getScheduledFor())
-                .referenceId(notification.getReferenceId())
-                .referenceType(notification.getReferenceType())
-                .build();
-    }
+    @Override
+    Notification toEntity(RegisterDeviceTokenRequest request);
 
-    /**
-     * Convert list of Notification entities to list of NotificationResponse DTOs
-     */
-    public List<NotificationResponse> toResponseList(List<Notification> notifications) {
-        return notifications.stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
-    }
+    @Override
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    void updateEntityFromRequest(@MappingTarget Notification entity, RegisterDeviceTokenRequest request);
 }

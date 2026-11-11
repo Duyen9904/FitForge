@@ -1,79 +1,72 @@
 package com.dev.backend.mapper;
 
-import com.dev.backend.model.dto.response.*;
+import com.dev.backend.model.dto.request.SelectCompensationRequest;
+import com.dev.backend.model.dto.response.CompensationActionResponse;
+import com.dev.backend.model.dto.response.CompensationOptionResponse;
+import com.dev.backend.model.dto.response.MakeupWorkoutResponse;
 import com.dev.backend.model.entity.CompensationAction;
 import com.dev.backend.model.entity.MakeupWorkout;
-import org.springframework.stereotype.Component;
+import org.mapstruct.BeanMapping;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.mapstruct.ReportingPolicy;
 
 /**
  * Mapper for Compensation entities and DTOs
  */
-@Component
-public class CompensationMapper {
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface CompensationMapper extends BaseMapper<CompensationAction, SelectCompensationRequest, CompensationActionResponse> {
 
-    public CompensationActionResponse toCompensationResponse(CompensationAction entity) {
-        String triggerType = entity.getCheatMealLog() != null ? "CHEAT_MEAL" : "MISSED_WORKOUT";
-        
-        return CompensationActionResponse.builder()
-                .compensationId(entity.getCompensationId())
-                .triggerType(triggerType)
-                .status(entity.getStatus().name())
-                .statusDisplayName(entity.getStatus().getDisplayName())
-                .actionType(entity.getActionType())
-                .actionDescription(entity.getActionDescription())
-                .scheduledDate(entity.getScheduledDate())
-                .validUntilDate(entity.getValidUntilDate())
-                .isCompleted(entity.getIsCompleted())
-                .calorieAdjustment(entity.getCalorieAdjustment())
-                .details(entity.getDetails())
-                .createdAt(entity.getCreatedAt())
-                .completedAt(entity.getCompletedAt())
-                .build();
+    @Override
+    @Mapping(target = "triggerType", expression = "java(entity.getCheatMealLog() != null ? \"CHEAT_MEAL\" : \"MISSED_WORKOUT\")")
+    @Mapping(target = "status", expression = "java(entity.getStatus() != null ? entity.getStatus().name() : null)")
+    @Mapping(target = "statusDisplayName", expression = "java(entity.getStatus() != null ? entity.getStatus().getDisplayName() : null)")
+    CompensationActionResponse toResponse(CompensationAction entity);
+
+    @Override
+    CompensationAction toEntity(SelectCompensationRequest request);
+
+    @Override
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    void updateEntityFromRequest(@MappingTarget CompensationAction entity, SelectCompensationRequest request);
+
+    default CompensationActionResponse toCompensationResponse(CompensationAction entity) {
+        return toResponse(entity);
     }
 
-    public CompensationOptionResponse toOptionResponse(CompensationAction entity, boolean isRecommended, String reason) {
-        return CompensationOptionResponse.builder()
-                .compensationId(entity.getCompensationId())
-                .actionType(entity.getActionType())
-                .actionTypeDisplayName(formatActionType(entity.getActionType()))
-                .actionDescription(entity.getActionDescription())
-                .calorieAdjustment(entity.getCalorieAdjustment())
-                .suggestedDate(entity.getScheduledDate())
-                .durationDays(calculateDurationDays(entity))
-                .expectedImpact(generateExpectedImpact(entity))
-                .isRecommended(isRecommended)
-                .recommendationReason(reason)
-                .build();
-    }
+    @Mapping(target = "compensationId", source = "entity.compensationId")
+    @Mapping(target = "actionType", source = "entity.actionType")
+    @Mapping(target = "actionTypeDisplayName", expression = "java(formatActionType(entity.getActionType()))")
+    @Mapping(target = "actionDescription", source = "entity.actionDescription")
+    @Mapping(target = "calorieAdjustment", source = "entity.calorieAdjustment")
+    @Mapping(target = "suggestedDate", source = "entity.scheduledDate")
+    @Mapping(target = "durationDays", expression = "java(calculateDurationDays(entity))")
+    @Mapping(target = "expectedImpact", expression = "java(generateExpectedImpact(entity))")
+    @Mapping(target = "isRecommended", source = "isRecommended")
+    @Mapping(target = "recommendationReason", source = "reason")
+    CompensationOptionResponse toOptionResponse(CompensationAction entity, boolean isRecommended, String reason);
 
-    public MakeupWorkoutResponse toMakeupWorkoutResponse(MakeupWorkout entity) {
-        return MakeupWorkoutResponse.builder()
-                .makeupId(entity.getMakeupId())
-                .originalSessionId(entity.getOriginalSession().getSessionId())
-                .originalSessionName(entity.getOriginalSession().getSessionName())
-                .replacementSessionId(entity.getReplacementSession() != null ? 
-                        entity.getReplacementSession().getSessionId() : null)
-                .scheduledMakeupDate(entity.getScheduledMakeupDate())
-                .adjustmentType(entity.getAdjustmentType())
-                .adjustmentNotes(entity.getAdjustmentNotes())
-                .isCompleted(entity.getIsCompleted())
-                .build();
-    }
+    @Mapping(target = "originalSessionId", source = "originalSession.sessionId")
+    @Mapping(target = "originalSessionName", source = "originalSession.sessionName")
+    @Mapping(target = "replacementSessionId", source = "replacementSession.sessionId")
+    MakeupWorkoutResponse toMakeupWorkoutResponse(MakeupWorkout entity);
 
-    private String formatActionType(String actionType) {
+    default String formatActionType(String actionType) {
         if (actionType == null) return "";
         return actionType.replace("_", " ");
     }
 
-    private Integer calculateDurationDays(CompensationAction entity) {
-        if (entity.getScheduledDate() == null || entity.getValidUntilDate() == null) {
+    default Integer calculateDurationDays(CompensationAction entity) {
+        if (entity == null || entity.getScheduledDate() == null || entity.getValidUntilDate() == null) {
             return 1;
         }
         return (int) (entity.getValidUntilDate().toEpochDay() - entity.getScheduledDate().toEpochDay()) + 1;
     }
 
-    private String generateExpectedImpact(CompensationAction entity) {
-        if (entity.getCalorieAdjustment() != null && entity.getCalorieAdjustment() < 0) {
+    default String generateExpectedImpact(CompensationAction entity) {
+        if (entity != null && entity.getCalorieAdjustment() != null && entity.getCalorieAdjustment() < 0) {
             return "Reduce " + Math.abs(entity.getCalorieAdjustment()) + " calories to offset excess intake";
         }
         return "Complete the assigned activity to maintain progress";

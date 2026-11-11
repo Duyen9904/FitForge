@@ -8,6 +8,7 @@ import com.dev.backend.model.entity.User.Role;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mapstruct.factory.Mappers;
 
 import java.time.LocalDate;
 
@@ -20,8 +21,8 @@ class UserMapperTest {
 
     @BeforeEach
     void setUp() {
-        goalMapper = new GoalMapper();
-        userMapper = new UserMapper(goalMapper);
+        goalMapper = Mappers.getMapper(GoalMapper.class);
+        userMapper = new UserMapperImpl(goalMapper);
     }
 
     @Test

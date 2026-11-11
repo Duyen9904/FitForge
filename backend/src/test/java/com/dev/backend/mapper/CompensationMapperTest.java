@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mapstruct.factory.Mappers;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -19,7 +20,7 @@ class CompensationMapperTest {
 
     @BeforeEach
     void setUp() {
-        compensationMapper = new CompensationMapper();
+        compensationMapper = Mappers.getMapper(CompensationMapper.class);
     }
 
     @Nested

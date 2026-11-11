@@ -5,6 +5,7 @@ import com.dev.backend.model.entity.Goal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mapstruct.factory.Mappers;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -14,7 +15,7 @@ class GoalMapperTest {
 
     @BeforeEach
     void setUp() {
-        goalMapper = new GoalMapper();
+        goalMapper = Mappers.getMapper(GoalMapper.class);
     }
 
     @Test

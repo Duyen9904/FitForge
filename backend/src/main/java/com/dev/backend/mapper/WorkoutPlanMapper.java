@@ -1,20 +1,42 @@
 package com.dev.backend.mapper;
 
+import com.dev.backend.exception.ResourceNotFoundException;
 import com.dev.backend.model.dto.request.CreateSessionExerciseRequest;
 import com.dev.backend.model.dto.request.CreateWorkoutPlanRequest;
 import com.dev.backend.model.dto.request.CreateWorkoutSessionRequest;
 import com.dev.backend.model.dto.request.UpdateSessionExerciseRequest;
 import com.dev.backend.model.dto.request.UpdateWorkoutPlanRequest;
 import com.dev.backend.model.dto.request.UpdateWorkoutSessionRequest;
+import com.dev.backend.model.dto.response.EquipmentResponse;
+import com.dev.backend.model.dto.response.ExerciseSummaryResponse;
+import com.dev.backend.model.dto.response.GoalResponse;
+import com.dev.backend.model.dto.response.MuscleGroupResponse;
+import com.dev.backend.model.dto.response.SessionExerciseResponse;
+import com.dev.backend.model.dto.response.WorkoutPlanDetailResponse;
+import com.dev.backend.model.dto.response.WorkoutPlanResponse;
+import com.dev.backend.model.dto.response.WorkoutPlanSummaryResponse;
+import com.dev.backend.model.dto.response.WorkoutPlanSummaryWithSessionsResponse;
+import com.dev.backend.model.dto.response.WorkoutSessionResponse;
+import com.dev.backend.model.dto.response.WorkoutSessionSummaryResponse;
+import com.dev.backend.model.entity.Exercise;
+import com.dev.backend.model.entity.Goal;
+import com.dev.backend.model.entity.MuscleGroup;
+import com.dev.backend.model.entity.SessionExercise;
+import com.dev.backend.model.entity.User;
+import com.dev.backend.model.entity.WorkoutPlan;
+import com.dev.backend.model.entity.WorkoutSession;
+import com.dev.backend.model.enums.DifficultyLevel;
 import com.dev.backend.model.enums.PlanGenerationStrategy;
-import com.dev.backend.model.dto.response.*;
-import com.dev.backend.model.entity.*;
 import com.dev.backend.repository.ExerciseRepository;
 import com.dev.backend.repository.GoalRepository;
 import com.dev.backend.repository.MuscleGroupRepository;
-import com.dev.backend.exception.ResourceNotFoundException;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
+import org.mapstruct.BeanMapping;
+import org.mapstruct.InjectionStrategy;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.NullValuePropertyMappingStrategy;
+import org.mapstruct.ReportingPolicy;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -23,72 +45,68 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Component
-@RequiredArgsConstructor
-public class WorkoutPlanMapper {
+@Mapper(
+        componentModel = "spring",
+        uses = {ExerciseMapper.class},
+        injectionStrategy = InjectionStrategy.CONSTRUCTOR,
+        unmappedTargetPolicy = ReportingPolicy.IGNORE,
+        imports = {DifficultyLevel.class, PlanGenerationStrategy.class, ArrayList.class}
+)
+public interface WorkoutPlanMapper extends BaseMapper<WorkoutPlan, CreateWorkoutPlanRequest, WorkoutPlanResponse> {
 
-    private final ExerciseMapper exerciseMapper;
+    @Override
+    @Mapping(target = "difficultyLevel", expression = "java(request.getDifficultyLevel() != null ? request.getDifficultyLevel().name() : null)")
+    @Mapping(target = "aiGenerated", constant = "false")
+    @Mapping(target = "allowWorkoutSwaps", expression = "java(request.getAllowWorkoutSwaps() != null ? request.getAllowWorkoutSwaps() : true)")
+    @Mapping(target = "isActive", constant = "true")
+    @Mapping(target = "generationStrategy", expression = "java(PlanGenerationStrategy.MANUAL)")
+    @Mapping(target = "scheduledWorkoutDates", expression = "java(request.getWorkoutDates() != null && !request.getWorkoutDates().isEmpty() ? new ArrayList<>(request.getWorkoutDates()) : new ArrayList<>())")
+    WorkoutPlan toEntity(CreateWorkoutPlanRequest request);
 
-    public WorkoutPlan toEntity(CreateWorkoutPlanRequest request, User user, Goal goal, MuscleGroup muscleGroup) {
-        WorkoutPlan plan = new WorkoutPlan();
-        plan.setUser(user);
-        plan.setGoal(goal);
-        plan.setMuscleGroup(muscleGroup);
-        plan.setPlanName(request.getPlanName());
-        plan.setDescription(request.getDescription());
-        plan.setFrequencyPerWeek(request.getFrequencyPerWeek());
-        plan.setDurationWeeks(request.getDurationWeeks());
-        plan.setDifficultyLevel(request.getDifficultyLevel().name());
-        plan.setStartDate(request.getStartDate());
-        plan.setAiGenerated(false);
-        plan.setAllowWorkoutSwaps(request.getAllowWorkoutSwaps() != null ? request.getAllowWorkoutSwaps() : true);
-        plan.setIsActive(true);
-        plan.setGenerationStrategy(PlanGenerationStrategy.MANUAL);
-        if (request.getWorkoutDates() != null && !request.getWorkoutDates().isEmpty()) {
-            plan.setScheduledWorkoutDates(new ArrayList<>(request.getWorkoutDates()));
+    @Override
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "difficultyLevel", expression = "java(request.getDifficultyLevel() != null ? request.getDifficultyLevel().name() : entity.getDifficultyLevel())")
+    void updateEntityFromRequest(@MappingTarget WorkoutPlan entity, CreateWorkoutPlanRequest request);
+
+    default WorkoutPlan toEntity(CreateWorkoutPlanRequest request, User user, Goal goal, MuscleGroup muscleGroup) {
+        WorkoutPlan plan = toEntity(request);
+        if (plan != null) {
+            plan.setUser(user);
+            plan.setGoal(goal);
+            plan.setMuscleGroup(muscleGroup);
         }
         return plan;
     }
 
-    public WorkoutSession toSessionEntity(CreateWorkoutSessionRequest request, WorkoutPlan plan) {
-        WorkoutSession session = new WorkoutSession();
-        session.setWorkoutPlan(plan);
-        session.setSessionName(request.getSessionName());
-        session.setDayNumber(request.getDayNumber());
-        session.setFocusArea(request.getFocusArea());
-        session.setEstimatedDuration(request.getEstimatedDuration());
-        session.setWarmUpNotes(request.getWarmUpNotes());
-        session.setCoolDownNotes(request.getCoolDownNotes());
-        session.setIsRestDay(request.getIsRestDay() != null ? request.getIsRestDay() : false);
-        return session;
-    }
+    @Mapping(target = "workoutPlan", source = "plan")
+    @Mapping(target = "sessionName", source = "request.sessionName")
+    @Mapping(target = "dayNumber", source = "request.dayNumber")
+    @Mapping(target = "focusArea", source = "request.focusArea")
+    @Mapping(target = "estimatedDuration", source = "request.estimatedDuration")
+    @Mapping(target = "warmUpNotes", source = "request.warmUpNotes")
+    @Mapping(target = "coolDownNotes", source = "request.coolDownNotes")
+    @Mapping(target = "isRestDay", expression = "java(request.getIsRestDay() != null ? request.getIsRestDay() : false)")
+    WorkoutSession toSessionEntity(CreateWorkoutSessionRequest request, WorkoutPlan plan);
 
-    public SessionExercise toSessionExerciseEntity(CreateSessionExerciseRequest request, 
-                                                    WorkoutSession session, 
-                                                    Exercise exercise) {
-        SessionExercise sessionExercise = new SessionExercise();
-        sessionExercise.setWorkoutSession(session);
-        sessionExercise.setExercise(exercise);
-        sessionExercise.setSets(request.getSets());
-        sessionExercise.setRepetitions(request.getRepetitions());
-        sessionExercise.setWeightKg(request.getWeightKg());
-        sessionExercise.setRestTimeSeconds(request.getRestTimeSeconds());
-        sessionExercise.setOrderIndex(request.getOrderIndex());
-        sessionExercise.setNotes(request.getNotes());
-        sessionExercise.setIsSuperset(request.getIsSuperset() != null ? request.getIsSuperset() : false);
-        return sessionExercise;
-    }
+    @Mapping(target = "workoutSession", source = "session")
+    @Mapping(target = "exercise", source = "exercise")
+    @Mapping(target = "sets", source = "request.sets")
+    @Mapping(target = "repetitions", source = "request.repetitions")
+    @Mapping(target = "weightKg", source = "request.weightKg")
+    @Mapping(target = "restTimeSeconds", source = "request.restTimeSeconds")
+    @Mapping(target = "orderIndex", source = "request.orderIndex")
+    @Mapping(target = "notes", source = "request.notes")
+    @Mapping(target = "isSuperset", expression = "java(request.getIsSuperset() != null ? request.getIsSuperset() : false)")
+    SessionExercise toSessionExerciseEntity(CreateSessionExerciseRequest request,
+                                            WorkoutSession session,
+                                            Exercise exercise);
 
     // ── Partial-update helpers (single source of truth) ──────────────────────
 
-    /**
-     * Apply non-null fields from the update request to the plan entity.
-     * Resolves Goal and MuscleGroup via repositories when their IDs are provided.
-     */
-    public void applyPartialUpdate(WorkoutPlan plan,
-                                   UpdateWorkoutPlanRequest request,
-                                   GoalRepository goalRepository,
-                                   MuscleGroupRepository muscleGroupRepository) {
+    default void applyPartialUpdate(WorkoutPlan plan,
+                                    UpdateWorkoutPlanRequest request,
+                                    GoalRepository goalRepository,
+                                    MuscleGroupRepository muscleGroupRepository) {
         if (request.getPlanName() != null) {
             plan.setPlanName(request.getPlanName());
         }
@@ -123,40 +141,12 @@ public class WorkoutPlanMapper {
         }
     }
 
-    /**
-     * Apply non-null fields from the update request to the session entity.
-     */
-    public void applyPartialUpdate(WorkoutSession session, UpdateWorkoutSessionRequest request) {
-        if (request.getSessionName() != null) {
-            session.setSessionName(request.getSessionName());
-        }
-        if (request.getDayNumber() != null) {
-            session.setDayNumber(request.getDayNumber());
-        }
-        if (request.getFocusArea() != null) {
-            session.setFocusArea(request.getFocusArea());
-        }
-        if (request.getEstimatedDuration() != null) {
-            session.setEstimatedDuration(request.getEstimatedDuration());
-        }
-        if (request.getWarmUpNotes() != null) {
-            session.setWarmUpNotes(request.getWarmUpNotes());
-        }
-        if (request.getCoolDownNotes() != null) {
-            session.setCoolDownNotes(request.getCoolDownNotes());
-        }
-        if (request.getIsRestDay() != null) {
-            session.setIsRestDay(request.getIsRestDay());
-        }
-    }
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    void applyPartialUpdate(@MappingTarget WorkoutSession session, UpdateWorkoutSessionRequest request);
 
-    /**
-     * Apply non-null fields from the update request to the session exercise entity.
-     * Resolves Exercise via repository when exerciseId is provided.
-     */
-    public void applyPartialUpdate(SessionExercise sessionExercise,
-                                   UpdateSessionExerciseRequest request,
-                                   ExerciseRepository exerciseRepository) {
+    default void applyPartialUpdate(SessionExercise sessionExercise,
+                                    UpdateSessionExerciseRequest request,
+                                    ExerciseRepository exerciseRepository) {
         if (request.getExerciseId() != null) {
             Exercise exercise = exerciseRepository.findById(request.getExerciseId())
                     .orElseThrow(() -> new ResourceNotFoundException("Exercise", "id", request.getExerciseId()));
@@ -185,59 +175,23 @@ public class WorkoutPlanMapper {
         }
     }
 
-    public WorkoutPlanResponse toResponse(WorkoutPlan plan) {
-        return WorkoutPlanResponse.builder()
-                .planId(plan.getPlanId())
-                .planName(plan.getPlanName())
-                .description(plan.getDescription())
-                .goal(toGoalResponse(plan.getGoal()))
-                .muscleGroup(exerciseMapper.toMuscleGroupResponse(plan.getMuscleGroup()))
-                .frequencyPerWeek(plan.getFrequencyPerWeek())
-                .durationWeeks(plan.getDurationWeeks())
-                .difficultyLevel(com.dev.backend.model.enums.DifficultyLevel.valueOf(plan.getDifficultyLevel()))
-                .startDate(plan.getStartDate())
-                .scheduledWorkoutDates(plan.getScheduledWorkoutDates() != null ? new ArrayList<>(plan.getScheduledWorkoutDates()) : null)
-                .algorithmVersion(plan.getAlgorithmVersion())
-                .generatedFrom(plan.getGeneratedFrom())
-                .version(plan.getVersion())
-                .recommendationReason(plan.getRecommendationReason())
-                .aiGenerated(plan.getAiGenerated())
-                .allowWorkoutSwaps(plan.getAllowWorkoutSwaps())
-                .isActive(plan.getIsActive())
-                .createdAt(plan.getCreatedAt())
-                .updatedAt(plan.getUpdatedAt())
-                .sessions(toSessionResponseList(plan.getWorkoutSessions()))
-                .build();
-    }
+    @Override
+    @Mapping(target = "goal", source = "goal")
+    @Mapping(target = "muscleGroup", source = "muscleGroup")
+    @Mapping(target = "difficultyLevel", expression = "java(plan.getDifficultyLevel() != null ? DifficultyLevel.valueOf(plan.getDifficultyLevel()) : null)")
+    @Mapping(target = "scheduledWorkoutDates", expression = "java(plan.getScheduledWorkoutDates() != null ? new ArrayList<>(plan.getScheduledWorkoutDates()) : null)")
+    @Mapping(target = "sessions", expression = "java(toSessionResponseList(plan.getWorkoutSessions()))")
+    WorkoutPlanResponse toResponse(WorkoutPlan plan);
 
-    public WorkoutPlanSummaryResponse toSummaryResponse(WorkoutPlan plan) {
-        return WorkoutPlanSummaryResponse.builder()
-                .planId(plan.getPlanId())
-                .planName(plan.getPlanName())
-                .description(plan.getDescription())
-                .goalName(plan.getGoal() != null ? plan.getGoal().getGoalName() : null)
-                .muscleGroup(exerciseMapper.toMuscleGroupResponse(plan.getMuscleGroup()))
-                .frequencyPerWeek(plan.getFrequencyPerWeek())
-                .durationWeeks(plan.getDurationWeeks())
-                .difficultyLevel(com.dev.backend.model.enums.DifficultyLevel.valueOf(plan.getDifficultyLevel()))
-                .startDate(plan.getStartDate())
-                .aiGenerated(plan.getAiGenerated())
-                .isActive(plan.getIsActive())
-                .sessionCount(plan.getWorkoutSessions() != null ? plan.getWorkoutSessions().size() : 0)
-                .createdAt(plan.getCreatedAt())
-                .build();
-    }
+    @Mapping(target = "goalName", source = "goal.goalName")
+    @Mapping(target = "muscleGroup", source = "muscleGroup")
+    @Mapping(target = "difficultyLevel", expression = "java(plan.getDifficultyLevel() != null ? DifficultyLevel.valueOf(plan.getDifficultyLevel()) : null)")
+    @Mapping(target = "sessionCount", expression = "java(plan.getWorkoutSessions() != null ? plan.getWorkoutSessions().size() : 0)")
+    WorkoutPlanSummaryResponse toSummaryResponse(WorkoutPlan plan);
 
-    public GoalResponse toGoalResponse(Goal goal) {
-        if (goal == null) return null;
-        return GoalResponse.builder()
-                .goalId(goal.getGoalId())
-                .goalName(goal.getGoalName())
-                .description(goal.getDescription())
-                .build();
-    }
+    GoalResponse toGoalResponse(Goal goal);
 
-    public List<WorkoutSessionResponse> toSessionResponseList(Set<WorkoutSession> sessions) {
+    default List<WorkoutSessionResponse> toSessionResponseList(Set<WorkoutSession> sessions) {
         if (sessions == null || sessions.isEmpty()) return Collections.emptyList();
         return sessions.stream()
                 .sorted(Comparator.comparing(WorkoutSession::getDayNumber))
@@ -245,33 +199,30 @@ public class WorkoutPlanMapper {
                 .collect(Collectors.toList());
     }
 
-    public WorkoutSessionResponse toSessionResponse(WorkoutSession session) {
+    default WorkoutSessionResponse toSessionResponse(WorkoutSession session) {
         return toSessionResponse(session, false, null);
     }
 
-    public WorkoutSessionResponse toSessionResponse(WorkoutSession session, Boolean isCompleted) {
+    default WorkoutSessionResponse toSessionResponse(WorkoutSession session, Boolean isCompleted) {
         return toSessionResponse(session, isCompleted, null);
     }
 
-    public WorkoutSessionResponse toSessionResponse(WorkoutSession session, Boolean isCompleted, Long missedWorkoutId) {
-        return WorkoutSessionResponse.builder()
-                .sessionId(session.getSessionId())
-                .sessionName(session.getSessionName())
-                .dayNumber(session.getDayNumber())
-                .scheduledDate(session.getScheduledDate())
-                .focusArea(session.getFocusArea())
-                .estimatedDuration(session.getEstimatedDuration())
-                .warmUpNotes(session.getWarmUpNotes())
-                .coolDownNotes(session.getCoolDownNotes())
-                .isRestDay(session.getIsRestDay())
-                .isCompleted(isCompleted)
-                .missedWorkoutId(missedWorkoutId)
-                .isMissed(missedWorkoutId != null)
-                .exercises(toSessionExerciseResponseList(session.getSessionExercises()))
-                .build();
-    }
+    @Mapping(target = "sessionId", source = "session.sessionId")
+    @Mapping(target = "sessionName", source = "session.sessionName")
+    @Mapping(target = "dayNumber", source = "session.dayNumber")
+    @Mapping(target = "scheduledDate", source = "session.scheduledDate")
+    @Mapping(target = "focusArea", source = "session.focusArea")
+    @Mapping(target = "estimatedDuration", source = "session.estimatedDuration")
+    @Mapping(target = "warmUpNotes", source = "session.warmUpNotes")
+    @Mapping(target = "coolDownNotes", source = "session.coolDownNotes")
+    @Mapping(target = "isRestDay", source = "session.isRestDay")
+    @Mapping(target = "isCompleted", source = "isCompleted")
+    @Mapping(target = "missedWorkoutId", source = "missedWorkoutId")
+    @Mapping(target = "isMissed", expression = "java(missedWorkoutId != null)")
+    @Mapping(target = "exercises", expression = "java(toSessionExerciseResponseList(session.getSessionExercises()))")
+    WorkoutSessionResponse toSessionResponse(WorkoutSession session, Boolean isCompleted, Long missedWorkoutId);
 
-    public List<SessionExerciseResponse> toSessionExerciseResponseList(List<SessionExercise> exercises) {
+    default List<SessionExerciseResponse> toSessionExerciseResponseList(List<SessionExercise> exercises) {
         if (exercises == null || exercises.isEmpty()) return Collections.emptyList();
         return exercises.stream()
                 .sorted(Comparator.comparing(SessionExercise::getOrderIndex))
@@ -279,91 +230,37 @@ public class WorkoutPlanMapper {
                 .collect(Collectors.toList());
     }
 
-    public SessionExerciseResponse toSessionExerciseResponse(SessionExercise se) {
-        List<EquipmentResponse> equipment = Collections.emptyList();
-        if (se.getExercise() != null && se.getExercise().getExerciseEquipments() != null) {
-            equipment = se.getExercise().getExerciseEquipments().stream()
-                    .map(ee -> exerciseMapper.toEquipmentResponse(ee.getEquipment()))
-                    .collect(Collectors.toList());
+    @Mapping(target = "exercise", expression = "java(toExerciseSummary(se.getExercise()))")
+    @Mapping(target = "equipmentUsed", expression = "java(extractEquipmentUsed(se))")
+    SessionExerciseResponse toSessionExerciseResponse(SessionExercise se);
+
+    default List<EquipmentResponse> extractEquipmentUsed(SessionExercise se) {
+        if (se == null || se.getExercise() == null || se.getExercise().getExerciseEquipments() == null) {
+            return Collections.emptyList();
         }
-        
-        return SessionExerciseResponse.builder()
-                .sessionExerciseId(se.getSessionExerciseId())
-                .exercise(toExerciseSummary(se.getExercise()))
-                .sets(se.getSets())
-                .repetitions(se.getRepetitions())
-                .weightKg(se.getWeightKg())
-                .restTimeSeconds(se.getRestTimeSeconds())
-                .orderIndex(se.getOrderIndex())
-                .notes(se.getNotes())
-                .isSuperset(se.getIsSuperset())
-                .equipmentUsed(equipment)
-                .build();
+        return se.getExercise().getExerciseEquipments().stream()
+                .map(ee -> toEquipmentResponse(ee.getEquipment()))
+                .collect(Collectors.toList());
     }
 
-    public ExerciseSummaryResponse toExerciseSummary(Exercise exercise) {
-        if (exercise == null) return null;
-        return ExerciseSummaryResponse.builder()
-                .exerciseId(exercise.getExerciseId())
-                .exerciseName(exercise.getExerciseName())
-                .description(exercise.getDescription())
-                .difficultyLevel(exercise.getDifficultyLevel())
-                .exerciseType(exercise.getExerciseType())
-                .imageUrl(exercise.getImageUrl())
-                .caloriesBurnedPerMin(exercise.getCaloriesBurnedPerMin())
-                .build();
-    }
+    EquipmentResponse toEquipmentResponse(com.dev.backend.model.entity.Equipment equipment);
 
-    public WorkoutPlanDetailResponse toDetailResponse(WorkoutPlan plan) {
-        return WorkoutPlanDetailResponse.builder()
-                .planId(plan.getPlanId())
-                .planName(plan.getPlanName())
-                .description(plan.getDescription())
-                .goal(toGoalResponse(plan.getGoal()))
-                .muscleGroup(exerciseMapper.toMuscleGroupResponse(plan.getMuscleGroup()))
-                .frequencyPerWeek(plan.getFrequencyPerWeek())
-                .durationWeeks(plan.getDurationWeeks())
-                .difficultyLevel(com.dev.backend.model.enums.DifficultyLevel.valueOf(plan.getDifficultyLevel()))
-                .startDate(plan.getStartDate())
-                .endDate(plan.getStartDate().plusWeeks(plan.getDurationWeeks()).minusDays(1))
-                .scheduledWorkoutDates(plan.getScheduledWorkoutDates() != null ? new ArrayList<>(plan.getScheduledWorkoutDates()) : null)
-                .algorithmVersion(plan.getAlgorithmVersion())
-                .generatedFrom(plan.getGeneratedFrom())
-                .version(plan.getVersion())
-                .recommendationReason(plan.getRecommendationReason())
-                .aiGenerated(plan.getAiGenerated())
-                .allowWorkoutSwaps(plan.getAllowWorkoutSwaps())
-                .isActive(plan.getIsActive())
-                .createdAt(plan.getCreatedAt())
-                .updatedAt(plan.getUpdatedAt())
-                .build();
-    }
+    ExerciseSummaryResponse toExerciseSummary(Exercise exercise);
 
-    public WorkoutPlanSummaryWithSessionsResponse toSummaryWithSessionsResponse(WorkoutPlan plan) {
-        return WorkoutPlanSummaryWithSessionsResponse.builder()
-                .planId(plan.getPlanId())
-                .planName(plan.getPlanName())
-                .description(plan.getDescription())
-                .goal(toGoalResponse(plan.getGoal()))
-                .muscleGroup(exerciseMapper.toMuscleGroupResponse(plan.getMuscleGroup()))
-                .frequencyPerWeek(plan.getFrequencyPerWeek())
-                .durationWeeks(plan.getDurationWeeks())
-                .difficultyLevel(com.dev.backend.model.enums.DifficultyLevel.valueOf(plan.getDifficultyLevel()))
-                .startDate(plan.getStartDate())
-                .algorithmVersion(plan.getAlgorithmVersion())
-                .generatedFrom(plan.getGeneratedFrom())
-                .version(plan.getVersion())
-                .recommendationReason(plan.getRecommendationReason())
-                .aiGenerated(plan.getAiGenerated())
-                .allowWorkoutSwaps(plan.getAllowWorkoutSwaps())
-                .isActive(plan.getIsActive())
-                .createdAt(plan.getCreatedAt())
-                .updatedAt(plan.getUpdatedAt())
-                .sessions(toSessionSummaryResponseList(plan.getWorkoutSessions()))
-                .build();
-    }
+    @Mapping(target = "goal", source = "goal")
+    @Mapping(target = "muscleGroup", source = "muscleGroup")
+    @Mapping(target = "difficultyLevel", expression = "java(plan.getDifficultyLevel() != null ? DifficultyLevel.valueOf(plan.getDifficultyLevel()) : null)")
+    @Mapping(target = "endDate", expression = "java(plan.getStartDate() != null && plan.getDurationWeeks() != null ? plan.getStartDate().plusWeeks(plan.getDurationWeeks()).minusDays(1) : null)")
+    @Mapping(target = "scheduledWorkoutDates", expression = "java(plan.getScheduledWorkoutDates() != null ? new ArrayList<>(plan.getScheduledWorkoutDates()) : null)")
+    WorkoutPlanDetailResponse toDetailResponse(WorkoutPlan plan);
 
-    public List<WorkoutSessionSummaryResponse> toSessionSummaryResponseList(Set<WorkoutSession> sessions) {
+    @Mapping(target = "goal", source = "goal")
+    @Mapping(target = "muscleGroup", source = "muscleGroup")
+    @Mapping(target = "difficultyLevel", expression = "java(plan.getDifficultyLevel() != null ? DifficultyLevel.valueOf(plan.getDifficultyLevel()) : null)")
+    @Mapping(target = "sessions", expression = "java(toSessionSummaryResponseList(plan.getWorkoutSessions()))")
+    WorkoutPlanSummaryWithSessionsResponse toSummaryWithSessionsResponse(WorkoutPlan plan);
+
+    default List<WorkoutSessionSummaryResponse> toSessionSummaryResponseList(Set<WorkoutSession> sessions) {
         if (sessions == null || sessions.isEmpty()) return Collections.emptyList();
         return sessions.stream()
                 .sorted(Comparator.comparing(WorkoutSession::getDayNumber))
@@ -371,19 +268,6 @@ public class WorkoutPlanMapper {
                 .collect(Collectors.toList());
     }
 
-    public WorkoutSessionSummaryResponse toSessionSummaryResponse(WorkoutSession session) {
-        int exerciseCount = session.getSessionExercises() != null ? session.getSessionExercises().size() : 0;
-        return WorkoutSessionSummaryResponse.builder()
-                .sessionId(session.getSessionId())
-                .sessionName(session.getSessionName())
-                .dayNumber(session.getDayNumber())
-                .scheduledDate(session.getScheduledDate())
-                .focusArea(session.getFocusArea())
-                .estimatedDuration(session.getEstimatedDuration())
-                .warmUpNotes(session.getWarmUpNotes())
-                .coolDownNotes(session.getCoolDownNotes())
-                .isRestDay(session.getIsRestDay())
-                .exerciseCount(exerciseCount)
-                .build();
-    }
+    @Mapping(target = "exerciseCount", expression = "java(session.getSessionExercises() != null ? session.getSessionExercises().size() : 0)")
+    WorkoutSessionSummaryResponse toSessionSummaryResponse(WorkoutSession session);
 }

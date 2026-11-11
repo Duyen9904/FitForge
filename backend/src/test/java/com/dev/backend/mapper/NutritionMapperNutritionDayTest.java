@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mapstruct.factory.Mappers;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +29,7 @@ class NutritionMapperNutritionDayTest {
 
     @BeforeEach
     void setUp() {
-        mapper = new NutritionMapper();
+        mapper = Mappers.getMapper(NutritionMapper.class);
 
         systemTemplate = new MealTemplate();
         systemTemplate.setMealTemplateId(1L);

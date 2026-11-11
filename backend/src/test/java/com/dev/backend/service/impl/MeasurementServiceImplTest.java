@@ -19,6 +19,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mapstruct.factory.Mappers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -49,7 +50,7 @@ class MeasurementServiceImplTest {
     private UserRepository userRepository;
 
     @Spy
-    private MeasurementMapper mapper = new MeasurementMapper();
+    private MeasurementMapper mapper = Mappers.getMapper(MeasurementMapper.class);
 
     @InjectMocks
     private MeasurementServiceImpl measurementService;

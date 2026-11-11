@@ -15,6 +15,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mapstruct.factory.Mappers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -61,7 +62,7 @@ class MissedWorkoutServiceImplTest {
     private UserRepository userRepository;
 
     @Spy
-    private MissedWorkoutMapper mapper = new MissedWorkoutMapper();
+    private MissedWorkoutMapper mapper = Mappers.getMapper(MissedWorkoutMapper.class);
 
     @InjectMocks
     private MissedWorkoutServiceImpl missedWorkoutService;
