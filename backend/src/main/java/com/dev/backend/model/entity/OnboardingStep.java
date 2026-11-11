@@ -1,7 +1,8 @@
 package com.dev.backend.model.entity;
 
-import com.dev.backend.model.enums.OnboardingInputType;
-import com.dev.backend.model.enums.OnboardingStepType;
+import com.dev.backend.model.dto.onboarding.OnboardingStepConfig;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
@@ -13,14 +14,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Defines a configurable onboarding step.
- * Admin can create, reorder, enable/disable steps.
+ * Defines a configurable onboarding step belonging to an OnboardingFlow.
+ * Step UI metadata and selectable options are stored as JSON in config.
  */
 @Entity
 @Table(
-    name = "onboarding_step",
+    name = "onboarding_steps",
     uniqueConstraints = {
-        @UniqueConstraint(name = "uk_onboarding_step_key", columnNames = "step_key")
+        @UniqueConstraint(name = "uk_onboarding_step_flow_key", columnNames = {"flow_id", "step_key"})
     }
 )
 @Getter
@@ -30,47 +31,62 @@ import java.util.List;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 public class OnboardingStep {
 
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @EqualsAndHashCode.Include
-    private Long stepId;
+    private Long id;
 
-    @Column(name = "step_key", nullable = false, unique = true, length = 50)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "flow_id", nullable = false)
+    private OnboardingFlow flow;
+
+    @Column(name = "step_key", nullable = false, length = 50)
     private String stepKey;
 
     @Column(nullable = false, length = 100)
     private String title;
 
-    @Column(length = 255)
-    private String subtitle;
-
-    @Column(length = 500)
-    private String helpText;
-
-    @Enumerated(EnumType.STRING)
-    @Column(length = 30)
-    private OnboardingStepType stepType;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "input_type", length = 30)
-    private OnboardingInputType inputType;
-
     @Column(nullable = false)
-    private Integer displayOrder;
+    private Integer sequence;
 
-    @Column(nullable = false)
+    @Column(name = "is_required", nullable = false)
     private Boolean isRequired = true;
 
-    @Column(nullable = false)
-    private Boolean isActive = true;
-
-    @Column(length = 255)
-    private String iconUrl;
-
-    @OneToMany(mappedBy = "step", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("displayOrder ASC")
-    private List<OnboardingOption> options = new ArrayList<>();
+    @Column(columnDefinition = "JSON")
+    private String config;
 
     @OneToMany(mappedBy = "step", cascade = CascadeType.ALL)
-    private List<UserOnboardingProgress> userProgress = new ArrayList<>();
+    private List<UserOnboardingStep> userOnboardingSteps = new ArrayList<>();
+
+    /**
+     * Convenience accessor to parse the JSON config into OnboardingStepConfig.
+     */
+    @Transient
+    public OnboardingStepConfig getParsedConfig() {
+        if (config == null || config.isBlank()) {
+            return new OnboardingStepConfig();
+        }
+        try {
+            return MAPPER.readValue(config, OnboardingStepConfig.class);
+        } catch (JsonProcessingException e) {
+            return new OnboardingStepConfig();
+        }
+    }
+
+    /**
+     * Convenience mutator to serialize OnboardingStepConfig into the JSON config column.
+     */
+    public void setParsedConfig(OnboardingStepConfig stepConfig) {
+        if (stepConfig == null) {
+            this.config = null;
+            return;
+        }
+        try {
+            this.config = MAPPER.writeValueAsString(stepConfig);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to serialize OnboardingStepConfig", e);
+        }
+    }
 }

@@ -11,27 +11,27 @@ import java.util.Optional;
 public interface OnboardingStepRepository extends JpaRepository<OnboardingStep, Long> {
 
     /**
-     * Get all active onboarding steps in display order.
+     * Get all steps for a flow in sequence order.
      */
-    List<OnboardingStep> findByIsActiveTrueOrderByDisplayOrderAsc();
+    List<OnboardingStep> findByFlowIdOrderBySequenceAsc(Long flowId);
 
     /**
-     * Get all steps (including inactive) in display order for admin.
+     * Get all steps across all flows in sequence order.
      */
-    List<OnboardingStep> findAllByOrderByDisplayOrderAsc();
+    List<OnboardingStep> findAllByOrderBySequenceAsc();
 
     /**
-     * Find step by its unique key.
+     * Find step by flow and unique key.
      */
-    Optional<OnboardingStep> findByStepKey(String stepKey);
+    Optional<OnboardingStep> findByFlowIdAndStepKey(Long flowId, String stepKey);
 
     /**
-     * Check if a step key already exists.
+     * Check if a step key already exists in a flow.
      */
-    boolean existsByStepKey(String stepKey);
+    boolean existsByFlowIdAndStepKey(Long flowId, String stepKey);
 
     /**
-     * Get maximum display order for new step ordering.
+     * Get maximum sequence number for a flow's steps.
      */
-    Optional<OnboardingStep> findTopByOrderByDisplayOrderDesc();
+    Optional<OnboardingStep> findTopByFlowIdOrderBySequenceDesc(Long flowId);
 }

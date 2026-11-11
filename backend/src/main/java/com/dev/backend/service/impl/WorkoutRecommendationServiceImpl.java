@@ -49,7 +49,7 @@ public class WorkoutRecommendationServiceImpl implements WorkoutRecommendationSe
     private final WorkoutSessionRepository workoutSessionRepository;
     private final ExerciseAPIService exerciseAPIService;
     private final WorkoutSessionGenerator workoutSessionGenerator;
-    private final UserOnboardingProgressRepository progressRepository;
+    private final UserOnboardingStepRepository userOnboardingStepRepository;
     private final OnboardingStepRepository stepRepository;
     private final GoalRepository goalRepository;
     private final ObjectMapper objectMapper;
@@ -580,20 +580,20 @@ public class WorkoutRecommendationServiceImpl implements WorkoutRecommendationSe
      */
     private Goal extractGoalFromOnboarding(User user) {
         try {
-            // Get all onboarding progress for user
-            List<UserOnboardingProgress> progressList = progressRepository.findByUserUserId(user.getUserId());
+            // Get all onboarding step answers for user
+            List<UserOnboardingStep> progressList = userOnboardingStepRepository.findByOnboardingUserUserId(user.getUserId());
             
             // Find FITNESS_GOAL step
-            Optional<UserOnboardingProgress> goalProgress = progressList.stream()
-                    .filter(p -> p.getStep().getStepType() == OnboardingStepType.FITNESS_GOAL)
+            Optional<UserOnboardingStep> goalProgress = progressList.stream()
+                    .filter(p -> p.getStep() != null && p.getStep().getParsedConfig().getStepType() == OnboardingStepType.FITNESS_GOAL)
                     .findFirst();
             
-            if (goalProgress.isEmpty() || goalProgress.get().getResponseData() == null) {
+            if (goalProgress.isEmpty() || goalProgress.get().getAnswerData() == null) {
                 log.debug("No FITNESS_GOAL onboarding data found for user {}", user.getUserId());
                 return null;
             }
             
-            String responseData = goalProgress.get().getResponseData();
+            String responseData = goalProgress.get().getAnswerData();
             JsonNode root = objectMapper.readTree(responseData);
             
             // Parse goal using same logic as OnboardingServiceImpl

@@ -81,7 +81,6 @@ public class AuthServiceImpl implements AuthService {
                 .refreshToken(refreshToken.getToken())
                 .tokenType("Bearer")
                 .expiresAt(Instant.now().plusSeconds(accessTokenExpiration).toEpochMilli())
-                .user(accountMapper.toResponse(userEntity))
                 .build();
     }
 
@@ -112,7 +111,6 @@ public class AuthServiceImpl implements AuthService {
                 .refreshToken(refreshToken)  // Keep same refresh token
                 .tokenType("Bearer")
                 .expiresAt(Instant.now().plusSeconds(accessTokenExpiration).toEpochMilli())
-                .user(accountMapper.toResponse(user))
                 .build();
     }
 
