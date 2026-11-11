@@ -145,8 +145,7 @@ class _ExerciseCategoriesScreenState
                         .toList();
 
                 if (filteredCategories.isEmpty) {
-                  return EmptyState(
-                    icon: Icons.search_off,
+                  return const EmptyScreen(
                     title: 'No categories found',
                     description: 'Try a different search term',
                   );

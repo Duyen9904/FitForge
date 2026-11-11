@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../models/profile_models.dart';
+import '../../../ui/core/states/empty_screen.dart';
 
 /// GitHub-style activity heatmap designed for mobile.
 ///
@@ -443,33 +444,10 @@ class _ProfileActivityGridState extends State<ProfileActivityGrid> {
   }
 
   Widget _buildEmptyState(ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppDimensions.spacing24),
-      child: Center(
-        child: Column(
-          children: [
-            Icon(
-              Icons.grid_on_rounded,
-              size: 40,
-              color: theme.colorScheme.onSurfaceVariant.withOpacity(0.4),
-            ),
-            const SizedBox(height: AppDimensions.spacing8),
-            Text(
-              'No workout activity yet',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: AppDimensions.spacing4),
-            Text(
-              'Complete workouts to see your activity here',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
-              ),
-            ),
-          ],
-        ),
-      ),
+    return const EmptyScreen(
+      illustrationHeight: 120,
+      title: 'No workout activity yet',
+      description: 'Complete workouts to see your activity here',
     );
   }
 

@@ -4,6 +4,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../workouts/models/workout_plan_models.dart';
 import '../../workouts/repositories/workout_plan_repository.dart';
+import '../../../ui/core/states/empty_screen.dart';
 
 /// Bottom sheet that lets the user add an exercise to an existing
 /// workout-plan session in two steps: pick plan → pick session.
@@ -452,14 +453,10 @@ class _AddExerciseToSessionSheetState
     }
 
     if (_sessions.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(AppDimensions.spacing24),
-        child: Text(
-          'No sessions found in this plan',
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.grey500,
-              ),
-        ),
+      return const EmptyScreen(
+        illustrationHeight: 120,
+        title: 'No sessions found in this plan',
+        description: 'Please add a workout session to this plan first.',
       );
     }
 

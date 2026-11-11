@@ -59,8 +59,7 @@ class _EquipmentListScreenState extends ConsumerState<EquipmentListScreen> {
         ),
         loaded: (equipment, groupedEquipment) {
           if (groupedEquipment.isEmpty) {
-            return EmptyState(
-              icon: Icons.fitness_center,
+            return const EmptyScreen(
               title: 'No equipment available',
               description: 'Equipment list is empty',
             );

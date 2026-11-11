@@ -50,12 +50,11 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
         ),
         loaded: (exercises, currentPage, totalPages, hasMore, filter) {
           if (exercises.isEmpty) {
-            return EmptyState(
-              icon: Icons.favorite_border,
+            return EmptyScreen(
               title: 'No favorite exercises yet',
               description: 'Add exercises to favorites to see them here',
-              actionText: 'Browse Exercises',
-              onAction: () => context.go('/exercises'),
+              buttonText: 'Browse Exercises',
+              onButtonPressed: () => context.go('/exercises'),
             );
           }
 

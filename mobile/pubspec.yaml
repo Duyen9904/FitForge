@@ -74,6 +74,7 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - assets/illustrations/
 
   # To add custom fonts, download from https://fonts.google.com/specimen/Outfit
   # and uncomment the following:

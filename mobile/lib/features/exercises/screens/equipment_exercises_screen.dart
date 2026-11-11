@@ -142,8 +142,7 @@ class _EquipmentExercisesScreenState
           : _exercises.isEmpty && _isLoading
               ? const Center(child: CircularProgressIndicator())
               : _exercises.isEmpty
-                  ? EmptyState(
-                      icon: Icons.fitness_center,
+                  ? const EmptyScreen(
                       title: 'No exercises found',
                       description:
                           'No exercises available for this equipment',

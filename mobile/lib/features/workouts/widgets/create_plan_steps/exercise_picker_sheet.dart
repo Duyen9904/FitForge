@@ -6,6 +6,7 @@ import '../../../exercises/models/exercise_filter.dart';
 import '../../../exercises/models/exercise_models.dart';
 import '../../../exercises/repositories/exercise_repository.dart';
 import '../../viewmodels/create_workout_plan_state.dart';
+import '../../../../ui/core/states/empty_screen.dart';
 
 /// Bottom sheet for searching and selecting exercises
 class ExercisePickerSheet extends ConsumerStatefulWidget {
@@ -216,13 +217,10 @@ class _ExercisePickerSheetState
                             ),
                           )
                         : _exercises.isEmpty
-                            ? Center(
-                                child: Text(
-                                  'No exercises found',
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: AppColors.grey400,
-                                  ),
-                                ),
+                            ? const EmptyScreen(
+                                illustrationHeight: 120,
+                                title: 'No exercises found',
+                                description: 'Try adjusting your search query',
                               )
                             : ListView.builder(
                                 controller: scrollController,

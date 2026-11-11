@@ -5,6 +5,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../models/workout_plan_models.dart';
 import 'workout_plan_card.dart';
+import '../../../ui/core/states/empty_screen.dart';
 
 /// Workout plans list widget with shimmer loading, pagination, and
 /// entrance animations. Handles loaded, empty-filter, and loading states.
@@ -98,40 +99,12 @@ class _WorkoutPlansListState extends State<WorkoutPlansList> {
   }
 
   Widget _buildEmptyFilterState(ThemeData theme) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(AppDimensions.spacing20),
-            decoration: BoxDecoration(
-              color: AppColors.grey100,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.search_off_rounded,
-              size: 44,
-              color: AppColors.grey400,
-            ),
-          ),
-          const SizedBox(height: AppDimensions.spacing16),
-          Text(
-            'No plans found',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: AppDimensions.spacing8),
-          Text(
-            widget.selectedDifficulty != null
-                ? 'No ${widget.selectedDifficulty} plans available'
-                : 'Try adjusting your filters',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: AppColors.grey500,
-            ),
-          ),
-        ],
-      ),
+    return EmptyScreen(
+      illustrationHeight: 160,
+      title: 'No plans found',
+      description: widget.selectedDifficulty != null
+          ? 'No ${widget.selectedDifficulty} plans available'
+          : 'Try adjusting your filters',
     );
   }
 }

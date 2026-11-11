@@ -3,6 +3,7 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../../../ui/core/cards/app_cards.dart';
 import '../../../ui/core/chips/app_chips.dart';
+import '../../../ui/core/states/empty_screen.dart';
 
 /// Model representing an exercise display item on the daily timeline
 class TimelineExerciseItem {
@@ -357,50 +358,14 @@ class TodayExercisesTimeline extends StatelessWidget {
 
   Widget _buildEmptyState(BuildContext context, ThemeData theme) {
     return AppSurfaceCard(
-      padding: const EdgeInsets.all(AppDimensions.spacing24),
-      child: Column(
-        children: [
-          const Icon(
-            Icons.event_available_rounded,
-            size: 48,
-            color: AppColors.primaryLight,
-          ),
-          const SizedBox(height: AppDimensions.spacing12),
-          Text(
-            'No Workouts Scheduled',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppColors.grey800,
-            ),
-          ),
-          const SizedBox(height: AppDimensions.spacing6),
-          Text(
-            'Rest day or no active workouts planned for this date.',
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: AppColors.grey500,
-            ),
-          ),
-          if (onGeneratePlan != null) ...[
-            const SizedBox(height: AppDimensions.spacing16),
-            ElevatedButton.icon(
-              onPressed: onGeneratePlan,
-              icon: const Icon(Icons.auto_awesome, size: 18),
-              label: const Text('Generate Plan with AI'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusFull),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimensions.spacing20,
-                  vertical: AppDimensions.spacing12,
-                ),
-              ),
-            ),
-          ],
-        ],
+      padding: const EdgeInsets.all(AppDimensions.spacing16),
+      child: EmptyScreen(
+        illustrationHeight: 140,
+        title: 'No Workouts Scheduled',
+        description: 'Rest day or no active workouts planned for this date.',
+        buttonText: onGeneratePlan != null ? 'Generate Plan with AI' : null,
+        onButtonPressed: onGeneratePlan,
+        buttonIcon: Icons.auto_awesome,
       ),
     );
   }

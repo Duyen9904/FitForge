@@ -211,8 +211,7 @@ class _BrowseAllTabContentState extends ConsumerState<BrowseAllTabContent>
                       .toList();
 
               if (filteredExercises.isEmpty) {
-                return EmptyState(
-                  icon: Icons.fitness_center,
+                return EmptyScreen(
                   title: 'No exercises found',
                   description: _searchQuery.isNotEmpty
                       ? 'Try a different search term'

@@ -6,6 +6,7 @@ import '../../../core/constants/app_dimensions.dart';
 import '../../exercises/models/exercise_models.dart';
 import '../../exercises/repositories/exercise_repository.dart';
 import '../models/workout_plan_models.dart';
+import '../../../ui/core/states/empty_screen.dart';
 
 /// Bottom sheet for editing a session exercise.
 /// Prefills all editable fields and provides an exercise picker.
@@ -575,14 +576,10 @@ class _ExercisePickerSheetState extends State<_ExercisePickerSheet> {
           else
             Expanded(
               child: _filtered.isEmpty
-                  ? Center(
-                      child: Text(
-                        'No exercises found',
-                        style:
-                            Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: AppColors.grey500,
-                                ),
-                      ),
+                  ? const EmptyScreen(
+                      illustrationHeight: 120,
+                      title: 'No exercises found',
+                      description: 'Try adjusting your search query',
                     )
                   : ListView.builder(
                       controller: scrollController,

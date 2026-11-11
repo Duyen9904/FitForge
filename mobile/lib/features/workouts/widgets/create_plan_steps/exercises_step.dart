@@ -6,6 +6,7 @@ import '../../../../core/constants/app_dimensions.dart';
 import '../../viewmodels/create_workout_plan_state.dart';
 import '../../viewmodels/create_workout_plan_viewmodel.dart';
 import 'exercise_picker_sheet.dart';
+import '../../../../ui/core/states/empty_screen.dart';
 
 /// Step 3: Add exercises to each session
 class ExercisesStep extends ConsumerWidget {
@@ -193,23 +194,10 @@ class _SessionExerciseCard extends StatelessWidget {
 
           // Exercise list
           if (session.exercises.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(AppDimensions.spacing24),
-              child: Center(
-                child: Column(
-                  children: [
-                    Icon(Icons.add_circle_outline,
-                        color: AppColors.grey300, size: 40),
-                    const SizedBox(height: AppDimensions.spacing8),
-                    Text(
-                      'No exercises yet',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColors.grey400,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            const EmptyScreen(
+              illustrationHeight: 120,
+              title: 'No exercises yet',
+              description: 'Add exercises to this session to build your routine',
             )
           else
             ...session.exercises.asMap().entries.map((entry) {

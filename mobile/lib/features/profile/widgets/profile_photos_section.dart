@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_dimensions.dart';
 import '../models/profile_models.dart';
+import '../../../ui/core/states/empty_screen.dart';
 
 /// Check-in photos gallery section for the profile screen.
 ///
@@ -88,9 +89,6 @@ class ProfilePhotosSection extends StatelessWidget {
   Widget _buildEmptyState(ThemeData theme) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        vertical: AppDimensions.spacing32,
-      ),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(AppDimensions.radiusXLarge),
@@ -98,28 +96,10 @@ class ProfilePhotosSection extends StatelessWidget {
           color: theme.colorScheme.onSurfaceVariant.withOpacity(0.1),
         ),
       ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.photo_camera_outlined,
-            size: 36,
-            color: theme.colorScheme.onSurfaceVariant.withOpacity(0.4),
-          ),
-          const SizedBox(height: AppDimensions.spacing8),
-          Text(
-            'No check-in photos yet',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: AppDimensions.spacing4),
-          Text(
-            'Upload a photo when completing a workout',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant.withOpacity(0.7),
-            ),
-          ),
-        ],
+      child: const EmptyScreen(
+        illustrationHeight: 120,
+        title: 'No check-in photos yet',
+        description: 'Upload a photo when completing a workout',
       ),
     );
   }

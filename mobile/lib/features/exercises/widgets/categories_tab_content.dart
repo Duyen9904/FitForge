@@ -24,8 +24,7 @@ class CategoriesTabContent extends ConsumerWidget {
       ),
       loaded: (types, selectedDifficulty) {
         if (types.isEmpty) {
-          return EmptyState(
-            icon: Icons.search_off,
+          return const EmptyScreen(
             title: 'No categories found',
             description: 'No categories available',
           );

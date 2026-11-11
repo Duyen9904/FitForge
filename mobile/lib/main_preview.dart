@@ -269,12 +269,11 @@ class _WidgetShowcaseScreenState extends State<WidgetShowcaseScreen>
         ),
         const SizedBox(height: AppDimensions.spacing16),
         Card(
-          child: EmptyState(
-            icon: Icons.fitness_center_outlined,
+          child: EmptyScreen(
             title: 'No Workouts Scheduled',
             description: 'You have not added any workouts to your schedule yet.',
-            actionText: 'Browse Exercises',
-            onAction: () {},
+            buttonText: 'Browse Exercises',
+            onButtonPressed: () {},
           ),
         ),
         const SizedBox(height: AppDimensions.spacing16),

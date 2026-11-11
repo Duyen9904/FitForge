@@ -25,8 +25,7 @@ class EquipmentTabContent extends ConsumerWidget {
       ),
       loaded: (equipment, groupedEquipment) {
         if (groupedEquipment.isEmpty) {
-          return EmptyState(
-            icon: Icons.search_off,
+          return const EmptyScreen(
             title: 'No equipment found',
             description: 'No equipment available',
           );
