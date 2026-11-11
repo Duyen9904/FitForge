@@ -52,10 +52,6 @@ class AuthControllerTest {
                 .refreshToken("mock-refresh-token")
                 .tokenType("Bearer")
                 .expiresAt(System.currentTimeMillis() + 900000) // 15 minutes
-                .user(AccountSummaryDto.builder()
-                        .email("test@example.com")
-                        .username("testuser")
-                        .build())
                 .build();
 
         // Setup valid login request

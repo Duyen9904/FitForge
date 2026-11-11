@@ -69,14 +69,4 @@ public class OnboardingController {
         onboardingService.completeOnboarding(userId);
         return ApiResponse.success(null, "Onboarding completed successfully");
     }
-
-    @Operation(summary = "Check onboarding status", 
-               description = "Check if current user has completed onboarding")
-    @GetMapping("/status")
-    public ApiResponse<Boolean> checkOnboardingStatus(
-            @AuthenticationPrincipal Jwt jwt) {
-        Long userId = Long.parseLong(jwt.getSubject());
-        boolean isComplete = onboardingService.isOnboardingComplete(userId);
-        return ApiResponse.success(isComplete);
-    }
 }

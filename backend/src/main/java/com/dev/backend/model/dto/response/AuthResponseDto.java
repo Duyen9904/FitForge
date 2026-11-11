@@ -22,7 +22,4 @@ public class AuthResponseDto {
 
     // Access token expiration (epoch millis or seconds)
     private long expiresAt;
-
-    // Minimal user info for frontend
-    private AccountSummaryDto user;
 }

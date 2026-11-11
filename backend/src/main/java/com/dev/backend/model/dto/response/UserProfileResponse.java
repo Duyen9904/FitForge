@@ -24,6 +24,7 @@ public class UserProfileResponse {
     private Float currentWeightKg;
     private Float targetWeightKg;
     private String fitnessLevel;
+    private Boolean onboardingCompleted;
     private GoalResponse primaryGoal;
     private UserPreferenceResponse userPreference;
 }

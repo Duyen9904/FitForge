@@ -1,13 +1,14 @@
 package com.dev.backend.service.impl;
 
 import com.dev.backend.exception.ResourceNotFoundException;
+import com.dev.backend.model.dto.onboarding.OnboardingStepConfig;
 import com.dev.backend.model.dto.profile.UserProfile;
 import com.dev.backend.model.entity.OnboardingStep;
 import com.dev.backend.model.entity.User;
-import com.dev.backend.model.entity.UserOnboardingProgress;
+import com.dev.backend.model.entity.UserOnboardingStep;
 import com.dev.backend.model.enums.OnboardingStepType;
 import com.dev.backend.repository.OnboardingStepRepository;
-import com.dev.backend.repository.UserOnboardingProgressRepository;
+import com.dev.backend.repository.UserOnboardingStepRepository;
 import com.dev.backend.repository.UserRepository;
 import com.dev.backend.service.UserProfileService;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -32,7 +33,7 @@ public class UserProfileServiceImpl implements UserProfileService {
 
     private final UserRepository userRepository;
     private final OnboardingStepRepository stepRepository;
-    private final UserOnboardingProgressRepository progressRepository;
+    private final UserOnboardingStepRepository userOnboardingStepRepository;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -40,25 +41,28 @@ public class UserProfileServiceImpl implements UserProfileService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
 
-        // Index progress by stepKey for easier lookup
-        List<OnboardingStep> steps = stepRepository.findByIsActiveTrueOrderByDisplayOrderAsc();
+        List<OnboardingStep> steps = stepRepository.findAllByOrderBySequenceAsc();
         Map<Long, OnboardingStep> stepById = steps.stream()
-                .collect(Collectors.toMap(OnboardingStep::getStepId, s -> s));
+                .collect(Collectors.toMap(OnboardingStep::getId, s -> s));
 
-        List<UserOnboardingProgress> progressList = progressRepository.findByUserUserId(userId);
+        List<UserOnboardingStep> progressList = userOnboardingStepRepository.findByOnboardingUserUserId(userId);
 
-        // Index progress by stepType (more robust than relying on step_key naming conventions)
-        // This avoids mismatches like 'fitness_goal' (seed data) vs 'FITNESS_GOAL_*' (previous assumption).
         Map<OnboardingStepType, JsonNode> responsesByType = new EnumMap<>(OnboardingStepType.class);
-        for (UserOnboardingProgress progress : progressList) {
-            if (progress.getResponseData() == null) {
+        for (UserOnboardingStep progress : progressList) {
+            if (progress.getAnswerData() == null) {
                 continue;
             }
-            OnboardingStep step = stepById.get(progress.getStep().getStepId());
-            if (step == null || step.getStepType() == null) {
+            OnboardingStep step = stepById.getOrDefault(
+                    progress.getStep() != null ? progress.getStep().getId() : null,
+                    progress.getStep());
+            if (step == null) {
                 continue;
             }
-            responsesByType.put(step.getStepType(), parseJsonSafe(progress.getResponseData()));
+            OnboardingStepConfig cfg = step.getParsedConfig();
+            if (cfg.getStepType() == null) {
+                continue;
+            }
+            responsesByType.put(cfg.getStepType(), parseJsonSafe(progress.getAnswerData()));
         }
 
         // Derive primitive attributes from User and preferences

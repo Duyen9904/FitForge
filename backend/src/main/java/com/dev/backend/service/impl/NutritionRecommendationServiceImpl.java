@@ -17,7 +17,7 @@ import com.dev.backend.repository.NutritionDayRepository;
 import com.dev.backend.repository.PlanMealRepository;
 import com.dev.backend.repository.NutritionPlanRepository;
 import com.dev.backend.repository.OnboardingStepRepository;
-import com.dev.backend.repository.UserOnboardingProgressRepository;
+import com.dev.backend.repository.UserOnboardingStepRepository;
 import com.dev.backend.repository.UserRepository;
 import com.dev.backend.service.AiService;
 import com.dev.backend.service.MealTemplateGenerator;
@@ -48,7 +48,7 @@ public class NutritionRecommendationServiceImpl implements NutritionRecommendati
     private final MealTemplateRepository mealTemplateRepository;
     private final NutritionDayRepository nutritionDayRepository;
     private final MealTemplateGenerator mealTemplateGenerator;
-    private final UserOnboardingProgressRepository progressRepository;
+    private final UserOnboardingStepRepository userOnboardingStepRepository;
     private final OnboardingStepRepository stepRepository;
     private final ObjectMapper objectMapper;
     private final AiService aiService;
@@ -453,20 +453,20 @@ public class NutritionRecommendationServiceImpl implements NutritionRecommendati
      */
     private Goal extractGoalFromOnboarding(User user) {
         try {
-            // Get all onboarding progress for user
-            List<UserOnboardingProgress> progressList = progressRepository.findByUserUserId(user.getUserId());
+            // Get all onboarding step answers for user
+            List<UserOnboardingStep> progressList = userOnboardingStepRepository.findByOnboardingUserUserId(user.getUserId());
             
             // Find FITNESS_GOAL step
-            Optional<UserOnboardingProgress> goalProgress = progressList.stream()
-                    .filter(p -> p.getStep().getStepType() == OnboardingStepType.FITNESS_GOAL)
+            Optional<UserOnboardingStep> goalProgress = progressList.stream()
+                    .filter(p -> p.getStep() != null && p.getStep().getParsedConfig().getStepType() == OnboardingStepType.FITNESS_GOAL)
                     .findFirst();
             
-            if (goalProgress.isEmpty() || goalProgress.get().getResponseData() == null) {
+            if (goalProgress.isEmpty() || goalProgress.get().getAnswerData() == null) {
                 log.debug("No FITNESS_GOAL onboarding data found for user {}", user.getUserId());
                 return null;
             }
             
-            String responseData = goalProgress.get().getResponseData();
+            String responseData = goalProgress.get().getAnswerData();
             JsonNode root = objectMapper.readTree(responseData);
             
             // Parse goal using same logic as OnboardingServiceImpl

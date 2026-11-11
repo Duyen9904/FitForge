@@ -1,62 +1,80 @@
 package com.dev.backend.mapper;
 
+import com.dev.backend.model.dto.onboarding.OnboardingStepConfig;
+import com.dev.backend.model.dto.onboarding.OnboardingStepConfig.OnboardingOptionItem;
 import com.dev.backend.model.dto.request.SaveOnboardingStepRequest;
 import com.dev.backend.model.dto.response.OnboardingFlowResponse;
 import com.dev.backend.model.dto.response.OnboardingOptionResponse;
 import com.dev.backend.model.dto.response.OnboardingStepResponse;
-import com.dev.backend.model.entity.OnboardingOption;
 import com.dev.backend.model.entity.OnboardingStep;
-import com.dev.backend.model.entity.UserOnboardingProgress;
+import com.dev.backend.model.entity.UserOnboardingStep;
 import com.dev.backend.model.enums.OnboardingStepStatus;
-import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
-import org.mapstruct.NullValuePropertyMappingStrategy;
 import org.mapstruct.ReportingPolicy;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Mapper for onboarding entities to DTOs.
+ * Mapper for onboarding entities and config JSON to DTOs.
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface OnboardingMapper extends BaseMapper<OnboardingStep, SaveOnboardingStepRequest, OnboardingStepResponse> {
 
-    @Override
-    @Mapping(target = "options", source = "options")
-    OnboardingStepResponse toResponse(OnboardingStep step);
+    OnboardingOptionResponse toOptionResponse(OnboardingOptionItem option);
+
+    List<OnboardingOptionResponse> toOptionResponseList(List<OnboardingOptionItem> options);
 
     @Override
-    @Mapping(target = "isRequired", expression = "java(request.getIsRequired() != null ? request.getIsRequired() : true)")
-    @Mapping(target = "isActive", expression = "java(request.getIsActive() != null ? request.getIsActive() : true)")
-    OnboardingStep toEntity(SaveOnboardingStepRequest request);
+    default OnboardingStepResponse toResponse(OnboardingStep step) {
+        if (step == null) {
+            return null;
+        }
+        OnboardingStepConfig cfg = step.getParsedConfig();
+        List<OnboardingOptionResponse> optionResponses = null;
+        if (cfg.getOptions() != null && !cfg.getOptions().isEmpty()) {
+            optionResponses = cfg.getOptions().stream()
+                    .sorted(Comparator.comparing(
+                            o -> o.getDisplayOrder() != null ? o.getDisplayOrder() : Integer.MAX_VALUE))
+                    .map(this::toOptionResponse)
+                    .collect(Collectors.toList());
+        }
 
-    @Override
-    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
-    void updateEntityFromRequest(@MappingTarget OnboardingStep entity, SaveOnboardingStepRequest request);
-
-    @Mapping(target = "goalId", source = "goal.goalId")
-    OnboardingOptionResponse toOptionResponse(OnboardingOption option);
-
-    List<OnboardingOptionResponse> toOptionResponseList(List<OnboardingOption> options);
+        return OnboardingStepResponse.builder()
+                .stepId(step.getId())
+                .stepKey(step.getStepKey())
+                .title(step.getTitle())
+                .subtitle(cfg.getSubtitle())
+                .helpText(cfg.getHelpText())
+                .stepType(cfg.getStepType())
+                .inputType(cfg.getInputType())
+                .displayOrder(step.getSequence())
+                .isRequired(step.getIsRequired())
+                .isActive(cfg.getIsActive() != null ? cfg.getIsActive() : true)
+                .iconUrl(cfg.getIconUrl())
+                .options(optionResponses)
+                .build();
+    }
 
     default OnboardingStepResponse toStepResponseWithAllOptions(OnboardingStep step) {
         return toResponse(step);
     }
 
-    default OnboardingStepResponse toStepResponse(OnboardingStep step, UserOnboardingProgress progress) {
+    default OnboardingStepResponse toStepResponse(OnboardingStep step, UserOnboardingStep progress) {
         if (step == null) {
             return null;
         }
 
         OnboardingStepResponse response = toResponse(step);
+        OnboardingStepConfig cfg = step.getParsedConfig();
 
-        if (step.getOptions() != null && !step.getOptions().isEmpty()) {
-            List<OnboardingOptionResponse> options = step.getOptions().stream()
-                    .filter(OnboardingOption::getIsActive)
+        if (cfg.getOptions() != null && !cfg.getOptions().isEmpty()) {
+            List<OnboardingOptionResponse> options = cfg.getOptions().stream()
+                    .filter(o -> o.getIsActive() == null || Boolean.TRUE.equals(o.getIsActive()))
+                    .sorted(Comparator.comparing(
+                            o -> o.getDisplayOrder() != null ? o.getDisplayOrder() : Integer.MAX_VALUE))
                     .map(this::toOptionResponse)
                     .collect(Collectors.toList());
             response.setOptions(options);
@@ -66,7 +84,7 @@ public interface OnboardingMapper extends BaseMapper<OnboardingStep, SaveOnboard
 
         if (progress != null) {
             response.setStatus(progress.getStatus());
-            response.setResponseData(progress.getResponseData());
+            response.setResponseData(progress.getAnswerData());
             response.setCompletedAt(progress.getCompletedAt());
         } else {
             response.setStatus(OnboardingStepStatus.PENDING);
@@ -77,7 +95,7 @@ public interface OnboardingMapper extends BaseMapper<OnboardingStep, SaveOnboard
 
     default OnboardingFlowResponse toFlowResponse(
             List<OnboardingStep> steps,
-            Map<Long, UserOnboardingProgress> progressMap) {
+            Map<Long, UserOnboardingStep> progressMap) {
 
         if (steps == null || steps.isEmpty()) {
             return OnboardingFlowResponse.builder()
@@ -90,7 +108,7 @@ public interface OnboardingMapper extends BaseMapper<OnboardingStep, SaveOnboard
         }
 
         List<OnboardingStepResponse> stepResponses = steps.stream()
-                .map(step -> toStepResponse(step, progressMap.get(step.getStepId())))
+                .map(step -> toStepResponse(step, progressMap.get(step.getId())))
                 .collect(Collectors.toList());
 
         int completedCount = 0;

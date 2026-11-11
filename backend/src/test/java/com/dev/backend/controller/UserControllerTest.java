@@ -49,6 +49,7 @@ class UserControllerTest {
                 .userId(1L)
                 .username("testuser")
                 .email("test@example.com")
+                .onboardingCompleted(true)
                 .primaryGoal(mockGoal)
                 .build();
     }
@@ -64,7 +65,8 @@ class UserControllerTest {
 
             mockMvc.perform(get("/api/v1/users/me")
                             .with(jwt().jwt(jwt -> jwt.subject("1"))))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.onboardingCompleted").value(true));
 
             verify(userService, times(1)).getCurrentUserProfile(1L);
         }

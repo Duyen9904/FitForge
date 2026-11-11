@@ -74,40 +74,42 @@ erDiagram
         %% Slimfit, Athletic, and Bodybuilding
     }
 
-    onboarding_step {
-        BIGINT step_id PK
-        VARCHAR_50 step_key UK "NOT NULL, uk_onboarding_step_key"
+    onboarding_flows {
+        BIGINT id PK
+        VARCHAR_50 flow_key "NOT NULL, uk_onboarding_flow_key_version(flow_key, version)"
+        VARCHAR_100 name "NOT NULL"
+        INT version "NOT NULL, default 1"
+        BOOLEAN is_active "NOT NULL, default true"
+    }
+
+    onboarding_steps {
+        BIGINT id PK
+        BIGINT flow_id FK "NOT NULL, onboarding_flows.id, uk_onboarding_step_flow_key(flow_id, step_key)"
+        VARCHAR_50 step_key "NOT NULL, uk_onboarding_step_flow_key(flow_id, step_key)"
         VARCHAR_100 title "NOT NULL"
-        VARCHAR_255 subtitle
-        VARCHAR_500 help_text
-        VARCHAR_30 step_type "PERSONAL_INFO, BODY_METRICS, GENDER, AGE, WEIGHT, HEIGHT, FITNESS_LEVEL, FITNESS_GOAL, EQUIPMENT, SCHEDULE, HEALTH_LIMITATIONS, NOTIFICATIONS"
-        VARCHAR_30 input_type "TEXT, NUMBER, SINGLE_CHOICE, MULTIPLE_CHOICE, TOGGLE"
-        INT display_order "NOT NULL"
+        INT sequence "NOT NULL"
         BOOLEAN is_required "NOT NULL, default true"
-        BOOLEAN is_active "NOT NULL, default true"
-        VARCHAR_255 icon_url
+        JSON config "stepType, inputType, subtitle, helpText, iconUrl, isActive, options[]"
     }
 
-    onboarding_option {
-        BIGINT option_id PK
-        BIGINT step_id FK "NOT NULL, uk_onboarding_option_step_key(step_id, option_key)"
-        VARCHAR_50 option_key "NOT NULL, uk_onboarding_option_step_key(step_id, option_key)"
-        VARCHAR_100 label "NOT NULL"
-        VARCHAR_255 description
-        VARCHAR_255 icon_url
-        INT display_order "NOT NULL"
-        BOOLEAN is_active "NOT NULL, default true"
-        TEXT metadata "JSON metadata"
-        BIGINT goal_id FK "goal.goal_id (nullable)"
-    }
-
-    user_onboarding_progress {
-        BIGINT progress_id PK
-        BIGINT user_id FK "NOT NULL, uk_user_onboarding_progress(user_id, step_id)"
-        BIGINT step_id FK "NOT NULL, uk_user_onboarding_progress(user_id, step_id)"
-        VARCHAR_20 status "NOT NULL, default PENDING (PENDING, COMPLETED, SKIPPED)"
-        TEXT response_data "JSON response"
+    user_onboardings {
+        BIGINT id PK
+        BIGINT user_id FK "NOT NULL, user.user_id"
+        BIGINT flow_id FK "NOT NULL, onboarding_flows.id"
+        VARCHAR_20 status "NOT NULL, default IN_PROGRESS (IN_PROGRESS, COMPLETED, ABANDONED)"
+        BIGINT current_step_id FK "onboarding_steps.id (nullable)"
+        DATETIME started_at "NOT NULL"
         DATETIME completed_at
+    }
+
+    user_onboarding_steps {
+        BIGINT onboarding_id PK, FK "NOT NULL, user_onboardings.id"
+        BIGINT step_id PK, FK "NOT NULL, onboarding_steps.id"
+        VARCHAR_20 status "NOT NULL, default PENDING (PENDING, COMPLETED, SKIPPED)"
+        JSON answer_data "JSON user response"
+        DATETIME started_at
+        DATETIME completed_at
+        DATETIME updated_at "NOT NULL"
     }
 
     %% =====================================================================
@@ -526,10 +528,12 @@ erDiagram
     %% =====================================================================
     %% RELATIONSHIPS: PART 2 - ONBOARDING & GOALS
     %% =====================================================================
-    onboarding_step ||--o{ onboarding_option : "step_id"
-    goal ||--o{ onboarding_option : "goal_id"
-    user ||--o{ user_onboarding_progress : "user_id"
-    onboarding_step ||--o{ user_onboarding_progress : "step_id"
+    user ||--o{ user_onboardings : "user_id"
+    onboarding_flows ||--o{ onboarding_steps : "flow_id"
+    onboarding_flows ||--o{ user_onboardings : "flow_id"
+    onboarding_steps ||--o{ user_onboardings : "current_step_id"
+    user_onboardings ||--o{ user_onboarding_steps : "onboarding_id"
+    onboarding_steps ||--o{ user_onboarding_steps : "step_id"
 
     %% =====================================================================
     %% RELATIONSHIPS: PART 3 - BODY MEASUREMENTS & PROGRESS PHOTOS

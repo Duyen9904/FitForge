@@ -91,7 +91,7 @@ public class User {
     private Boolean onboardingCompleted = false;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<UserOnboardingProgress> onboardingProgress = new ArrayList<>();
+    private List<UserOnboarding> userOnboardings = new ArrayList<>();
 
     public enum Role {
         USER,

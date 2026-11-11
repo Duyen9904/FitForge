@@ -1,5 +1,6 @@
 package com.dev.backend.model.dto.request;
 
+import com.dev.backend.model.enums.OnboardingInputType;
 import com.dev.backend.model.enums.OnboardingStepType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -35,10 +36,14 @@ public class SaveOnboardingStepRequest {
     @NotNull(message = "Step type is required")
     private OnboardingStepType stepType;
 
+    private OnboardingInputType inputType;
+
     private Integer displayOrder;
 
+    @Builder.Default
     private Boolean isRequired = true;
 
+    @Builder.Default
     private Boolean isActive = true;
 
     @Size(max = 255, message = "Icon URL must be at most 255 characters")

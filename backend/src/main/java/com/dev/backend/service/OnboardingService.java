@@ -33,9 +33,4 @@ public interface OnboardingService {
      * UC-17.13
      */
     void completeOnboarding(Long userId);
-
-    /**
-     * Check if a user has completed onboarding.
-     */
-    boolean isOnboardingComplete(Long userId);
 }

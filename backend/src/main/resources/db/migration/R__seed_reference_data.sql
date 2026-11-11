@@ -313,98 +313,186 @@ INSERT IGNORE INTO exercise_equipment (exercise_id, equipment_id, is_required, u
 */
 
 -- =====================================================
--- 8. ONBOARDING (Steps and options)
+-- 8. ONBOARDING (Flows and Steps with JSON config)
 -- =====================================================
-INSERT IGNORE INTO onboarding_step (step_key, title, subtitle, help_text, step_type, input_type, display_order, is_required, is_active, icon_url) VALUES
-('gender', 'Gender', 'What is your gender?', 'We use this to personalize your experience.', 'GENDER', 'SINGLE_CHOICE', 1, 1, 1, NULL),
-('age', 'Age', 'How old are you?', 'Your age helps us tailor your plan.', 'AGE', 'NUMBER', 2, 1, 1, NULL),
-('weight', 'Weight', 'What is your current weight?', 'Your weight helps us calculate the right load.', 'WEIGHT', 'NUMBER', 3, 1, 1, NULL),
-('height', 'Height', 'How tall are you?', 'Your height helps us tailor your plan.', 'HEIGHT', 'NUMBER', 4, 1, 1, NULL),
-('fitness_level', 'Fitness Level', 'How would you describe your experience?', 'This helps us recommend the right intensity.', 'FITNESS_LEVEL', 'SINGLE_CHOICE', 5, 1, 1, NULL),
-('fitness_goal', 'Fitness Goal', 'What do you want to achieve?', 'Select your primary goal.', 'FITNESS_GOAL', 'MULTIPLE_CHOICE', 6, 1, 1, NULL),
-('equipment', 'Equipment', 'What do you have access to?', 'We will suggest workouts that match your gear.', 'EQUIPMENT', 'MULTIPLE_CHOICE', 7, 1, 1, NULL),
-('schedule', 'Schedule', 'When can you work out?', 'Pick your preferred days and time.', 'SCHEDULE', 'MULTIPLE_CHOICE', 8, 1, 1, NULL),
-('health_limitations', 'Health & Limitations', 'Any we should know about?', 'Optional - helps us keep you safe.', 'HEALTH_LIMITATIONS', 'MULTIPLE_CHOICE', 9, 0, 1, NULL),
-('notifications', 'Notifications', 'Stay on track', 'Choose what reminders you want.', 'NOTIFICATIONS', 'TOGGLE', 10, 0, 1, NULL);
+INSERT IGNORE INTO onboarding_flows (flow_key, name, version, is_active) VALUES
+('default_onboarding', 'Default User Onboarding', 1, 1);
 
--- Onboarding options: GENDER
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'female', 'Female', 'Female', 1, 1 FROM onboarding_step WHERE step_key = 'gender' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'male', 'Male', 'Male', 2, 1 FROM onboarding_step WHERE step_key = 'gender' LIMIT 1;
+-- 1. GENDER
+INSERT IGNORE INTO onboarding_steps (flow_id, step_key, title, sequence, is_required, config)
+SELECT id, 'gender', 'Gender', 1, 1,
+    JSON_OBJECT(
+        'subtitle', 'What is your gender?',
+        'helpText', 'We use this to personalize your experience.',
+        'stepType', 'GENDER',
+        'inputType', 'SINGLE_CHOICE',
+        'iconUrl', NULL,
+        'isActive', TRUE,
+        'options', JSON_ARRAY(
+            JSON_OBJECT('optionId', 1, 'optionKey', 'female', 'label', 'Female', 'description', 'Female', 'iconUrl', NULL, 'displayOrder', 1, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL),
+            JSON_OBJECT('optionId', 2, 'optionKey', 'male', 'label', 'Male', 'description', 'Male', 'iconUrl', NULL, 'displayOrder', 2, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL)
+        )
+    )
+FROM onboarding_flows WHERE flow_key = 'default_onboarding' AND version = 1 LIMIT 1;
 
--- Onboarding options: FITNESS_LEVEL
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'beginner', 'Beginner', 'New to fitness or returning after a break', 1, 1 FROM onboarding_step WHERE step_key = 'fitness_level' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'intermediate', 'Intermediate', '1-3 years of consistent training', 2, 1 FROM onboarding_step WHERE step_key = 'fitness_level' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'advanced', 'Advanced', '3+ years of structured training', 3, 1 FROM onboarding_step WHERE step_key = 'fitness_level' LIMIT 1;
+-- 2. AGE
+INSERT IGNORE INTO onboarding_steps (flow_id, step_key, title, sequence, is_required, config)
+SELECT id, 'age', 'Age', 2, 1,
+    JSON_OBJECT(
+        'subtitle', 'How old are you?',
+        'helpText', 'Your age helps us tailor your plan.',
+        'stepType', 'AGE',
+        'inputType', 'NUMBER',
+        'iconUrl', NULL,
+        'isActive', TRUE,
+        'options', JSON_ARRAY()
+    )
+FROM onboarding_flows WHERE flow_key = 'default_onboarding' AND version = 1 LIMIT 1;
 
--- Onboarding options: FITNESS_GOAL (with goal_id FK)
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active, goal_id)
-SELECT step_id, 'slimfit', 'Slimfit', 'Fat loss and muscle toning for a lean physique', 1, 1,
-    (SELECT goal_id FROM goal WHERE goal_name = 'Slimfit' LIMIT 1)
-FROM onboarding_step WHERE step_key = 'fitness_goal' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active, goal_id)
-SELECT step_id, 'athletic', 'Athletic', 'Functional strength, power, speed, and agility', 2, 1,
-    (SELECT goal_id FROM goal WHERE goal_name = 'Athletic' LIMIT 1)
-FROM onboarding_step WHERE step_key = 'fitness_goal' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active, goal_id)
-SELECT step_id, 'bodybuilding', 'Bodybuilding', 'Hypertrophy-focused training for maximum muscle size', 3, 1,
-    (SELECT goal_id FROM goal WHERE goal_name = 'Bodybuilding' LIMIT 1)
-FROM onboarding_step WHERE step_key = 'fitness_goal' LIMIT 1;
+-- 3. WEIGHT
+INSERT IGNORE INTO onboarding_steps (flow_id, step_key, title, sequence, is_required, config)
+SELECT id, 'weight', 'Weight', 3, 1,
+    JSON_OBJECT(
+        'subtitle', 'What is your current weight?',
+        'helpText', 'Your weight helps us calculate the right load.',
+        'stepType', 'WEIGHT',
+        'inputType', 'NUMBER',
+        'iconUrl', NULL,
+        'isActive', TRUE,
+        'options', JSON_ARRAY()
+    )
+FROM onboarding_flows WHERE flow_key = 'default_onboarding' AND version = 1 LIMIT 1;
 
--- Onboarding options: EQUIPMENT
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'dumbbells', 'Dumbbells', 'Hand weights only', 1, 1 FROM onboarding_step WHERE step_key = 'equipment' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'barbell', 'Barbell', 'Barbell and plates', 2, 1 FROM onboarding_step WHERE step_key = 'equipment' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'resistance_bands', 'Resistance Bands', 'Bands and bodyweight', 3, 1 FROM onboarding_step WHERE step_key = 'equipment' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'bodyweight', 'Bodyweight', 'No equipment', 4, 1 FROM onboarding_step WHERE step_key = 'equipment' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'full_gym', 'Full Gym', 'Full access to gym equipment', 5, 1 FROM onboarding_step WHERE step_key = 'equipment' LIMIT 1;
+-- 4. HEIGHT
+INSERT IGNORE INTO onboarding_steps (flow_id, step_key, title, sequence, is_required, config)
+SELECT id, 'height', 'Height', 4, 1,
+    JSON_OBJECT(
+        'subtitle', 'How tall are you?',
+        'helpText', 'Your height helps us tailor your plan.',
+        'stepType', 'HEIGHT',
+        'inputType', 'NUMBER',
+        'iconUrl', NULL,
+        'isActive', TRUE,
+        'options', JSON_ARRAY()
+    )
+FROM onboarding_flows WHERE flow_key = 'default_onboarding' AND version = 1 LIMIT 1;
 
--- Onboarding options: HEALTH_LIMITATIONS
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'none', 'None', 'No limitations', 1, 1 FROM onboarding_step WHERE step_key = 'health_limitations' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'back', 'Back', 'Lower or upper back issues', 2, 1 FROM onboarding_step WHERE step_key = 'health_limitations' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'knee', 'Knee', 'Knee pain or injury', 3, 1 FROM onboarding_step WHERE step_key = 'health_limitations' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'shoulder', 'Shoulder', 'Shoulder pain or limited mobility', 4, 1 FROM onboarding_step WHERE step_key = 'health_limitations' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'cardiac', 'Cardiac', 'Heart or blood pressure considerations', 5, 1 FROM onboarding_step WHERE step_key = 'health_limitations' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'other', 'Other', 'Other limitations', 6, 1 FROM onboarding_step WHERE step_key = 'health_limitations' LIMIT 1;
+-- 5. FITNESS_LEVEL
+INSERT IGNORE INTO onboarding_steps (flow_id, step_key, title, sequence, is_required, config)
+SELECT id, 'fitness_level', 'Fitness Level', 5, 1,
+    JSON_OBJECT(
+        'subtitle', 'How would you describe your experience?',
+        'helpText', 'This helps us recommend the right intensity.',
+        'stepType', 'FITNESS_LEVEL',
+        'inputType', 'SINGLE_CHOICE',
+        'iconUrl', NULL,
+        'isActive', TRUE,
+        'options', JSON_ARRAY(
+            JSON_OBJECT('optionId', 3, 'optionKey', 'beginner', 'label', 'Beginner', 'description', 'New to fitness or returning after a break', 'iconUrl', NULL, 'displayOrder', 1, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL),
+            JSON_OBJECT('optionId', 4, 'optionKey', 'intermediate', 'label', 'Intermediate', 'description', '1-3 years of consistent training', 'iconUrl', NULL, 'displayOrder', 2, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL),
+            JSON_OBJECT('optionId', 5, 'optionKey', 'advanced', 'label', 'Advanced', 'description', '3+ years of structured training', 'iconUrl', NULL, 'displayOrder', 3, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL)
+        )
+    )
+FROM onboarding_flows WHERE flow_key = 'default_onboarding' AND version = 1 LIMIT 1;
 
--- Onboarding options: SCHEDULE (time of day)
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'morning', 'Morning', 'Before noon', 1, 1 FROM onboarding_step WHERE step_key = 'schedule' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'afternoon', 'Afternoon', '12pm - 5pm', 2, 1 FROM onboarding_step WHERE step_key = 'schedule' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'evening', 'Evening', 'After 5pm', 3, 1 FROM onboarding_step WHERE step_key = 'schedule' LIMIT 1;
--- SCHEDULE: days per week
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'days_3', '3 days/week', 'Three workouts per week', 4, 1 FROM onboarding_step WHERE step_key = 'schedule' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'days_4', '4 days/week', 'Four workouts per week', 5, 1 FROM onboarding_step WHERE step_key = 'schedule' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'days_5', '5 days/week', 'Five workouts per week', 6, 1 FROM onboarding_step WHERE step_key = 'schedule' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'days_6', '6 days/week', 'Six workouts per week', 7, 1 FROM onboarding_step WHERE step_key = 'schedule' LIMIT 1;
+-- 6. FITNESS_GOAL
+INSERT IGNORE INTO onboarding_steps (flow_id, step_key, title, sequence, is_required, config)
+SELECT id, 'fitness_goal', 'Fitness Goal', 6, 1,
+    JSON_OBJECT(
+        'subtitle', 'What do you want to achieve?',
+        'helpText', 'Select your primary goal.',
+        'stepType', 'FITNESS_GOAL',
+        'inputType', 'MULTIPLE_CHOICE',
+        'iconUrl', NULL,
+        'isActive', TRUE,
+        'options', JSON_ARRAY(
+            JSON_OBJECT('optionId', 6, 'optionKey', 'slimfit', 'label', 'Slimfit', 'description', 'Fat loss and muscle toning for a lean physique', 'iconUrl', NULL, 'displayOrder', 1, 'isActive', TRUE, 'metadata', NULL, 'goalId', (SELECT goal_id FROM goal WHERE goal_name = 'Slimfit' LIMIT 1)),
+            JSON_OBJECT('optionId', 7, 'optionKey', 'athletic', 'label', 'Athletic', 'description', 'Functional strength, power, speed, and agility', 'iconUrl', NULL, 'displayOrder', 2, 'isActive', TRUE, 'metadata', NULL, 'goalId', (SELECT goal_id FROM goal WHERE goal_name = 'Athletic' LIMIT 1)),
+            JSON_OBJECT('optionId', 8, 'optionKey', 'bodybuilding', 'label', 'Bodybuilding', 'description', 'Hypertrophy-focused training for maximum muscle size', 'iconUrl', NULL, 'displayOrder', 3, 'isActive', TRUE, 'metadata', NULL, 'goalId', (SELECT goal_id FROM goal WHERE goal_name = 'Bodybuilding' LIMIT 1))
+        )
+    )
+FROM onboarding_flows WHERE flow_key = 'default_onboarding' AND version = 1 LIMIT 1;
 
--- Onboarding options: NOTIFICATIONS
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'workout_reminders', 'Workout Reminders', 'Remind me to work out', 1, 1 FROM onboarding_step WHERE step_key = 'notifications' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'rest_day', 'Rest Day', 'Remind me to rest and recover', 2, 1 FROM onboarding_step WHERE step_key = 'notifications' LIMIT 1;
-INSERT IGNORE INTO onboarding_option (step_id, option_key, label, description, display_order, is_active)
-SELECT step_id, 'achievements', 'Achievements', 'Notify when I earn achievements', 3, 1 FROM onboarding_step WHERE step_key = 'notifications' LIMIT 1;
+-- 7. EQUIPMENT
+INSERT IGNORE INTO onboarding_steps (flow_id, step_key, title, sequence, is_required, config)
+SELECT id, 'equipment', 'Equipment', 7, 1,
+    JSON_OBJECT(
+        'subtitle', 'What do you have access to?',
+        'helpText', 'We will suggest workouts that match your gear.',
+        'stepType', 'EQUIPMENT',
+        'inputType', 'MULTIPLE_CHOICE',
+        'iconUrl', NULL,
+        'isActive', TRUE,
+        'options', JSON_ARRAY(
+            JSON_OBJECT('optionId', 9, 'optionKey', 'dumbbells', 'label', 'Dumbbells', 'description', 'Hand weights only', 'iconUrl', NULL, 'displayOrder', 1, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL),
+            JSON_OBJECT('optionId', 10, 'optionKey', 'barbell', 'label', 'Barbell', 'description', 'Barbell and plates', 'iconUrl', NULL, 'displayOrder', 2, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL),
+            JSON_OBJECT('optionId', 11, 'optionKey', 'resistance_bands', 'label', 'Resistance Bands', 'description', 'Bands and bodyweight', 'iconUrl', NULL, 'displayOrder', 3, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL),
+            JSON_OBJECT('optionId', 12, 'optionKey', 'bodyweight', 'label', 'Bodyweight', 'description', 'No equipment', 'iconUrl', NULL, 'displayOrder', 4, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL),
+            JSON_OBJECT('optionId', 13, 'optionKey', 'full_gym', 'label', 'Full Gym', 'description', 'Full access to gym equipment', 'iconUrl', NULL, 'displayOrder', 5, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL)
+        )
+    )
+FROM onboarding_flows WHERE flow_key = 'default_onboarding' AND version = 1 LIMIT 1;
+
+-- 8. SCHEDULE
+INSERT IGNORE INTO onboarding_steps (flow_id, step_key, title, sequence, is_required, config)
+SELECT id, 'schedule', 'Schedule', 8, 1,
+    JSON_OBJECT(
+        'subtitle', 'When can you work out?',
+        'helpText', 'Pick your preferred days and time.',
+        'stepType', 'SCHEDULE',
+        'inputType', 'MULTIPLE_CHOICE',
+        'iconUrl', NULL,
+        'isActive', TRUE,
+        'options', JSON_ARRAY(
+            JSON_OBJECT('optionId', 14, 'optionKey', 'morning', 'label', 'Morning', 'description', 'Before noon', 'iconUrl', NULL, 'displayOrder', 1, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL),
+            JSON_OBJECT('optionId', 15, 'optionKey', 'afternoon', 'label', 'Afternoon', 'description', '12pm - 5pm', 'iconUrl', NULL, 'displayOrder', 2, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL),
+            JSON_OBJECT('optionId', 16, 'optionKey', 'evening', 'label', 'Evening', 'description', 'After 5pm', 'iconUrl', NULL, 'displayOrder', 3, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL),
+            JSON_OBJECT('optionId', 17, 'optionKey', 'days_3', 'label', '3 days/week', 'description', 'Three workouts per week', 'iconUrl', NULL, 'displayOrder', 4, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL),
+            JSON_OBJECT('optionId', 18, 'optionKey', 'days_4', 'label', '4 days/week', 'description', 'Four workouts per week', 'iconUrl', NULL, 'displayOrder', 5, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL),
+            JSON_OBJECT('optionId', 19, 'optionKey', 'days_5', 'label', '5 days/week', 'description', 'Five workouts per week', 'iconUrl', NULL, 'displayOrder', 6, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL),
+            JSON_OBJECT('optionId', 20, 'optionKey', 'days_6', 'label', '6 days/week', 'description', 'Six workouts per week', 'iconUrl', NULL, 'displayOrder', 7, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL)
+        )
+    )
+FROM onboarding_flows WHERE flow_key = 'default_onboarding' AND version = 1 LIMIT 1;
+
+-- 9. HEALTH_LIMITATIONS
+INSERT IGNORE INTO onboarding_steps (flow_id, step_key, title, sequence, is_required, config)
+SELECT id, 'health_limitations', 'Health & Limitations', 9, 0,
+    JSON_OBJECT(
+        'subtitle', 'Any we should know about?',
+        'helpText', 'Optional - helps us keep you safe.',
+        'stepType', 'HEALTH_LIMITATIONS',
+        'inputType', 'MULTIPLE_CHOICE',
+        'iconUrl', NULL,
+        'isActive', TRUE,
+        'options', JSON_ARRAY(
+            JSON_OBJECT('optionId', 21, 'optionKey', 'none', 'label', 'None', 'description', 'No limitations', 'iconUrl', NULL, 'displayOrder', 1, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL),
+            JSON_OBJECT('optionId', 22, 'optionKey', 'back', 'label', 'Back', 'description', 'Lower or upper back issues', 'iconUrl', NULL, 'displayOrder', 2, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL),
+            JSON_OBJECT('optionId', 23, 'optionKey', 'knee', 'label', 'Knee', 'description', 'Knee pain or injury', 'iconUrl', NULL, 'displayOrder', 3, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL),
+            JSON_OBJECT('optionId', 24, 'optionKey', 'shoulder', 'label', 'Shoulder', 'description', 'Shoulder pain or limited mobility', 'iconUrl', NULL, 'displayOrder', 4, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL),
+            JSON_OBJECT('optionId', 25, 'optionKey', 'cardiac', 'label', 'Cardiac', 'description', 'Heart or blood pressure considerations', 'iconUrl', NULL, 'displayOrder', 5, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL),
+            JSON_OBJECT('optionId', 26, 'optionKey', 'other', 'label', 'Other', 'description', 'Other limitations', 'iconUrl', NULL, 'displayOrder', 6, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL)
+        )
+    )
+FROM onboarding_flows WHERE flow_key = 'default_onboarding' AND version = 1 LIMIT 1;
+
+-- 10. NOTIFICATIONS
+INSERT IGNORE INTO onboarding_steps (flow_id, step_key, title, sequence, is_required, config)
+SELECT id, 'notifications', 'Notifications', 10, 0,
+    JSON_OBJECT(
+        'subtitle', 'Stay on track',
+        'helpText', 'Choose what reminders you want.',
+        'stepType', 'NOTIFICATIONS',
+        'inputType', 'TOGGLE',
+        'iconUrl', NULL,
+        'isActive', TRUE,
+        'options', JSON_ARRAY(
+            JSON_OBJECT('optionId', 27, 'optionKey', 'workout_reminders', 'label', 'Workout Reminders', 'description', 'Remind me to work out', 'iconUrl', NULL, 'displayOrder', 1, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL),
+            JSON_OBJECT('optionId', 28, 'optionKey', 'rest_day', 'label', 'Rest Day', 'description', 'Remind me to rest and recover', 'iconUrl', NULL, 'displayOrder', 2, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL),
+            JSON_OBJECT('optionId', 29, 'optionKey', 'achievements', 'label', 'Achievements', 'description', 'Notify when I earn achievements', 'iconUrl', NULL, 'displayOrder', 3, 'isActive', TRUE, 'metadata', NULL, 'goalId', NULL)
+        )
+    )
+FROM onboarding_flows WHERE flow_key = 'default_onboarding' AND version = 1 LIMIT 1;
 
 -- =====================================================
 -- 9. WORKOUT TEMPLATES (For Recommendation System)
